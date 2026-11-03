@@ -2,6 +2,16 @@
 
 AI studio for researched, animated explainer reels. This is Phase 1: accounts, handles, dashboard, projects, routes for every stage, and encrypted API-key settings.
 
+## Quick start
+
+```bash
+npm install
+npm run setup   # creates .env, generates secrets, tells you what's left to fill in
+npm run dev     # starts the API and the web app; open http://localhost:5173
+```
+
+Everything runs from this folder: one `package.json`, one `.env`.
+
 ## Stack
 
 - `frontend`: React 18 + TypeScript + Vite + Tailwind CSS + MobX + React Router. Talks only to our API
@@ -31,24 +41,21 @@ The Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai) is already
 
 ## 2. Configure
 
-```bash
-cp .env.example .env   # one file for everything: API, web app (VITE_*) and reel engine
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"   # run twice: KEY_ENCRYPTION_SECRET and AUTH_SECRET
-```
+`npm run setup` copies `.env.example` to `.env` and generates `KEY_ENCRYPTION_SECRET` and `AUTH_SECRET`. It's safe to run again, because it never overwrites a value you've set. One file holds everything: the API, the web app (`VITE_*`, the only values the browser sees) and the reel engine.
 
 Keep `KEY_ENCRYPTION_SECRET` safe. If it is lost, saved API keys can't be decrypted and must be re-entered. Changing `AUTH_SECRET` signs everyone out.
 
 ### Sign-in emails (SMTP)
 
-Sign-in is a 6-digit code sent by email, and a first sign-in creates the account. Fill in `SMTP_*` in `.env`. For Gmail, turn on 2-Step Verification, create an **App password** (Google Account → Security → App passwords), then set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=you@gmail.com` and `SMTP_PASS=<the 16-character app password>`. While `SMTP_HOST` is empty, codes are printed in the `npm run dev:api` terminal instead.
+Sign-in is a 6-digit code sent by email, and a first sign-in creates the account. Fill in `SMTP_*` in `.env`. For Gmail, turn on 2-Step Verification, create an **App password** (Google Account → Security → App passwords), then set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=you@gmail.com` and `SMTP_PASS=<the 16-character app password>`. While `SMTP_HOST` is empty, codes are printed in the `npm run dev` terminal instead.
 
 ## 3. Run
 
 ```bash
-npm install
-npm run dev:api    # http://localhost:8787, reads .env
-npm run dev:web    # http://localhost:5173
+npm run dev        # API on :8787 and web app on :5173 together. Ctrl+C stops both
 ```
+
+The web app calls `/api` on its own address, and Vite forwards it to the local API, just as Netlify does in production. To run one side alone, use `npm run dev:api` or `npm run dev:web`.
 
 ## Deploy to Netlify
 

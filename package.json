@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "node scripts/dev.mjs",
     "dev:web": "vite frontend",
     "dev:api": "tsx watch --tsconfig backend/tsconfig.json --env-file=.env backend/src/server.ts",
     "start:api": "tsx --tsconfig backend/tsconfig.json --env-file=.env backend/src/server.ts",
