@@ -12,8 +12,10 @@ AI studio for researched, animated explainer reels. This is Phase 1: accounts, h
 
 ## 1. Supabase setup
 
+The Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai) is already created with both migrations applied, and its URL and publishable key are filled in `apps/web/.env.example`. You still need steps 3 and 4 below (auth URLs and the server-only service_role key). For a fresh project, do all of these:
+
 1. Create a project at https://supabase.com.
-2. Open **SQL Editor**, paste `supabase/migrations/20261103000000_init.sql`, and run it (or `supabase db push` with the CLI).
+2. Open **SQL Editor**, run each file in `supabase/migrations/` in order (or `supabase db push` with the CLI).
 3. **Authentication → URL Configuration**:
    - Site URL: `http://localhost:5173` (your real domain in production)
    - Redirect URLs: `http://localhost:5173/auth/callback` and `http://localhost:5173/reset-password`
