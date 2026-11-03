@@ -4,10 +4,10 @@ AI studio for researched, animated explainer reels. This is Phase 1: accounts, h
 
 ## Stack
 
-- `frontend`: React 18 + TypeScript + Vite + Tailwind CSS + MobX + React Router, Supabase Auth
-- `backend`: Node.js + Fastify + TypeScript. Stores provider API keys (AES-256-GCM) and tests them
+- `frontend`: React 18 + TypeScript + Vite + Tailwind CSS + MobX + React Router. Talks only to our API
+- `backend`: Node.js + Fastify + TypeScript. Email one-time-code sign-in (SMTP), sessions, profiles, projects, and provider API keys (AES-256-GCM)
 - `shared`: types, handle rules, provider list, brand name
-- `supabase/migrations`: database schema with Row Level Security
+- `supabase/migrations`: database schema. Supabase is the database only (no Supabase Auth), and every table is locked to the API server
 - `brand/`: logo files
 
 ```
@@ -22,24 +22,25 @@ MotionMind/
 
 ## 1. Supabase setup
 
-The Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai) is already created with both migrations applied, and its URL and publishable key are filled in `frontend/.env.example`. You still need steps 3 and 4 below (auth URLs and the server-only service_role key). For a fresh project, do all of these:
+The Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai) is already created. You need its server-only service_role key (step 3). For a fresh project, do all of these:
 
 1. Create a project at https://supabase.com.
 2. Open **SQL Editor**, run each file in `supabase/migrations/` in order (or `supabase db push` with the CLI).
-3. **Authentication → URL Configuration**:
-   - Site URL: `http://localhost:5173` (your real domain in production)
-   - Redirect URLs: `http://localhost:5173/auth/callback` and `http://localhost:5173/reset-password`
-4. **Project Settings → API**: copy the Project URL, the `anon` public key and the `service_role` key. The service_role key is for the API server only; never put it in the web app.
+3. **Project Settings → API**: copy the Project URL and the `service_role` key into `backend/.env`. The service_role key is for the API server only; never put it in the web app.
 
 ## 2. Configure
 
 ```bash
-cp frontend/.env.example frontend/.env.local   # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL
-cp backend/.env.example backend/.env         # SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, KEY_ENCRYPTION_SECRET
-node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"   # paste as KEY_ENCRYPTION_SECRET
+cp frontend/.env.example frontend/.env.local   # VITE_API_URL
+cp backend/.env.example backend/.env         # SUPABASE_*, KEY_ENCRYPTION_SECRET, AUTH_SECRET, SMTP_*
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"   # run twice: KEY_ENCRYPTION_SECRET and AUTH_SECRET
 ```
 
-Keep `KEY_ENCRYPTION_SECRET` safe. If it is lost, saved API keys can't be decrypted and must be re-entered.
+Keep `KEY_ENCRYPTION_SECRET` safe. If it is lost, saved API keys can't be decrypted and must be re-entered. Changing `AUTH_SECRET` signs everyone out.
+
+### Sign-in emails (SMTP)
+
+Sign-in is a 6-digit code sent by email, and a first sign-in creates the account. Fill in `SMTP_*` in `backend/.env`. For Gmail, turn on 2-Step Verification, create an **App password** (Google Account → Security → App passwords), then set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=you@gmail.com` and `SMTP_PASS=<the 16-character app password>`. While `SMTP_HOST` is empty, codes are printed in the `npm run dev:api` terminal instead.
 
 ## 3. Run
 
@@ -55,22 +56,22 @@ npm run dev:web    # http://localhost:5173
 
 1. In Netlify, choose **Add new site → Import from Git** and pick this repo. The build settings come from `netlify.toml`.
 2. Under **Site configuration → Environment variables**, add:
-   - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (web app, public)
-   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `KEY_ENCRYPTION_SECRET` (API, secret). Use the same `KEY_ENCRYPTION_SECRET` as local if you want keys you've already saved to keep working.
-3. In Supabase, go to **Authentication → URL Configuration**. Set the Site URL to your Netlify address and add `<site>/auth/callback` and `<site>/reset-password` to the Redirect URLs.
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `KEY_ENCRYPTION_SECRET`, `AUTH_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (all secret, all for the API). Use the same `KEY_ENCRYPTION_SECRET` as local if you want keys you've already saved to keep working.
+
+The web app needs no environment variables on Netlify.
 
 `backend/reel-engine` does not run on Netlify. Remotion rendering needs Chromium, ffmpeg and minutes of compute, which is beyond Netlify Function limits. In Phase 3 it will run on Remotion Lambda or a separate render worker, and the Netlify API will hand jobs to it.
 
-### Demo mode (no Supabase)
+### Demo mode (no database)
 
-Set `VITE_DATA_MODE=memory` (web) and `API_DATA_MODE=memory` (API). Accounts and projects stay in the browser, keys stay in API memory, and a yellow banner says so. Development only.
+Set `VITE_DATA_MODE=memory` (web) and `API_DATA_MODE=memory` (API). Accounts and projects stay in the browser, keys stay in API memory, and a yellow banner says so. No email is sent, and the sign-in code is always `123456`. Development only.
 
 ## 4. Checks
 
 ```bash
 npm run typecheck
-npm test                    # handle rules, API key storage/encryption/auth, MobX store flows
-bash supabase/test/run.sh   # applies the migration to a throwaway Postgres and tests RLS (run as a non-root user)
+npm test                    # handle rules, email-code sign-in, profiles/projects, API key encryption, MobX store flows
+bash supabase/test/run.sh   # applies the migrations to a throwaway Postgres and checks browser roles are locked out (Linux, non-root)
 npm run build
 ```
 
@@ -78,7 +79,7 @@ npm run build
 
 | Route | Screen |
 |---|---|
-| `/login`, `/signup`, `/forgot-password`, `/reset-password`, `/auth/callback` | Accounts: password, email link, reset |
+| `/login` (`/signup` redirects here) | Email, then a 6-digit code. Signs in, or creates the account on first use |
 | `/onboarding` | Handle + channel setup (required before the app) |
 | `/app` | Dashboard |
 | `/app/discover` | Topic discovery (next module) |

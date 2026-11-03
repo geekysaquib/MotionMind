@@ -12,14 +12,12 @@ export class ServiceError extends Error {
   }
 }
 
+/** Email one-time-code sign-in. A first sign-in creates the account. */
 export interface AuthService {
   getSession(): Promise<Session | null>;
   onChange(cb: (session: Session | null, event: string) => void): () => void;
-  signUp(email: string, password: string, displayName: string): Promise<{ needsConfirmation: boolean }>;
-  signIn(email: string, password: string): Promise<void>;
-  sendMagicLink(email: string): Promise<void>;
-  sendPasswordReset(email: string): Promise<void>;
-  updatePassword(password: string): Promise<void>;
+  requestCode(email: string): Promise<void>;
+  verifyCode(email: string, code: string): Promise<void>;
   signOut(): Promise<void>;
 }
 
@@ -54,7 +52,7 @@ export interface KeysService {
 }
 
 export interface Services {
-  mode: 'supabase' | 'memory';
+  mode: 'api' | 'memory';
   auth: AuthService;
   profiles: ProfileService;
   projects: ProjectService;

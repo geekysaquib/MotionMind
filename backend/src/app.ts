@@ -1,14 +1,24 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { PROVIDER_INFO, providerIdSchema, saveKeySchema, type ProviderId } from '@motionmind/shared';
+import type { Mailer } from './accounts/mailer';
+import type { SessionTokens } from './accounts/session';
 import type { TokenVerifier } from './auth';
 import { KeyCipher, last4 } from './crypto';
+import type { DataRepository } from './data/repository';
 import { toSummary, type KeyRepository } from './keys/repository';
 import { KEY_TESTERS, type KeyTester } from './providers/testers';
+import { registerAccountRoutes, registerLoginRoutes } from './routes/account';
 
 export interface AppDeps {
   keys: KeyRepository;
-  verifier: TokenVerifier;
+  data: DataRepository;
+  sessions: SessionTokens;
+  mailer: Mailer;
+  /** Defaults to the session tokens. Tests swap in DevTokenVerifier. */
+  verifier?: TokenVerifier;
+  /** Signs session tokens and hashes login codes. */
+  authSecret: string;
   cipher: KeyCipher;
   webOrigin: string;
   mode: 'supabase' | 'memory';
@@ -30,19 +40,24 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const testers = deps.testers ?? KEY_TESTERS;
   const fetchImpl = deps.fetchImpl ?? fetch;
 
-  await app.register(cors, { origin: deps.webOrigin, methods: ['GET', 'PUT', 'POST', 'DELETE'] });
+  await app.register(cors, { origin: deps.webOrigin, methods: ['GET', 'PUT', 'PATCH', 'POST', 'DELETE'] });
   app.decorateRequest('userId', '');
+  const verifier = deps.verifier ?? deps.sessions;
 
   app.get('/health', async () => ({ ok: true, mode: deps.mode }));
+
+  app.register(async (auth) => registerLoginRoutes(auth, deps), { prefix: '/api/auth' });
 
   app.register(async (api) => {
     api.addHook('onRequest', async (req, reply) => {
       const header = req.headers.authorization ?? '';
       const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-      const userId = token ? await deps.verifier.verify(token) : null;
+      const userId = token ? await verifier.verify(token) : null;
       if (!userId) return reply.code(401).send({ error: 'unauthorized', message: 'Sign in again.' });
       req.userId = userId;
     });
+
+    registerAccountRoutes(api, deps);
 
     const parseProvider = (req: FastifyRequest) => providerIdSchema.safeParse((req.params as { provider?: string }).provider);
 

@@ -34,7 +34,7 @@ export const GuestOnly = observer(function GuestOnly({ children }: { children: R
   const { auth } = useStores();
   const loc = useLocation();
   if (!auth.ready) return <FullScreenSpinner />;
-  if (auth.isSignedIn && !auth.recovering) {
+  if (auth.isSignedIn) {
     const from = (loc.state as { from?: string } | null)?.from;
     return <Navigate to={from ?? '/app'} replace />;
   }

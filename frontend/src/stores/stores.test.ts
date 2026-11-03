@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { memoryServices, type Storage } from '../services/memory';
+import { DEMO_CODE, memoryServices, type Storage } from '../services/memory';
 import { RootStore } from './RootStore';
 
 function mem(): Storage {
@@ -10,7 +10,8 @@ function mem(): Storage {
 async function signedUpStore(storage = mem(), email = 'a@x.com') {
   const root = new RootStore(memoryServices(storage, 'http://api.test'));
   await root.auth.init();
-  await root.auth.signUp(email, 'password123', 'Saquib');
+  await root.auth.requestCode(email);
+  await root.auth.verifyCode(email, DEMO_CODE);
   await root.onSessionChanged();
   return root;
 }
@@ -19,7 +20,6 @@ describe('account + onboarding flow', () => {
   it('new accounts need a handle before the dashboard', async () => {
     const root = await signedUpStore();
     expect(root.auth.isSignedIn).toBe(true);
-    expect(root.profile.profile?.displayName).toBe('Saquib');
     expect(root.profile.needsOnboarding).toBe(true);
   });
 
@@ -52,14 +52,16 @@ describe('account + onboarding flow', () => {
     await expect(root.profile.completeOnboarding({ displayName: 'a', channelName: 'b', niche: 'c', language: 'en' })).rejects.toThrow();
   });
 
-  it('rejects duplicate email and wrong password', async () => {
+  it('rejects a wrong code and signs the same email back into the same account', async () => {
     const storage = mem();
     const root = await signedUpStore(storage);
+    const id = root.auth.session?.userId;
     await root.auth.signOut();
-    await expect(root.auth.signUp('a@x.com', 'password123', 'X')).rejects.toThrow(/already exists/);
-    await expect(root.auth.signIn('a@x.com', 'nope')).rejects.toThrow(/Invalid/);
-    await root.auth.signIn('a@x.com', 'password123');
+    await expect(root.auth.requestCode('not-an-email')).rejects.toThrow(/valid email/);
+    await expect(root.auth.verifyCode('a@x.com', '000000')).rejects.toThrow(/isn't right/);
+    await root.auth.verifyCode('a@x.com', DEMO_CODE);
     expect(root.auth.isSignedIn).toBe(true);
+    expect(root.auth.session?.userId).toBe(id);
   });
 });
 
@@ -75,7 +77,7 @@ describe('projects', () => {
 
     await root.auth.signOut();
     expect(root.projects.items).toHaveLength(0);
-    await root.auth.signUp('b@x.com', 'password123', 'B');
+    await root.auth.verifyCode('b@x.com', DEMO_CODE);
     await root.onSessionChanged();
     expect(root.projects.items).toHaveLength(0);
   });

@@ -4,11 +4,14 @@ import { httpKeysService } from './keysHttp';
 import { ServiceError, type AuthService, type ProfileService, type ProjectService, type Services, type Session } from './types';
 
 /**
- * Local demo mode. Accounts and projects live in this browser's storage; nothing is sent to Supabase.
+ * Local demo mode. Accounts and projects live in this browser's storage; nothing is sent to the database.
  * The UI shows a "Demo data" banner whenever this mode is active.
  */
+/** Demo mode sends no email; this code always works. */
+export const DEMO_CODE = '123456';
+
 interface Db {
-  users: { id: string; email: string; password: string }[];
+  users: { id: string; email: string }[];
   profiles: Profile[];
   projects: Project[];
   session: Session | null;
@@ -54,32 +57,19 @@ export function memoryServices(storage: Storage = window.localStorage, apiUrl = 
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    async signUp(email, password, displayName) {
+    async requestCode(email) {
+      if (!/^\S+@\S+\.\S+$/.test(email.trim())) throw new ServiceError('Enter a valid email address.', 'invalid_email');
+    },
+    async verifyCode(email, code) {
+      if (code.trim() !== DEMO_CODE) throw new ServiceError("That code isn't right.", 'wrong_code');
       const e = email.trim().toLowerCase();
-      if (db.users.some((u) => u.email === e)) throw new ServiceError('An account with this email already exists.', 'user_exists');
-      if (password.length < 8) throw new ServiceError('Password should be at least 8 characters.', 'weak_password');
-      const user = { id: uid(), email: e, password };
-      db.users.push(user);
-      db.profiles.push({ id: user.id, handle: null, displayName: displayName || null, channelName: null, niche: null, language: 'hinglish', onboardedAt: null });
+      let user = db.users.find((u) => u.email === e);
+      if (!user) {
+        user = { id: uid(), email: e };
+        db.users.push(user);
+        db.profiles.push({ id: user.id, handle: null, displayName: null, channelName: null, niche: null, language: 'hinglish', onboardedAt: null });
+      }
       startSession(user);
-      return { needsConfirmation: false };
-    },
-    async signIn(email, password) {
-      const u = db.users.find((x) => x.email === email.trim().toLowerCase());
-      if (!u || u.password !== password) throw new ServiceError('Invalid login credentials', 'invalid_credentials');
-      startSession(u);
-    },
-    async sendMagicLink() {
-      throw new ServiceError('Magic links need Supabase. Demo mode supports email and password only.', 'demo_unsupported');
-    },
-    async sendPasswordReset() {
-      throw new ServiceError('Password reset emails need Supabase. Demo mode has no email.', 'demo_unsupported');
-    },
-    async updatePassword(password) {
-      const u = db.users.find((x) => x.id === db.session?.userId);
-      if (!u) throw new ServiceError('You are signed out.', 'unauthorized');
-      u.password = password;
-      save();
     },
     async signOut() {
       db.session = null;

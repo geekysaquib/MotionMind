@@ -5,8 +5,6 @@ import type { Session } from '../services/types';
 export class AuthStore {
   session: Session | null = null;
   ready = false;
-  /** Set when the user arrives from a password-recovery email. */
-  recovering = false;
 
   constructor(private readonly root: RootStore) {
     makeAutoObservable(this, {}, { autoBind: true });
@@ -18,10 +16,9 @@ export class AuthStore {
 
   async init() {
     const svc = this.root.services.auth;
-    svc.onChange((session, event) => {
+    svc.onChange((session) => {
       runInAction(() => {
         this.session = session;
-        if (event === 'PASSWORD_RECOVERY') this.recovering = true;
       });
       void this.root.onSessionChanged();
     });
@@ -35,27 +32,12 @@ export class AuthStore {
     });
   }
 
-  signUp(email: string, password: string, displayName: string) {
-    return this.root.services.auth.signUp(email.trim(), password, displayName.trim());
+  requestCode(email: string) {
+    return this.root.services.auth.requestCode(email.trim());
   }
 
-  signIn(email: string, password: string) {
-    return this.root.services.auth.signIn(email.trim(), password);
-  }
-
-  sendMagicLink(email: string) {
-    return this.root.services.auth.sendMagicLink(email.trim());
-  }
-
-  sendPasswordReset(email: string) {
-    return this.root.services.auth.sendPasswordReset(email.trim());
-  }
-
-  async updatePassword(password: string) {
-    await this.root.services.auth.updatePassword(password);
-    runInAction(() => {
-      this.recovering = false;
-    });
+  verifyCode(email: string, code: string) {
+    return this.root.services.auth.verifyCode(email.trim(), code.trim());
   }
 
   async signOut() {

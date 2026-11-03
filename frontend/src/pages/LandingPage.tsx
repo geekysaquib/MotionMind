@@ -95,7 +95,7 @@ function PhoneMock() {
 export const LandingPage = observer(function LandingPage() {
   const { auth } = useStores();
   const signedIn = auth.ready && auth.isSignedIn;
-  const primary = signedIn ? { to: '/app', label: 'Open your studio' } : { to: '/signup', label: 'Start creating' };
+  const primary = signedIn ? { to: '/app', label: 'Open your studio' } : { to: '/login', label: 'Start creating' };
 
   return (
     <div className="min-h-full bg-ink-950 text-ink-100">

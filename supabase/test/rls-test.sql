@@ -1,15 +1,21 @@
--- Run after the migration. Fails loudly if any security rule is broken.
-grant select, insert, update, delete on all tables in schema public to anon, authenticated, service_role;
-revoke all on public.provider_credentials from anon, authenticated;
-grant execute on function auth.uid() to anon, authenticated;
-
-insert into auth.users (id, raw_user_meta_data) values
-  ('00000000-0000-0000-0000-00000000000a', '{"display_name":"Alice"}'),
-  ('00000000-0000-0000-0000-00000000000b', '{}');
+-- Run after the migrations. Fails loudly if any security rule is broken.
+-- auth-stub.sql grants the API roles everything by default, as Supabase does; the migrations must take it away.
 
 do $$ begin
-  assert (select count(*) from public.profiles) = 2, 'profile trigger did not create rows';
-  assert (select display_name from public.profiles where id = '00000000-0000-0000-0000-00000000000a') = 'Alice', 'display_name not copied';
+  assert (select count(*) from public.app_users where email = 'old@example.com') = 1, 'existing Supabase Auth user not carried over';
+end $$;
+
+insert into public.app_users (id, email) values
+  ('00000000-0000-0000-0000-00000000000a', 'Alice@Example.com'),
+  ('00000000-0000-0000-0000-00000000000b', 'bob@example.com');
+insert into public.profiles (id) values
+  ('00000000-0000-0000-0000-00000000000a'),
+  ('00000000-0000-0000-0000-00000000000b');
+
+-- Emails are unique regardless of case.
+do $$ begin
+  begin insert into public.app_users (email) values ('alice@example.com'); raise exception 'email should be case-insensitive unique';
+  exception when unique_violation then null; end;
 end $$;
 
 -- Handle format constraints
@@ -29,31 +35,43 @@ do $$ begin
   exception when unique_violation or check_violation then null; end;
 end $$;
 
-insert into public.provider_credentials (user_id, provider, ciphertext, iv, auth_tag, last4)
-  values ('00000000-0000-0000-0000-00000000000a', 'elevenlabs', 'x', 'y', 'z', 'abcd');
-
--- As user B
-set role authenticated;
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false);
+-- Projects need a real owner, and go away with the account.
+insert into public.projects (owner_id, title) values ('00000000-0000-0000-0000-00000000000b', 'B project');
 do $$ begin
-  assert (select count(*) from public.profiles) = 1, 'user B can see other profiles';
-  insert into public.projects (title) values ('B project');
-  assert (select count(*) from public.projects) = 1, 'B cannot see own project';
+  begin insert into public.projects (title) values ('no owner'); raise exception 'owner_id should be required';
+  exception when not_null_violation then null; end;
 end $$;
+delete from public.app_users where id = '00000000-0000-0000-0000-00000000000b';
 do $$ begin
-  begin perform 1 from public.provider_credentials; raise exception 'authenticated can read provider_credentials';
+  assert (select count(*) from public.projects) = 0, 'projects not removed with their owner';
+  assert (select count(*) from public.profiles) = 1, 'profile not removed with its owner';
+end $$;
+
+-- The browser roles can touch nothing: only the API server (service role) reads or writes.
+set role anon;
+do $$ begin
+  begin perform 1 from public.app_users; raise exception 'anon can read app_users';
+  exception when insufficient_privilege then null; end;
+  begin perform 1 from public.login_codes; raise exception 'anon can read login_codes';
+  exception when insufficient_privilege then null; end;
+  begin perform 1 from public.profiles; raise exception 'anon can read profiles';
+  exception when insufficient_privilege then null; end;
+  begin perform 1 from public.projects; raise exception 'anon can read projects';
+  exception when insufficient_privilege then null; end;
+  begin perform 1 from public.provider_credentials; raise exception 'anon can read provider_credentials';
+  exception when insufficient_privilege then null; end;
+  begin perform public.handle_available('x'); raise exception 'anon can call handle_available';
   exception when insufficient_privilege then null; end;
 end $$;
+reset role;
 
--- As user A
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false);
+set role authenticated;
 do $$ begin
-  assert (select count(*) from public.projects) = 0, 'user A can see B''s project';
-  update public.projects set title = 'hijack';
-  assert (select count(*) from public.projects where title = 'hijack') = 0, 'cross-user update';
+  begin perform 1 from public.profiles; raise exception 'authenticated can read profiles';
+  exception when insufficient_privilege then null; end;
+  begin perform 1 from public.projects; raise exception 'authenticated can read projects';
+  exception when insufficient_privilege then null; end;
 end $$;
 reset role;
-do $$ begin
-  assert (select count(*) from public.projects where title = 'hijack') = 0, 'A modified B''s project';
-end $$;
-select 'ALL RLS TESTS PASSED' as result;
+
+select 'ALL DATABASE TESTS PASSED' as result;

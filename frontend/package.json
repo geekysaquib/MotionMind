@@ -15,7 +15,6 @@
     "@fontsource/inter": "5.1.1",
     "@fontsource/space-grotesk": "5.1.1",
     "@motionmind/shared": "0.1.0",
-    "@supabase/supabase-js": "2.118.0",
     "lucide-react": "0.460.0",
     "mobx": "6.16.1",
     "mobx-react-lite": "4.1.1",

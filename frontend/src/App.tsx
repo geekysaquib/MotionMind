@@ -1,11 +1,7 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { AppShell } from './layout/AppShell';
 import { GuestOnly, RequireAuth, RequireOnboarded } from './layout/guards';
 import { LoginPage } from './pages/auth/LoginPage';
-import { SignupPage } from './pages/auth/SignupPage';
-import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/auth/ResetPasswordPage';
-import { AuthCallbackPage } from './pages/auth/AuthCallbackPage';
 import { OnboardingPage } from './pages/auth/OnboardingPage';
 import { DashboardPage } from './pages/app/DashboardPage';
 import { DiscoverPage } from './pages/app/DiscoverPage';
@@ -26,10 +22,8 @@ const stage = (s: Parameters<typeof StagePage>[0]['stage']) => ({ path: s, eleme
 export const routes = [
   { path: '/', element: <LandingPage /> },
   { path: '/login', element: <GuestOnly><LoginPage /></GuestOnly> },
-  { path: '/signup', element: <GuestOnly><SignupPage /></GuestOnly> },
-  { path: '/forgot-password', element: <GuestOnly><ForgotPasswordPage /></GuestOnly> },
-  { path: '/reset-password', element: <ResetPasswordPage /> },
-  { path: '/auth/callback', element: <AuthCallbackPage /> },
+  // Sign-up is the same email-code screen; old links still land somewhere useful.
+  { path: '/signup', element: <Navigate to="/login" replace /> },
   { path: '/onboarding', element: <RequireAuth><OnboardingPage /></RequireAuth> },
   {
     path: '/app',

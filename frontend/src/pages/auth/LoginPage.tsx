@@ -1,31 +1,43 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, KeyRound } from 'lucide-react';
 import { useStores } from '../../stores/RootStore';
 import { AuthLayout } from '../../layout/AuthLayout';
 import { Alert, Button, Field } from '../../components/ui';
 import { errorText } from '../../lib/format';
-import { cn } from '../../lib/cn';
+import { DEMO_CODE } from '../../services/memory';
 
+/** One screen for sign-in and sign-up: enter an email, then the 6-digit code we send to it. */
 export function LoginPage() {
   const { auth, services } = useStores();
-  const [mode, setMode] = useState<'password' | 'magic'>('password');
+  const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  async function submit(e: FormEvent) {
+  async function send(e?: FormEvent) {
+    e?.preventDefault();
+    setError(null);
+    setNotice(null);
+    setBusy(true);
+    try {
+      await auth.requestCode(email);
+      setStep('code');
+      setCode('');
+      setNotice(`We sent a 6-digit code to ${email.trim()}. It expires in 10 minutes.`);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verify(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setBusy(true);
     try {
-      if (mode === 'password') await auth.signIn(email, password);
-      else {
-        await auth.sendMagicLink(email);
-        setSent(true);
-      }
+      await auth.verifyCode(email, code);
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -35,60 +47,53 @@ export function LoginPage() {
 
   return (
     <AuthLayout
-      title="Welcome back"
-      subtitle="Sign in to continue making reels."
-      footer={
-        <>
-          New to Motion Mind?{' '}
-          <Link to="/signup" className="font-semibold text-accent hover:underline">
-            Create an account
-          </Link>
-        </>
-      }
+      title={step === 'email' ? 'Sign in to Motion Mind' : 'Check your email'}
+      subtitle={step === 'email' ? "Enter your email and we'll send you a code. New here? This creates your account." : undefined}
     >
-      <div className="mb-6 grid grid-cols-2 rounded-xl border border-line/10 bg-ink-900 p-1 text-sm" role="tablist">
-        {(['password', 'magic'] as const).map((m) => (
-          <button
-            key={m}
-            role="tab"
-            aria-selected={mode === m}
-            onClick={() => {
-              setMode(m);
-              setError(null);
-              setSent(false);
-            }}
-            className={cn('flex items-center justify-center gap-2 rounded-lg py-2 font-medium transition', mode === m ? 'bg-line/10 text-ink-100' : 'text-ink-400 hover:text-ink-100')}
-          >
-            {m === 'password' ? <KeyRound className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
-            {m === 'password' ? 'Password' : 'Email link'}
-          </button>
-        ))}
-      </div>
-      {sent ? (
-        <Alert tone="success">Check {email} for a sign-in link. You can close this tab.</Alert>
-      ) : (
-        <form onSubmit={submit} className="space-y-4">
-          <Field label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
-          {mode === 'password' && (
-            <Field
-              label="Password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              hint={
-                <Link to="/forgot-password" className="text-accent hover:underline">
-                  Forgot password?
-                </Link>
-              }
-            />
-          )}
-          {mode === 'magic' && services.mode === 'memory' && <Alert tone="info">Email links need Supabase. In demo mode, use a password.</Alert>}
+      {step === 'email' ? (
+        <form onSubmit={send} className="space-y-4">
+          <Field label="Email" type="email" autoComplete="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           {error && <Alert>{error}</Alert>}
           <Button type="submit" className="w-full" size="lg" loading={busy}>
-            {mode === 'password' ? 'Sign in' : 'Email me a link'}
+            Send code
           </Button>
+        </form>
+      ) : (
+        <form onSubmit={verify} className="space-y-4">
+          {notice && <Alert tone="success">{notice}</Alert>}
+          {services.mode === 'memory' && <Alert tone="info">Demo mode sends no email. Use code {DEMO_CODE}.</Alert>}
+          <Field
+            label="Sign-in code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="\d{6}"
+            maxLength={6}
+            required
+            autoFocus
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            placeholder="123456"
+          />
+          {error && <Alert>{error}</Alert>}
+          <Button type="submit" className="w-full" size="lg" loading={busy} disabled={code.length !== 6}>
+            Sign in
+          </Button>
+          <div className="flex justify-between text-sm">
+            <button
+              type="button"
+              className="text-ink-400 hover:text-ink-100"
+              onClick={() => {
+                setStep('email');
+                setError(null);
+                setNotice(null);
+              }}
+            >
+              Use a different email
+            </button>
+            <button type="button" className="font-semibold text-accent hover:underline" disabled={busy} onClick={() => void send()}>
+              Resend code
+            </button>
+          </div>
         </form>
       )}
     </AuthLayout>
