@@ -51,7 +51,7 @@ MotionMind/
 │   └── reel-engine/          Remotion renderer prototype (src/ compositions, render.mjs, tts.mjs)
 ├── shared/src/               used by both sides: brand, handle rules, providers, project types/STAGES
 ├── supabase/
-│   ├── migrations/           run in order. 000200 = switch to our own users + login codes
+│   ├── migrations/           20261103000000_init.sql = the whole schema (reset on 2026-11-03); add new files after it
 │   └── test/                 run.sh: applies migrations to a throwaway Postgres (Linux only)
 ├── scripts/                  setup.mjs (creates .env + secrets), dev.mjs (runs API + web together)
 ├── brand/                    logo files

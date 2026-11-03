@@ -1,23 +1,49 @@
--- Motion Mind: accounts, handles, projects, provider keys.
--- Row Level Security is on for every table. Provider keys are readable only by the API server (service role).
+-- Motion Mind schema. Supabase is the database only (no Supabase Auth).
+-- The API server (service_role) is the only thing that reads or writes. Every table has
+-- Row Level Security on with no policies, and the browser roles (anon, authenticated) have no grants.
 
-create extension if not exists citext;
+create schema if not exists extensions;
+create extension if not exists citext with schema extensions;
+
+-- Future tables and functions in public are closed to the browser roles too.
+alter default privileges in schema public revoke all on tables from anon, authenticated;
+alter default privileges in schema public revoke all on functions from anon, authenticated;
+alter default privileges in schema public revoke all on sequences from anon, authenticated;
 
 -- ---------- helpers ----------
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.updated_at = now();
   return new;
 end;
 $$;
+revoke execute on function public.set_updated_at() from public, anon, authenticated;
+
+-- ---------- accounts (email one-time-code sign-in) ----------
+create table public.app_users (
+  id uuid primary key default gen_random_uuid(),
+  email extensions.citext not null unique,
+  created_at timestamptz not null default now(),
+  last_login_at timestamptz
+);
+
+-- One pending code per email. Only an HMAC of the code is stored.
+create table public.login_codes (
+  email extensions.citext primary key,
+  code_hash text not null,
+  expires_at timestamptz not null,
+  attempts smallint not null default 0,
+  created_at timestamptz not null default now()
+);
 
 -- ---------- profiles ----------
 create table public.profiles (
-  id uuid primary key references auth.users (id) on delete cascade,
-  handle citext unique,
+  id uuid primary key references public.app_users (id) on delete cascade,
+  handle extensions.citext unique,
   display_name text check (char_length(display_name) <= 60),
   channel_name text check (char_length(channel_name) <= 60),
   niche text check (char_length(niche) <= 60),
@@ -28,7 +54,7 @@ create table public.profiles (
   updated_at timestamptz not null default now(),
   constraint handle_format check (
     handle is null
-    or (handle ~ '^[a-z0-9._]{3,30}$' and handle !~ '\.\.' and handle !~ '^\.' and handle !~ '\.$')
+    or (handle::text ~ '^[a-z0-9._]{3,30}$' and handle::text !~ '\.\.' and handle::text !~ '^\.' and handle::text !~ '\.$')
   ),
   constraint handle_not_reserved check (
     handle is null
@@ -39,48 +65,10 @@ create table public.profiles (
 create trigger profiles_updated_at before update on public.profiles
   for each row execute function public.set_updated_at();
 
-alter table public.profiles enable row level security;
-
-create policy "profiles: owner can read" on public.profiles
-  for select to authenticated using (id = auth.uid());
-create policy "profiles: owner can update" on public.profiles
-  for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
-
--- A profile row is created for every new account.
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.profiles (id, display_name)
-  values (new.id, nullif(new.raw_user_meta_data ->> 'display_name', ''));
-  return new;
-end;
-$$;
-
-create trigger on_auth_user_created after insert on auth.users
-  for each row execute function public.handle_new_user();
-
--- Handle availability without exposing other users' profiles.
-create or replace function public.handle_available(p_handle text)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select not exists (select 1 from public.profiles where handle = lower(trim(leading '@' from p_handle))::citext);
-$$;
-
-revoke all on function public.handle_available(text) from public;
-grant execute on function public.handle_available(text) to anon, authenticated;
-
 -- ---------- projects ----------
 create table public.projects (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  owner_id uuid not null references public.app_users (id) on delete cascade,
   title text not null check (char_length(title) between 1 and 120),
   topic text check (char_length(topic) <= 500),
   stage text not null default 'topic'
@@ -97,14 +85,9 @@ create index projects_owner_updated_idx on public.projects (owner_id, updated_at
 create trigger projects_updated_at before update on public.projects
   for each row execute function public.set_updated_at();
 
-alter table public.projects enable row level security;
-
-create policy "projects: owner full access" on public.projects
-  for all to authenticated using (owner_id = auth.uid()) with check (owner_id = auth.uid());
-
--- ---------- provider keys (server-only) ----------
+-- ---------- provider API keys (AES-256-GCM, encrypted by the API) ----------
 create table public.provider_credentials (
-  user_id uuid not null references auth.users (id) on delete cascade,
+  user_id uuid not null references public.app_users (id) on delete cascade,
   provider text not null
     check (provider in ('openai','anthropic','tavily','exa','elevenlabs','replicate','google_tts')),
   ciphertext text not null,
@@ -122,6 +105,11 @@ create table public.provider_credentials (
 create trigger provider_credentials_updated_at before update on public.provider_credentials
   for each row execute function public.set_updated_at();
 
--- RLS on with no policies: browsers (anon/authenticated) can never read or write keys.
+-- ---------- lock the browser out ----------
+alter table public.app_users enable row level security;
+alter table public.login_codes enable row level security;
+alter table public.profiles enable row level security;
+alter table public.projects enable row level security;
 alter table public.provider_credentials enable row level security;
-revoke all on public.provider_credentials from anon, authenticated;
+
+revoke all on public.app_users, public.login_codes, public.profiles, public.projects, public.provider_credentials from anon, authenticated;

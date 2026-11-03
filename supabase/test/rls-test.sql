@@ -1,9 +1,5 @@
--- Run after the migrations. Fails loudly if any security rule is broken.
--- auth-stub.sql grants the API roles everything by default, as Supabase does; the migrations must take it away.
-
-do $$ begin
-  assert (select count(*) from public.app_users where email = 'old@example.com') = 1, 'existing Supabase Auth user not carried over';
-end $$;
+-- Run after the migrations. Fails loudly if any data or security rule is broken.
+-- auth-stub.sql grants the browser roles everything by default, as Supabase does; the migration must take it away.
 
 insert into public.app_users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'Alice@Example.com'),
@@ -18,7 +14,7 @@ do $$ begin
   exception when unique_violation then null; end;
 end $$;
 
--- Handle format constraints
+-- Handle rules
 do $$ begin
   begin update public.profiles set handle = 'Bad Handle' where id = '00000000-0000-0000-0000-00000000000a'; raise exception 'format check missing';
   exception when check_violation then null; end;
@@ -27,12 +23,17 @@ do $$ begin
 end $$;
 
 update public.profiles set handle = 'samjho.studio' where id = '00000000-0000-0000-0000-00000000000a';
-
 do $$ begin
-  assert public.handle_available('SAMJHO.STUDIO') = false, 'handle_available should be case-insensitive';
-  assert public.handle_available('@free_handle') = true, 'handle_available false negative';
   begin update public.profiles set handle = 'Samjho.Studio' where id = '00000000-0000-0000-0000-00000000000b'; raise exception 'unique handle missing';
   exception when unique_violation or check_violation then null; end;
+end $$;
+
+-- updated_at moves on update.
+do $$ declare before timestamptz; begin
+  select updated_at into before from public.profiles where id = '00000000-0000-0000-0000-00000000000a';
+  perform pg_sleep(0.01);
+  update public.profiles set niche = 'Tech' where id = '00000000-0000-0000-0000-00000000000a';
+  assert (select updated_at from public.profiles where id = '00000000-0000-0000-0000-00000000000a') > before, 'updated_at trigger missing';
 end $$;
 
 -- Projects need a real owner, and go away with the account.
@@ -60,8 +61,6 @@ do $$ begin
   exception when insufficient_privilege then null; end;
   begin perform 1 from public.provider_credentials; raise exception 'anon can read provider_credentials';
   exception when insufficient_privilege then null; end;
-  begin perform public.handle_available('x'); raise exception 'anon can call handle_available';
-  exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 
@@ -69,7 +68,7 @@ set role authenticated;
 do $$ begin
   begin perform 1 from public.profiles; raise exception 'authenticated can read profiles';
   exception when insufficient_privilege then null; end;
-  begin perform 1 from public.projects; raise exception 'authenticated can read projects';
+  begin insert into public.projects (owner_id, title) values ('00000000-0000-0000-0000-00000000000a', 'x'); raise exception 'authenticated can write projects';
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;

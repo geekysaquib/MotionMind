@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tests the migration on a throwaway local Postgres with a stub auth schema.
+# Tests the migrations on a throwaway local Postgres with stand-ins for the Supabase roles.
 set -euo pipefail
 PGBIN=$(ls -d /usr/lib/postgresql/*/bin | tail -1)
 DIR=$(mktemp -d)
