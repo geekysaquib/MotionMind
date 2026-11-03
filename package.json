@@ -1,0 +1,12 @@
+{
+  "name": "motion-mind",
+  "private": true,
+  "workspaces": ["packages/shared", "apps/*"],
+  "scripts": {
+    "dev:web": "npm run dev -w @motionmind/web",
+    "dev:api": "npm run dev -w @motionmind/api",
+    "build": "npm run build -w @motionmind/shared && npm run build -w @motionmind/web && npm run build -w @motionmind/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  }
+}

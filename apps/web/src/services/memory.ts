@@ -1,0 +1,144 @@
+import { RESERVED_HANDLES, normalizeHandle, type Profile, type Project } from '@motionmind/shared';
+import { config } from '../config';
+import { httpKeysService } from './keysHttp';
+import { ServiceError, type AuthService, type ProfileService, type ProjectService, type Services, type Session } from './types';
+
+/**
+ * Local demo mode. Accounts and projects live in this browser's storage; nothing is sent to Supabase.
+ * The UI shows a "Demo data" banner whenever this mode is active.
+ */
+interface Db {
+  users: { id: string; email: string; password: string }[];
+  profiles: Profile[];
+  projects: Project[];
+  session: Session | null;
+}
+
+const KEY = 'motionmind-demo-db';
+
+export interface Storage {
+  getItem(k: string): string | null;
+  setItem(k: string, v: string): void;
+}
+
+function uid(): string {
+  return crypto.randomUUID();
+}
+
+export function memoryServices(storage: Storage = window.localStorage, apiUrl = config.apiUrl): Services {
+  const load = (): Db => {
+    try {
+      const raw = storage.getItem(KEY);
+      if (raw) return JSON.parse(raw) as Db;
+    } catch {
+      /* corrupted demo data: start fresh */
+    }
+    return { users: [], profiles: [], projects: [], session: null };
+  };
+  let db = load();
+  const save = () => storage.setItem(KEY, JSON.stringify(db));
+  const listeners = new Set<(s: Session | null, e: string) => void>();
+  const emit = (e: string) => listeners.forEach((l) => l(db.session, e));
+  const startSession = (u: { id: string; email: string }) => {
+    db.session = { userId: u.id, email: u.email, accessToken: `dev:${u.id}` };
+    save();
+    emit('SIGNED_IN');
+  };
+
+  const auth: AuthService = {
+    async getSession() {
+      db = load();
+      return db.session;
+    },
+    onChange(cb) {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    async signUp(email, password, displayName) {
+      const e = email.trim().toLowerCase();
+      if (db.users.some((u) => u.email === e)) throw new ServiceError('An account with this email already exists.', 'user_exists');
+      if (password.length < 8) throw new ServiceError('Password should be at least 8 characters.', 'weak_password');
+      const user = { id: uid(), email: e, password };
+      db.users.push(user);
+      db.profiles.push({ id: user.id, handle: null, displayName: displayName || null, channelName: null, niche: null, language: 'hinglish', onboardedAt: null });
+      startSession(user);
+      return { needsConfirmation: false };
+    },
+    async signIn(email, password) {
+      const u = db.users.find((x) => x.email === email.trim().toLowerCase());
+      if (!u || u.password !== password) throw new ServiceError('Invalid login credentials', 'invalid_credentials');
+      startSession(u);
+    },
+    async sendMagicLink() {
+      throw new ServiceError('Magic links need Supabase. Demo mode supports email and password only.', 'demo_unsupported');
+    },
+    async sendPasswordReset() {
+      throw new ServiceError('Password reset emails need Supabase. Demo mode has no email.', 'demo_unsupported');
+    },
+    async updatePassword(password) {
+      const u = db.users.find((x) => x.id === db.session?.userId);
+      if (!u) throw new ServiceError('You are signed out.', 'unauthorized');
+      u.password = password;
+      save();
+    },
+    async signOut() {
+      db.session = null;
+      save();
+      emit('SIGNED_OUT');
+    },
+  };
+
+  const profiles: ProfileService = {
+    async get(userId) {
+      const p = db.profiles.find((x) => x.id === userId);
+      if (!p) throw new ServiceError('Profile not found', 'not_found');
+      return { ...p };
+    },
+    async update(userId, patch) {
+      const p = db.profiles.find((x) => x.id === userId);
+      if (!p) throw new ServiceError('Profile not found', 'not_found');
+      if (patch.handle && db.profiles.some((x) => x.id !== userId && x.handle === patch.handle)) {
+        throw new ServiceError('That handle was just taken. Try another.', 'handle_taken');
+      }
+      Object.assign(p, patch);
+      save();
+      return { ...p };
+    },
+    async isHandleAvailable(handle) {
+      const h = normalizeHandle(handle);
+      return !RESERVED_HANDLES.has(h) && !db.profiles.some((x) => x.handle === h && x.id !== db.session?.userId);
+    },
+  };
+
+  const mine = () => db.projects.filter((p) => p.ownerId === db.session?.userId);
+  const projects: ProjectService = {
+    async list() {
+      return mine().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map((p) => ({ ...p }));
+    },
+    async get(id) {
+      const p = mine().find((x) => x.id === id);
+      return p ? { ...p } : null;
+    },
+    async create(input) {
+      if (!db.session) throw new ServiceError('You are signed out.', 'unauthorized');
+      const now = new Date().toISOString();
+      const p: Project = { id: uid(), ownerId: db.session.userId, title: input.title, topic: input.topic, stage: 'topic', status: 'draft', qualityTier: input.qualityTier, durationSec: input.durationSec, createdAt: now, updatedAt: now };
+      db.projects.push(p);
+      save();
+      return { ...p };
+    },
+    async update(id, patch) {
+      const p = mine().find((x) => x.id === id);
+      if (!p) throw new ServiceError('Project not found', 'not_found');
+      Object.assign(p, patch, { updatedAt: new Date().toISOString() });
+      save();
+      return { ...p };
+    },
+    async remove(id) {
+      db.projects = db.projects.filter((x) => !(x.id === id && x.ownerId === db.session?.userId));
+      save();
+    },
+  };
+
+  return { mode: 'memory', auth, profiles, projects, keys: (getToken) => httpKeysService(apiUrl, getToken) };
+}

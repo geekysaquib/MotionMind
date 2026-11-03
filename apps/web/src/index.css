@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Light (default): white surfaces on cream. */
+  :root {
+    color-scheme: light;
+    --ink-950: 250 246 238; /* page: cream */
+    --ink-900: 255 255 255; /* cards */
+    --ink-850: 255 255 255; /* inputs */
+    --ink-800: 244 239 229;
+    --ink-700: 232 226 214;
+    --ink-600: 205 198 184;
+    --ink-400: 107 113 128; /* secondary text */
+    --ink-300: 72 78 92;
+    --ink-100: 31 36 48; /* primary text */
+    --line: 31 36 48; /* borders and hover tints, used at low opacity */
+    --accent: 15 118 110;
+    --danger: 200 60 48;
+  }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --ink-950: 11 13 18;
+    --ink-900: 17 20 27;
+    --ink-850: 22 26 35;
+    --ink-800: 28 33 44;
+    --ink-700: 38 44 57;
+    --ink-600: 53 60 76;
+    --ink-400: 138 145 163;
+    --ink-300: 180 186 202;
+    --ink-100: 238 240 245;
+    --line: 255 255 255;
+    --accent: 94 234 212;
+    --danger: 247 160 138;
+  }
+  html, body, #root { height: 100%; }
+  body { font-family: 'Google Sans Variable', 'Google Sans', system-ui, sans-serif; }
+  ::selection { background: rgba(45, 212, 191, 0.35); }
+  :focus-visible { outline: 2px solid #2DD4BF; outline-offset: 2px; }
+}
+
+@layer components {
+  .card { @apply rounded-2xl border border-line/[0.07] bg-ink-900 shadow-soft; }
+  .label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-400; }
+  .field {
+    @apply w-full rounded-xl border border-line/15 bg-ink-850 px-3.5 py-2.5 text-sm text-ink-100 placeholder:text-ink-400/70
+           transition focus:border-mint-400/60 focus:outline-none focus:ring-2 focus:ring-mint-400/20 disabled:opacity-50;
+  }
+}
