@@ -12,7 +12,7 @@ const schema = z
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
     KEY_ENCRYPTION_SECRET: base64Secret('KEY_ENCRYPTION_SECRET'),
     AUTH_SECRET: base64Secret('AUTH_SECRET'),
-    // Login-code email. Leave SMTP_HOST empty in development to print codes in the terminal instead.
+    // Login-code email. Leave SMTP_HOST empty in the root .env during development to print codes in the terminal instead.
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().positive().default(465),
     SMTP_USER: z.string().optional(),

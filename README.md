@@ -27,13 +27,12 @@ The Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai) is already
 
 1. Create a project at https://supabase.com.
 2. Open **SQL Editor**, run each file in `supabase/migrations/` in order (or `supabase db push` with the CLI).
-3. **Project Settings → API**: copy the Project URL and the `service_role` key into `backend/.env`. The service_role key is for the API server only; never put it in the web app.
+3. **Project Settings → API**: copy the Project URL and the `service_role` key into the root `.env`. The service_role key is for the API server only; never put it in the web app.
 
 ## 2. Configure
 
 ```bash
-cp frontend/.env.example frontend/.env.local   # VITE_API_URL
-cp backend/.env.example backend/.env         # SUPABASE_*, KEY_ENCRYPTION_SECRET, AUTH_SECRET, SMTP_*
+cp .env.example .env   # one file for everything: API, web app (VITE_*) and reel engine
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"   # run twice: KEY_ENCRYPTION_SECRET and AUTH_SECRET
 ```
 
@@ -41,13 +40,13 @@ Keep `KEY_ENCRYPTION_SECRET` safe. If it is lost, saved API keys can't be decryp
 
 ### Sign-in emails (SMTP)
 
-Sign-in is a 6-digit code sent by email, and a first sign-in creates the account. Fill in `SMTP_*` in `backend/.env`. For Gmail, turn on 2-Step Verification, create an **App password** (Google Account → Security → App passwords), then set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=you@gmail.com` and `SMTP_PASS=<the 16-character app password>`. While `SMTP_HOST` is empty, codes are printed in the `npm run dev:api` terminal instead.
+Sign-in is a 6-digit code sent by email, and a first sign-in creates the account. Fill in `SMTP_*` in `.env`. For Gmail, turn on 2-Step Verification, create an **App password** (Google Account → Security → App passwords), then set `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=you@gmail.com` and `SMTP_PASS=<the 16-character app password>`. While `SMTP_HOST` is empty, codes are printed in the `npm run dev:api` terminal instead.
 
 ## 3. Run
 
 ```bash
 npm install
-npm run dev:api    # http://localhost:8787, reads backend/.env
+npm run dev:api    # http://localhost:8787, reads .env
 npm run dev:web    # http://localhost:5173
 ```
 

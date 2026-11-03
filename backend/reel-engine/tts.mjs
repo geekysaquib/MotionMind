@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 
 const KEY = process.env.ELEVENLABS_API_KEY;
-if (!KEY) throw new Error('ELEVENLABS_API_KEY is not set. Add it to the cloud environment, then start a new session.');
+if (!KEY) throw new Error('ELEVENLABS_API_KEY is not set. Add it to the .env file in the repo root.');
 const MODEL = process.env.ELEVENLABS_MODEL ?? 'eleven_multilingual_v2';
 const API = 'https://api.elevenlabs.io/v1';
 const FPS = 30;

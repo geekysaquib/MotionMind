@@ -43,6 +43,6 @@ export class ConsoleMailer implements Mailer {
   constructor(private readonly print = true) {}
   async sendLoginCode(to: string, code: string) {
     this.sent.push({ to, code });
-    if (this.print) console.warn(`[dev] Sign-in code for ${to}: ${code}  (set SMTP_* in backend/.env to send real emails)`);
+    if (this.print) console.warn(`[dev] Sign-in code for ${to}: ${code}  (set SMTP_* in .env to send real emails)`);
   }
 }
