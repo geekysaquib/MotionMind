@@ -1,11 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Motion Mind">
-  <rect width="512" height="512" rx="120" fill="#1F2430"/>
-  <!-- isometric cube: the "world" every reel is built in -->
-  <polygon points="256,108 396,189 256,270 116,189" fill="#5EEAD4"/>
-  <polygon points="116,189 256,270 256,432 116,351" fill="#F7A08A"/>
-  <polygon points="256,270 396,189 396,351 256,432" fill="#8B5CF6"/>
-  <!-- M drawn across the two front faces -->
-  <polyline points="152,352 152,240 256,330 360,240 360,352" fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- motion spark -->
-  <circle cx="256" cy="189" r="20" fill="#FFFFFF"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" aria-label="Motion Mind" role="img" viewBox="0 0 512 512"><rect width="512" height="512" fill="#1F2430" rx="120"/><polygon fill="#5EEAD4" points="256 108 396 189 256 270 116 189"/><polygon fill="#F7A08A" points="116 189 256 270 256 432 116 351"/><polygon fill="#8B5CF6" points="256 270 396 189 396 351 256 432"/><polyline fill="none" stroke="#FFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="34" points="152 352 152 240 256 330 360 240 360 352"/><circle cx="256" cy="189" r="20" fill="#FFF"/></svg>
