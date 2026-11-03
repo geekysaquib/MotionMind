@@ -4,7 +4,8 @@ import path from 'node:path';
 
 const mode = process.argv[2] ?? 'stills';
 const out = process.argv[3] ?? 'out';
-const browserExecutable = '/opt/pw-browsers/chromium';
+// Remotion downloads its own headless Chrome on first run. Set REMOTION_BROWSER to use an installed one.
+const browserExecutable = process.env.REMOTION_BROWSER || undefined;
 const serveUrl = await bundle({ entryPoint: path.resolve('src/index.ts') });
 const composition = await selectComposition({ serveUrl, id: 'Reel', browserExecutable });
 console.log('frames', composition.durationInFrames);

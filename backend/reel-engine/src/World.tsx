@@ -73,7 +73,7 @@ const HOUSES = Array.from({ length: 26 }, (_, i) => {
     w: 1.4 + rand(i + 7) * 1.2,
     d: 1.4 + rand(i + 11) * 1.0,
     h: side > 0 ? 0.8 + rand(i + 3) * 1.1 : 1.2 + rand(i + 3) * 3.4,
-    color: C.houses[i % C.houses.length],
+    color: C.houses[i % C.houses.length]!,
   };
 }).filter((h) => !TOWERS.some((t) => Math.abs(t.x - h.x) < 1.8 && h.y < 0));
 
@@ -174,8 +174,8 @@ function tree(key: string, x: number, y: number, s: number): Item {
     depth: x + y + 0.2,
     el: (
       <g key={key}>
-        <polygon points={pts([base[0], base[1], tip])} fill="#8FCB8F" stroke={C.outline} strokeWidth={1} vectorEffect="non-scaling-stroke" />
-        <polygon points={pts([base[1], base[2], tip])} fill="#74B57A" stroke={C.outline} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+        <polygon points={pts([base[0]!, base[1]!, tip])} fill="#8FCB8F" stroke={C.outline} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+        <polygon points={pts([base[1]!, base[2]!, tip])} fill="#74B57A" stroke={C.outline} strokeWidth={1} vectorEffect="non-scaling-stroke" />
       </g>
     ),
   };

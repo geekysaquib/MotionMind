@@ -1,27 +1,29 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
-import { TIMED, STORY_FRAMES, HAS_VOICE, type CameraKey, type WorldEvent } from './script';
+import { hasVoice, reelTiming, type Brand, type CameraKey, type ReelSpec, type TimedBeat, type WorldEvent } from './script';
 import { World, phonePos, type WorldProps } from './World';
+import { Backdrop } from './Backdrop';
 import { Header, InfoCard, Captions, EndCard } from './Ui';
 import { Camera, clamp01, easeInOutCubic, lerp } from './iso';
 
 const FX: Exclude<WorldEvent, 'none'>[] = ['rings', 'towerIds', 'pins', 'gpsLog', 'stationGlow', 'errorBand'];
 const RAMP = 12;
+const STILL: CameraKey = { follow: true, x: 0, y: 0, z: 1, zoom: 40 };
 
 function resolveKey(k: CameraKey, frame: number, fps: number) {
   const x = k.follow ? phonePos(frame / fps).x + k.x : k.x;
   return { x, y: k.y, z: k.z, zoom: k.zoom };
 }
 
-function cameraAt(frame: number, fps: number): Camera {
-  const f = Math.min(frame, STORY_FRAMES - 1);
-  const i = Math.max(0, TIMED.findIndex((b) => f >= b.start && f < b.start + b.frames));
-  const beat = TIMED[i];
-  const cur = resolveKey(beat.camera, f, fps);
-  const prev = i > 0 ? resolveKey(TIMED[i - 1].camera, f, fps) : cur;
+function cameraAt(timed: TimedBeat[], storyFrames: number, frame: number, fps: number): Camera {
+  const f = Math.min(frame, storyFrames - 1);
+  const i = Math.max(0, timed.findIndex((b) => f >= b.start && f < b.start + b.frames));
+  const beat = timed[i]!;
+  const cur = resolveKey(beat.camera ?? STILL, f, fps);
+  const prev = i > 0 ? resolveKey(timed[i - 1]!.camera ?? STILL, f, fps) : cur;
   const t = easeInOutCubic(clamp01((f - beat.start) / 36));
   const drift = 1 + 0.035 * clamp01((f - beat.start) / beat.frames);
-  const endPull = frame >= STORY_FRAMES ? 1 - 0.08 * clamp01((frame - STORY_FRAMES) / 60) : 1;
+  const endPull = frame >= storyFrames ? 1 - 0.08 * clamp01((frame - storyFrames) / 60) : 1;
   return {
     target: { x: lerp(prev.x, cur.x, t), y: lerp(prev.y, cur.y, t), z: lerp(prev.z, cur.z, t) },
     zoom: lerp(prev.zoom, cur.zoom, t) * drift * endPull,
@@ -30,21 +32,22 @@ function cameraAt(frame: number, fps: number): Camera {
   };
 }
 
-function fxAt(frame: number): WorldProps['fx'] {
+function fxAt(timed: TimedBeat[], frame: number): WorldProps['fx'] {
   const out = {} as WorldProps['fx'];
+  const has = (b: TimedBeat, name: WorldEvent) => b.events?.includes(name) ?? false;
   for (const name of FX) {
     let v = 0;
     // merge consecutive beats that share the effect into one range
     let i = 0;
-    while (i < TIMED.length) {
-      if (!TIMED[i].events.includes(name)) {
+    while (i < timed.length) {
+      if (!has(timed[i]!, name)) {
         i++;
         continue;
       }
-      const s = TIMED[i].start;
+      const s = timed[i]!.start;
       let j = i;
-      while (j + 1 < TIMED.length && TIMED[j + 1].events.includes(name)) j++;
-      const e = TIMED[j].start + TIMED[j].frames;
+      while (j + 1 < timed.length && has(timed[j + 1]!, name)) j++;
+      const e = timed[j]!.start + timed[j]!.frames;
       const up = clamp01((frame - s) / RAMP);
       const down = clamp01((e + RAMP - frame) / RAMP);
       v = Math.max(v, Math.min(up, down));
@@ -55,41 +58,47 @@ function fxAt(frame: number): WorldProps['fx'] {
   return out;
 }
 
-function pinProgressAt(frame: number, fps: number): number {
-  const first = TIMED.find((b) => b.events.includes('pins'));
+function pinProgressAt(timed: TimedBeat[], frame: number, fps: number): number {
+  const first = timed.find((b) => b.events?.includes('pins'));
   if (!first) return 0;
   return clamp01((frame - first.start - 10) / (3.5 * fps));
 }
 
-export const Reel: React.FC = () => {
+/** One reel, driven entirely by its spec. Used by the CLI renderer and by the in-app preview player. */
+export const Reel: React.FC<ReelSpec> = (spec) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const cam = cameraAt(frame, fps);
-  const inStory = frame < STORY_FRAMES;
-  const beat = TIMED.find((b) => frame >= b.start && frame < b.start + b.frames) ?? TIMED[TIMED.length - 1];
-  const chapterStart = TIMED.find((b) => b.chapter === beat.chapter)?.start ?? 0;
+  const { timed, storyFrames } = useMemo(() => reelTiming(spec), [spec]);
+  const inStory = frame < storyFrames;
+  const beat = timed.find((b) => frame >= b.start && frame < b.start + b.frames) ?? timed[timed.length - 1]!;
+  const chapterStart = timed.find((b) => b.chapter === beat.chapter)?.start ?? 0;
+  const progress = storyFrames ? Math.min(1, frame / storyFrames) : 0;
 
   return (
     <AbsoluteFill style={{ background: '#F6F2E9', overflow: 'hidden' }}>
-      <World frame={frame} fps={fps} cam={cam} fx={fxAt(frame)} pinProgress={pinProgressAt(frame, fps)} />
-      <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} />
+      {spec.world === 'train' ? (
+        <World frame={frame} fps={fps} cam={cameraAt(timed, storyFrames, frame, fps)} fx={fxAt(timed, frame)} pinProgress={pinProgressAt(timed, frame, fps)} />
+      ) : (
+        <Backdrop frame={frame} fps={fps} tone={beat.card.tone} chapter={beat.chapter} progress={progress} />
+      )}
+      <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} steps={spec.steps} brand={spec.brand} />
       {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} />}
       {inStory && <Captions beat={beat} frame={frame} />}
-      {HAS_VOICE &&
-        TIMED.map((b, i) => (
+      {hasVoice(spec) &&
+        timed.map((b, i) => (
           <Sequence key={`vo${b.id}`} from={b.start + Math.round(0.2 * fps)}>
             <Audio src={staticFile(`voice/beat_${i}.mp3`)} />
           </Sequence>
         ))}
-      <Sequence from={STORY_FRAMES}>
-        <EndCardWrapper />
+      <Sequence from={storyFrames}>
+        <EndCardWrapper brand={spec.brand} />
       </Sequence>
     </AbsoluteFill>
   );
 };
 
-const EndCardWrapper: React.FC = () => {
+const EndCardWrapper: React.FC<{ brand: Brand }> = ({ brand }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  return <EndCard frame={frame} fps={fps} />;
+  return <EndCard frame={frame} fps={fps} brand={brand} />;
 };

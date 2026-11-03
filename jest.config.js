@@ -17,6 +17,8 @@ const base = {
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   moduleNameMapper: {
     '^@motionmind/shared$': '<rootDir>/shared/src/index.ts',
+    '^@motionmind/reel-engine$': '<rootDir>/backend/reel-engine/src/public.ts',
+    '\.css$': '<rootDir>/test/shims/style.cjs',
     // ESM-only package that Fastify's inject() requires; see the shim for why.
     '^cookie$': '<rootDir>/test/shims/cookie.cjs',
   },

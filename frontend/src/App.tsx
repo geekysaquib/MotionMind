@@ -14,6 +14,8 @@ import { ProfileSettings } from './pages/app/ProfileSettings';
 import { KeysSettings } from './pages/app/KeysSettings';
 import { AccountSettings } from './pages/app/AccountSettings';
 import { DiagnosticsSettings } from './pages/app/DiagnosticsSettings';
+import { ClaudeSettings } from './pages/app/ClaudeSettings';
+import { ScriptStagePage } from './pages/app/ScriptStagePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LandingPage } from './pages/LandingPage';
 import { Toasts } from './components/Toasts';
@@ -47,7 +49,7 @@ export const routes = [
         children: [
           { index: true, element: <ProjectOverviewPage /> },
           stage('research'),
-          stage('script'),
+          { path: 'script', element: <ScriptStagePage /> },
           stage('storyboard'),
           stage('graphics'),
           stage('voice'),
@@ -60,6 +62,7 @@ export const routes = [
         element: <SettingsPage />,
         children: [
           { index: true, element: <ProfileSettings /> },
+          { path: 'claude', element: <ClaudeSettings /> },
           { path: 'keys', element: <KeysSettings /> },
           { path: 'account', element: <AccountSettings /> },
           { path: 'diagnostics', element: <DiagnosticsSettings /> },

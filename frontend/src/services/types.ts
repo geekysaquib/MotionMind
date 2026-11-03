@@ -1,4 +1,5 @@
 import type { Profile, Project, ProviderId, StoredKeySummary, KeyTestResult, QualityTier } from '@motionmind/shared';
+import type { ClaudeService } from './claudeHttp';
 
 export interface Session {
   userId: string;
@@ -58,4 +59,6 @@ export interface Services {
   projects: ProjectService;
   /** Built lazily because it needs the current access token. */
   keys: (getToken: () => string | null) => KeysService;
+  /** Same: Claude calls are signed in. */
+  claude: (getToken: () => string | null) => ClaudeService;
 }

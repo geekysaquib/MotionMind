@@ -2,6 +2,8 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import type { ProviderId } from '@motionmind/shared';
 import { registerAccountRoutes } from './account/routes';
+import type { ClaudeClient } from './ai/claude';
+import { registerClaudeRoutes } from './ai/routes';
 import type { Mailer } from './auth/mailer';
 import { registerLoginRoutes } from './auth/routes';
 import type { SessionTokens } from './auth/session';
@@ -31,6 +33,8 @@ export interface AppDeps {
   logger?: boolean;
   /** Where browser log reports go. Defaults to one console line each. */
   clientLogSink?: (report: ClientLogReport) => void;
+  /** Builds a Claude client for a user's Anthropic key. Tests pass a fake. */
+  claude?: (apiKey: string) => ClaudeClient;
 }
 
 declare module 'fastify' {
@@ -66,6 +70,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       });
       registerAccountRoutes(api, deps);
       registerKeyRoutes(api, deps);
+      registerClaudeRoutes(api, deps);
     },
     { prefix: '/api' },
   );

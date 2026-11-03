@@ -1,7 +1,7 @@
 import React from 'react';
 import { spring, interpolate } from 'remotion';
 import { C } from './World';
-import type { Card as CardT, CardRow, Tone, TimedBeat } from './script';
+import type { Brand, Card as CardT, CardRow, Tone, TimedBeat } from './script';
 
 const TONE: Record<Tone, string> = { red: C.red, teal: C.teal, purple: C.purple, blue: C.blue, amber: C.amber };
 const SAFE_X = 60;
@@ -23,13 +23,14 @@ function Highlight({ text, tone }: { text: string; tone: string }) {
   );
 }
 
-export const Header: React.FC<{ chapter: number; frame: number; fps: number; chapterStart: number }> = ({
+export const Header: React.FC<{ chapter: number; frame: number; fps: number; chapterStart: number; steps: string[]; brand: Brand }> = ({
   chapter,
   frame,
   fps,
   chapterStart,
+  steps,
+  brand,
 }) => {
-  const steps = ['Tower', 'Naksha', 'Timetable', 'Accuracy'];
   const grow = spring({ frame: frame - chapterStart, fps, config: { damping: 200 } });
   return (
     <div style={{ position: 'absolute', top: 70, left: SAFE_X, right: SAFE_X }}>
@@ -51,13 +52,13 @@ export const Header: React.FC<{ chapter: number; frame: number; fps: number; cha
               border: `3px solid ${C.teal}`,
             }}
           >
-            RS
+            {brand.initials}
           </div>
           <div style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: 28, letterSpacing: 4, color: '#5B6170' }}>
-            REEL STUDIO
+            {brand.name.toUpperCase()}
           </div>
         </div>
-        <div style={{ fontFamily: 'JetBrains Mono', fontSize: 26, color: '#7A8090' }}>@yourchannel</div>
+        <div style={{ fontFamily: 'JetBrains Mono', fontSize: 26, color: '#7A8090' }}>{brand.handle}</div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', marginTop: 30, gap: 14 }}>
         {steps.map((s, i) => {
@@ -288,9 +289,9 @@ export const Captions: React.FC<{ beat: TimedBeat; frame: number }> = ({ beat, f
     }
   }
   if (cur.length) groups.push(cur);
-  const active = groups.find((g) => frame < g[g.length - 1].end + 4) ?? groups[groups.length - 1];
-  if (frame < beat.words[0].start - 2) return null;
-  const pop = interpolate(frame - active[0].start, [0, 5], [0.92, 1], { extrapolateRight: 'clamp', extrapolateLeft: 'clamp' });
+  const active = groups.find((g) => frame < g[g.length - 1]!.end + 4) ?? groups[groups.length - 1];
+  if (!active?.length || frame < beat.words[0]!.start - 2) return null;
+  const pop = interpolate(frame - active[0]!.start, [0, 5], [0.92, 1], { extrapolateRight: 'clamp', extrapolateLeft: 'clamp' });
   return (
     <div style={{ position: 'absolute', left: 0, right: 0, top: 1545, display: 'flex', justifyContent: 'center' }}>
       <div
@@ -324,7 +325,7 @@ export const Captions: React.FC<{ beat: TimedBeat; frame: number }> = ({ beat, f
   );
 };
 
-export const EndCard: React.FC<{ frame: number; fps: number }> = ({ frame, fps }) => {
+export const EndCard: React.FC<{ frame: number; fps: number; brand: Brand }> = ({ frame, fps, brand }) => {
   const s = spring({ frame, fps, config: { damping: 14 } });
   const b = spring({ frame: frame - 18, fps, config: { damping: 12 } });
   return (
@@ -356,13 +357,13 @@ export const EndCard: React.FC<{ frame: number; fps: number }> = ({ frame, fps }
           transform: `scale(${s})`,
         }}
       >
-        RS
+        {brand.initials}
       </div>
       <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 84, color: C.ink, marginTop: 40, opacity: s }}>
-        Reel Studio
+        {brand.name}
       </div>
       <div style={{ fontFamily: 'Space Grotesk', fontWeight: 500, fontSize: 38, color: '#6B7180', marginTop: 6, opacity: s }}>
-        Roz ki tech, <span style={{ color: C.teal }}>andar ki baat</span>
+        {brand.tagline}
       </div>
       <div
         style={{
@@ -378,7 +379,7 @@ export const EndCard: React.FC<{ frame: number; fps: number }> = ({ frame, fps }
           background: '#fff',
         }}
       >
-        follow @yourchannel
+        follow {brand.handle}
       </div>
     </div>
   );

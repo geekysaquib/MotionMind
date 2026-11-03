@@ -75,6 +75,18 @@ export class ProjectStore {
     return p;
   }
 
+  /** Claude writes the reel script for this project (server side, with the user's Anthropic key). */
+  async writeScript(id: string) {
+    log.info('claude', 'Writing reel script', { projectId: id });
+    const started = Date.now();
+    const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).writeScript(id);
+    log.info('claude', 'Reel script written', { projectId: id, beats: p.script?.beats.length, model: p.script?.model, ms: Date.now() - started });
+    runInAction(() => {
+      this.items = [p, ...this.items.filter((x) => x.id !== id)];
+    });
+    return p;
+  }
+
   async remove(id: string) {
     await this.root.services.projects.remove(id);
     log.info('projects', 'Project deleted', { id });

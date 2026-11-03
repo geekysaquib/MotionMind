@@ -1,12 +1,19 @@
 import React from 'react';
 import { Composition } from 'remotion';
-import '@fontsource/space-grotesk/500.css';
-import '@fontsource/space-grotesk/700.css';
-import '@fontsource/jetbrains-mono/500.css';
-import '@fontsource/jetbrains-mono/700.css';
+import './fonts';
 import { Reel } from './Reel';
-import { FPS, TOTAL_FRAMES } from './script';
+import { FPS, TRAIN_REEL, reelTiming, type ReelSpec } from './script';
 
+// CLI renders (render.mjs) use this. The reel comes in as props; the sample train reel is the default.
 export const Root: React.FC = () => (
-  <Composition id="Reel" component={Reel} durationInFrames={TOTAL_FRAMES} fps={FPS} width={1080} height={1920} />
+  <Composition
+    id="Reel"
+    component={Reel}
+    defaultProps={TRAIN_REEL}
+    calculateMetadata={({ props }: { props: ReelSpec }) => ({ durationInFrames: reelTiming(props).totalFrames })}
+    durationInFrames={reelTiming(TRAIN_REEL).totalFrames}
+    fps={FPS}
+    width={1080}
+    height={1920}
+  />
 );

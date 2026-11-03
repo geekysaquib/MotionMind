@@ -11,7 +11,7 @@
     "start:api": "tsx --tsconfig backend/tsconfig.json --env-file=.env backend/src/server.ts",
     "preview:web": "vite preview frontend",
     "build": "npm run typecheck && vite build frontend",
-    "typecheck": "tsc -p shared --noEmit && tsc -p backend --noEmit && tsc -p frontend --noEmit",
+    "typecheck": "tsc -p shared --noEmit && tsc -p backend --noEmit && tsc -p backend/reel-engine --noEmit && tsc -p frontend --noEmit",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
@@ -19,11 +19,13 @@
     "reel:render": "cd backend/reel-engine && node render.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
     "@fastify/cors": "10.1.0",
     "@fontsource-variable/google-sans": "^5.3.2",
     "@fontsource/jetbrains-mono": "5.1.1",
     "@fontsource/space-grotesk": "5.1.1",
     "@remotion/bundler": "4.0.540",
+    "@remotion/player": "^4.0.540",
     "@remotion/renderer": "4.0.540",
     "@supabase/supabase-js": "2.118.0",
     "fastify": "5.12.8",

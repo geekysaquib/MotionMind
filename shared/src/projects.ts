@@ -12,8 +12,38 @@ export interface Project {
   status: ProjectStatus;
   qualityTier: QualityTier;
   durationSec: number;
+  /** The reel script Claude wrote for this project, or null before the Script stage. */
+  script: ReelScript | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type ReelTone = 'red' | 'teal' | 'purple' | 'blue' | 'amber';
+
+export type ReelRow =
+  | { kind: 'chips'; items: { text: string; tone?: ReelTone; strike?: boolean }[] }
+  | { kind: 'flow'; items: string[] }
+  | { kind: 'kv'; k: string; v: string; tone?: ReelTone }
+  | { kind: 'note'; text: string };
+
+export interface ReelBeat {
+  id: string;
+  narration: string;
+  /** Words to highlight in captions, as they appear in the narration (lower-case). */
+  keywords: string[];
+  /** 0 = hook, then 1..steps.length */
+  chapter: number;
+  card: { eyebrow: string; headline: string; tone: ReelTone; rows: ReelRow[] };
+}
+
+/** A reel script: what the voice says and what each on-screen card shows. The reel engine renders it. */
+export interface ReelScript {
+  title: string;
+  steps: string[];
+  beats: ReelBeat[];
+  /** Which Claude model wrote it, and when. */
+  model?: string;
+  writtenAt?: string;
 }
 
 export interface Profile {

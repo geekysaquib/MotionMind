@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Profile, Project, QualityTier } from '@motionmind/shared';
+import type { Profile, Project, QualityTier, ReelScript } from '@motionmind/shared';
 import { RESERVED_HANDLES, normalizeHandle } from '@motionmind/shared';
 
 export interface User {
@@ -24,7 +24,7 @@ export interface NewProject {
   qualityTier: QualityTier;
 }
 
-export type ProjectPatch = Partial<NewProject & Pick<Project, 'status' | 'stage'>>;
+export type ProjectPatch = Partial<NewProject & Pick<Project, 'status' | 'stage'>> & { script?: ReelScript | null };
 
 export class HandleTakenError extends Error {}
 
@@ -110,7 +110,7 @@ export class MemoryDataRepository implements DataRepository {
   }
   async createProject(ownerId: string, input: NewProject) {
     const now = new Date().toISOString();
-    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, stage: 'topic', status: 'draft', createdAt: now, updatedAt: now };
+    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, stage: 'topic', status: 'draft', script: null, createdAt: now, updatedAt: now };
     this.projects.push(p);
     return { ...p };
   }
@@ -148,6 +148,7 @@ const projectFromRow = (r: Row): Project => ({
   status: r.status as Project['status'],
   qualityTier: r.quality_tier as Project['qualityTier'],
   durationSec: r.duration_sec as number,
+  script: (r.script as ReelScript | null) ?? null,
   createdAt: r.created_at as string,
   updatedAt: r.updated_at as string,
 });
@@ -171,6 +172,7 @@ function projectRow(patch: ProjectPatch): Row {
   if (patch.qualityTier !== undefined) row.quality_tier = patch.qualityTier;
   if (patch.status !== undefined) row.status = patch.status;
   if (patch.stage !== undefined) row.stage = patch.stage;
+  if (patch.script !== undefined) row.script = patch.script;
   return row;
 }
 

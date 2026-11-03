@@ -43,12 +43,15 @@ MotionMind/
 │   │   ├── http.ts           firstIssue(): zod error -> message for the UI
 │   │   ├── auth/             routes (request-code, verify-code), otp, session tokens, mailer, verifiers
 │   │   ├── account/          routes: /profile, /handles/:h/available, /projects CRUD
+│   │   ├── ai/               Claude (claude-opus-5-5, user's own Anthropic key): /claude/status, /claude/ask, /projects/:id/script
 │   │   ├── keys/             routes, AES-256-GCM crypto, repository, provider key testers
 │   │   ├── logs/             POST /api/client-logs: browser warnings/errors into the server log
 │   │   ├── data/             DataRepository: users, login codes, profiles, projects (Memory + Supabase)
 │   │   └── app.test.ts       API tests via app.inject() (each folder also has its own *.test.ts)
 │   ├── netlify/functions/api.ts   Netlify entry: wraps the same app with app.inject()
-│   └── reel-engine/          Remotion renderer prototype (src/ compositions, render.mjs, tts.mjs)
+│   └── reel-engine/          Remotion engine. Reel takes a ReelSpec as props ('train' or 'cards' world).
+│                             src/public.ts = what the web app imports as @motionmind/reel-engine (live preview);
+│                             render.mjs / tts.mjs = CLI MP4 render and ElevenLabs voice for the sample reel
 ├── shared/src/               used by both sides: brand, handle rules, providers, project types/STAGES
 ├── supabase/
 │   ├── migrations/           20261103000000_init.sql = the whole schema (reset on 2026-11-03); add new files after it
@@ -67,6 +70,14 @@ MotionMind/
 Browser, then `services/api.ts`, then `apiRequest()`, then `/api/...` (same origin; Vite proxies it in dev, Netlify routes it to the function in prod). Then Fastify `buildApp`. For signed-in routes, the `onRequest` hook verifies the bearer token and sets `req.userId`. Then the route handler validates with zod, calls a repository, and the Supabase service-role client does the query.
 
 Every route only ever reads or writes rows for `req.userId`. Repositories take `userId`/`ownerId` as the first argument. Keep it that way.
+
+## Claude and the reel engine
+
+- Claude runs only on the API with the user's own Anthropic key (saved encrypted like other provider keys). `backend/src/ai/claude.ts` uses `@anthropic-ai/sdk`, model `claude-opus-5-5`, server-side refusal fallback (`fallbacks: 'default'`), and structured output (`betaZodOutputFormat(reelScriptSchema)`) for scripts. Tests inject `AppDeps.claude` instead of calling Anthropic.
+- A project's script is `projects.script` (jsonb) with the `ReelScript` shape in `shared/src/projects.ts`. `frontend/src/components/reelSpec.ts` turns it into the engine's `ReelSpec` (cards world, branded with the user's channel).
+- The web app embeds the engine through `@remotion/player` (`components/ReelPreview.tsx`, lazy-loaded). Keep the engine browser-safe: no Node imports in `backend/reel-engine/src`.
+- Settings → Claude connects the key, tests it and has an "Ask Claude" box. Project → Script has "Write with Claude" and the live preview.
+- Netlify Functions time out at about 10 to 26 seconds, and a long script can take longer. If that bites, move script writing to a Netlify Background Function or stream it.
 
 ## Sign-in
 

@@ -1,5 +1,6 @@
-// Storyboard for the test reel. Each beat is one narration line on a continuous camera path.
-// Durations are estimated from word count until real TTS word timings are available.
+// Reel format the engine renders, plus the "Where is my Train" sample reel.
+// Each beat is one narration line with an on-screen card. Durations come from real TTS word
+// timings when a voice track exists, and are estimated from word count otherwise.
 
 import voice from './voice.json';
 
@@ -7,7 +8,8 @@ export const FPS = 30;
 const WORDS_PER_SEC = 2.7;
 const BEAT_PAD_SEC = 0.6;
 
-export type Chapter = 0 | 1 | 2 | 3 | 4;
+/** 0 = intro, then 1..steps.length for the progress steps in the header. */
+export type Chapter = number;
 
 export type CardRow =
   | { kind: 'chips'; items: { text: string; tone?: Tone; strike?: boolean }[] }
@@ -52,11 +54,42 @@ export interface Beat {
   keywords: string[];
   card: Card;
   chapter: Chapter;
-  camera: CameraKey;
-  events: WorldEvent[];
+  /** Train world only: where the camera looks during this beat. */
+  camera?: CameraKey;
+  /** Train world only: effects shown in the scene. */
+  events?: WorldEvent[];
 }
 
-export const BEATS: Beat[] = [
+export interface Brand {
+  name: string;
+  /** Two letters for the round badge. */
+  initials: string;
+  handle: string;
+  tagline: string;
+}
+
+export interface VoiceBeat {
+  durationSec: number;
+  words: { start: number; end: number }[];
+}
+
+/** Everything needed to render one reel. Passed to the Reel composition as props. */
+// A type alias (not an interface) so Remotion accepts it as composition props.
+export type ReelSpec = {
+  title: string;
+  /** 'train' = the isometric railway world; 'cards' = a clean animated backdrop for any topic. */
+  world: 'train' | 'cards';
+  /** Names of the progress steps shown in the header (chapters 1..n). */
+  steps: string[];
+  brand: Brand;
+  beats: Beat[];
+  /** Per-beat TTS timings; audio files are expected at voice/beat_<i>.mp3. */
+  voice?: VoiceBeat[];
+};
+
+export const END_CARD_FRAMES = 3 * FPS;
+
+const TRAIN_BEATS: Beat[] = [
   {
     id: 'hook',
     narration: 'Na internet, na GPS. Phir bhi ye app bilkul sahi batata hai ki aapki train kahan hai. Kaise?',
@@ -224,27 +257,23 @@ export const BEATS: Beat[] = [
   },
 ];
 
-export const END_CARD_FRAMES = 3 * FPS;
-
 export interface TimedBeat extends Beat {
   start: number;
   frames: number;
   words: { text: string; start: number; end: number }[];
 }
 
-interface VoiceBeat {
-  durationSec: number;
-  words: { start: number; end: number }[];
+export function hasVoice(spec: Pick<ReelSpec, 'beats' | 'voice'>): boolean {
+  return (spec.voice?.length ?? 0) === spec.beats.length && spec.beats.length > 0;
 }
-const VOICE: VoiceBeat[] = (voice as { beats: VoiceBeat[] }).beats ?? [];
-export const HAS_VOICE = VOICE.length === BEATS.length;
 
-export function timeBeats(beats: Beat[]): TimedBeat[] {
+export function timeBeats(beats: Beat[], voiceBeats: VoiceBeat[] = []): TimedBeat[] {
+  const useVoice = voiceBeats.length === beats.length;
   let cursor = 0;
   const lead = Math.round(0.2 * FPS);
   return beats.map((beat, idx) => {
     const words = beat.narration.split(/\s+/);
-    const v = HAS_VOICE ? VOICE[idx] : undefined;
+    const v = useVoice ? voiceBeats[idx] : undefined;
     let frames: number;
     let timedWords: TimedBeat['words'];
     if (v && v.words.length) {
@@ -252,7 +281,7 @@ export function timeBeats(beats: Beat[]): TimedBeat[] {
       frames = Math.round(v.durationSec * FPS) + lead + Math.round(0.25 * FPS);
       const m = v.words.length;
       timedWords = words.map((text, j) => {
-        const a = v.words[Math.min(m - 1, Math.floor((j * m) / words.length))];
+        const a = v.words[Math.min(m - 1, Math.floor((j * m) / words.length))]!;
         const b = v.words[Math.min(m - 1, Math.floor(((j + 1) * m) / words.length) - 1)] ?? a;
         return { text, start: cursor + lead + Math.round(a.start * FPS), end: cursor + lead + Math.round(Math.max(a.end, b.end) * FPS) };
       });
@@ -272,6 +301,21 @@ export function timeBeats(beats: Beat[]): TimedBeat[] {
   });
 }
 
-export const TIMED = timeBeats(BEATS);
-export const STORY_FRAMES = TIMED.reduce((n, b) => n + b.frames, 0);
-export const TOTAL_FRAMES = STORY_FRAMES + END_CARD_FRAMES;
+/** Frame layout of a reel: the timed beats, then a 3-second end card. */
+export function reelTiming(spec: Pick<ReelSpec, 'beats' | 'voice'>) {
+  const timed = timeBeats(spec.beats, hasVoice(spec) ? spec.voice : []);
+  const storyFrames = timed.reduce((n, b) => n + b.frames, 0);
+  return { timed, storyFrames, totalFrames: storyFrames + END_CARD_FRAMES };
+}
+
+export const DEFAULT_BRAND: Brand = { name: 'Reel Studio', initials: 'RS', handle: '@yourchannel', tagline: 'Roz ki tech, andar ki baat' };
+
+/** The sample reel, rendered in the train world with its recorded voice track (if generated). */
+export const TRAIN_REEL: ReelSpec = {
+  title: 'Where is my Train',
+  world: 'train',
+  steps: ['Tower', 'Naksha', 'Timetable', 'Accuracy'],
+  brand: DEFAULT_BRAND,
+  beats: TRAIN_BEATS,
+  voice: (voice as { beats?: VoiceBeat[] }).beats ?? [],
+};
