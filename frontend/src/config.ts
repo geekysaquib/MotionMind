@@ -6,7 +6,8 @@ export const config = {
   dataMode: (env.VITE_DATA_MODE === 'memory' ? 'memory' : 'supabase') as DataMode,
   supabaseUrl: env.VITE_SUPABASE_URL as string | undefined,
   supabaseAnonKey: env.VITE_SUPABASE_ANON_KEY as string | undefined,
-  apiUrl: (env.VITE_API_URL as string | undefined) ?? 'http://localhost:8787',
+  // Unset in a production build means same origin (Netlify serves the API at /api).
+  apiUrl: ((env.VITE_API_URL as string | undefined) ?? (env.DEV ? 'http://localhost:8787' : '')).replace(/\/+$/, ''),
 };
 
 export function configProblems(): string[] {

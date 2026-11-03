@@ -49,6 +49,18 @@ npm run dev:api    # http://localhost:8787, reads backend/.env
 npm run dev:web    # http://localhost:5173
 ```
 
+## Deploy to Netlify
+
+`netlify.toml` sets up a single site. The web app is served from `frontend/dist`, and the API runs as a Netlify Function (`backend/netlify/functions/api.ts`) on the same domain at `/api/*`, so you don't need CORS or `VITE_API_URL`.
+
+1. In Netlify, choose **Add new site → Import from Git** and pick this repo. The build settings come from `netlify.toml`.
+2. Under **Site configuration → Environment variables**, add:
+   - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (web app, public)
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `KEY_ENCRYPTION_SECRET` (API, secret). Use the same `KEY_ENCRYPTION_SECRET` as local if you want keys you've already saved to keep working.
+3. In Supabase, go to **Authentication → URL Configuration**. Set the Site URL to your Netlify address and add `<site>/auth/callback` and `<site>/reset-password` to the Redirect URLs.
+
+`backend/reel-engine` does not run on Netlify. Remotion rendering needs Chromium, ffmpeg and minutes of compute, which is beyond Netlify Function limits. In Phase 3 it will run on Remotion Lambda or a separate render worker, and the Netlify API will hand jobs to it.
+
 ### Demo mode (no Supabase)
 
 Set `VITE_DATA_MODE=memory` (web) and `API_DATA_MODE=memory` (API). Accounts and projects stay in the browser, keys stay in API memory, and a yellow banner says so. Development only.

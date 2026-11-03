@@ -1,0 +1,18 @@
+# One Netlify site: the React app is served as static files and the API runs
+# as a Netlify Function on the same domain (/api/*), so no CORS setup is needed.
+[build]
+  command = "npm run build"
+  publish = "frontend/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[functions]
+  directory = "backend/netlify/functions"
+  node_bundler = "esbuild"
+
+# React Router: send every non-file path to the app.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
