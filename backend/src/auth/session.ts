@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import type { TokenVerifier } from '../auth';
+import type { TokenVerifier } from './verifiers';
 
 /** Signed session tokens (HS256 JWT). The secret never leaves the API server. */
 export class SessionTokens implements TokenVerifier {

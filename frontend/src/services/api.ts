@@ -1,12 +1,13 @@
 import type { Profile, Project } from '@motionmind/shared';
 import { config } from '../config';
+import { apiRequest } from './http';
 import { httpKeysService } from './keysHttp';
 import { ServiceError, type AuthService, type ProfileService, type ProjectService, type Services, type Session } from './types';
 import type { Storage } from './memory';
 
 const SESSION_KEY = 'motionmind-session';
 
-/** Talks only to the Motion Mind API. The browser never connects to the database. */
+/** Real mode: everything goes through the Motion Mind API. The browser never connects to the database. */
 export function apiServices(storage: Storage = window.localStorage, baseUrl = config.apiUrl, fetchImpl: typeof fetch = fetch): Services {
   const listeners = new Set<(s: Session | null, e: string) => void>();
 
@@ -18,7 +19,9 @@ export function apiServices(storage: Storage = window.localStorage, baseUrl = co
       return null;
     }
   };
-  const writeSession = (s: Session | null, event: string) => {
+  let session = readSession();
+  const setSession = (s: Session | null, event: string) => {
+    session = s;
     try {
       storage.setItem(SESSION_KEY, s ? JSON.stringify(s) : '');
     } catch {
@@ -26,56 +29,37 @@ export function apiServices(storage: Storage = window.localStorage, baseUrl = co
     }
     listeners.forEach((l) => l(s, event));
   };
-  let session = readSession();
 
-  async function call<T>(path: string, init: RequestInit = {}, authed = true): Promise<T> {
-    const headers: Record<string, string> = {};
-    if (init.body) headers['Content-Type'] = 'application/json';
-    if (authed) {
-      if (!session) throw new ServiceError('You are signed out.', 'unauthorized');
-      headers.Authorization = `Bearer ${session.accessToken}`;
-    }
-    let res: Response;
+  /** Signed-in call. A 401 means the session expired, so sign out everywhere in the app. */
+  async function call<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+    if (!session) throw new ServiceError('You are signed out.', 'unauthorized');
     try {
-      res = await fetchImpl(`${baseUrl}/api${path}`, { ...init, headers });
-    } catch {
-      throw new ServiceError(`Can't reach the Motion Mind API at ${baseUrl || 'this site'}. Is it running?`, 'network');
+      return await apiRequest<T>(baseUrl, path, { method, body, token: session.accessToken, fetchImpl });
+    } catch (e) {
+      if (e instanceof ServiceError && e.code === 'unauthorized') setSession(null, 'SIGNED_OUT');
+      throw e;
     }
-    const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
-    if (res.status === 401 && authed) {
-      session = null;
-      writeSession(null, 'SIGNED_OUT');
-    }
-    if (!res.ok) throw new ServiceError(body.message ?? `Request failed (${res.status}).`, body.error ?? 'http');
-    return body as T;
   }
-  const json = (method: string, data: unknown): RequestInit => ({ method, body: JSON.stringify(data) });
 
   const auth: AuthService = {
-    async getSession() {
-      return session;
-    },
+    getSession: async () => session,
     onChange(cb) {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
     async requestCode(email) {
-      await call('/auth/request-code', json('POST', { email }), false);
+      await apiRequest(baseUrl, '/auth/request-code', { method: 'POST', body: { email }, fetchImpl });
     },
     async verifyCode(email, code) {
-      const res = await call<{ token: string; user: { id: string; email: string } }>('/auth/verify-code', json('POST', { email, code }), false);
-      session = { userId: res.user.id, email: res.user.email, accessToken: res.token };
-      writeSession(session, 'SIGNED_IN');
+      const res = await apiRequest<{ token: string; user: { id: string; email: string } }>(baseUrl, '/auth/verify-code', { method: 'POST', body: { email, code }, fetchImpl });
+      setSession({ userId: res.user.id, email: res.user.email, accessToken: res.token }, 'SIGNED_IN');
     },
-    async signOut() {
-      session = null;
-      writeSession(null, 'SIGNED_OUT');
-    },
+    signOut: async () => setSession(null, 'SIGNED_OUT'),
   };
 
   const profiles: ProfileService = {
     get: async () => (await call<{ profile: Profile }>('/profile')).profile,
-    update: async (_userId, patch) => (await call<{ profile: Profile }>('/profile', json('PATCH', patch))).profile,
+    update: async (_userId, patch) => (await call<{ profile: Profile }>('/profile', 'PATCH', patch)).profile,
     isHandleAvailable: async (handle) => (await call<{ available: boolean }>(`/handles/${encodeURIComponent(handle)}/available`)).available,
   };
 
@@ -89,12 +73,12 @@ export function apiServices(storage: Storage = window.localStorage, baseUrl = co
         throw e;
       }
     },
-    create: async (input) => (await call<{ project: Project }>('/projects', json('POST', input))).project,
-    update: async (id, patch) => (await call<{ project: Project }>(`/projects/${id}`, json('PATCH', patch))).project,
+    create: async (input) => (await call<{ project: Project }>('/projects', 'POST', input)).project,
+    update: async (id, patch) => (await call<{ project: Project }>(`/projects/${id}`, 'PATCH', patch)).project,
     async remove(id) {
-      await call(`/projects/${id}`, { method: 'DELETE' });
+      await call(`/projects/${id}`, 'DELETE');
     },
   };
 
-  return { mode: 'api', auth, profiles, projects, keys: (getToken) => httpKeysService(baseUrl, getToken) };
+  return { mode: 'api', auth, profiles, projects, keys: (getToken) => httpKeysService(baseUrl, getToken, fetchImpl) };
 }

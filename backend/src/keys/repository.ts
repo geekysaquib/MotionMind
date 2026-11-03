@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ProviderId, StoredKeySummary } from '@motionmind/shared';
-import type { Sealed } from '../crypto';
+import type { Sealed } from './crypto';
 
 export interface KeyRecord extends Sealed {
   userId: string;

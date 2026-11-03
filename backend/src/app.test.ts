@@ -1,13 +1,13 @@
 import { randomBytes } from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ConsoleMailer } from './accounts/mailer';
-import { SessionTokens } from './accounts/session';
+import { ConsoleMailer } from './auth/mailer';
+import { SessionTokens } from './auth/session';
 import { buildApp } from './app';
-import { DevTokenVerifier } from './auth';
-import { KeyCipher } from './crypto';
+import { DevTokenVerifier } from './auth/verifiers';
+import { KeyCipher } from './keys/crypto';
 import { MemoryDataRepository } from './data/repository';
 import { MemoryKeyRepository } from './keys/repository';
-import { KEY_TESTERS } from './providers/testers';
+import { KEY_TESTERS } from './keys/testers';
 
 const secret = randomBytes(32).toString('base64');
 const A = { authorization: 'Bearer dev:user-a' };

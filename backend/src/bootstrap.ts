@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { FastifyInstance } from 'fastify';
-import { ConsoleMailer, SmtpMailer, type Mailer } from './accounts/mailer';
-import { SessionTokens } from './accounts/session';
+import { ConsoleMailer, SmtpMailer, type Mailer } from './auth/mailer';
+import { SessionTokens } from './auth/session';
 import { buildApp } from './app';
-import { AnyVerifier, DevTokenVerifier } from './auth';
-import { KeyCipher } from './crypto';
+import { AnyVerifier, DevTokenVerifier } from './auth/verifiers';
+import { KeyCipher } from './keys/crypto';
 import { MemoryDataRepository, SupabaseDataRepository } from './data/repository';
 import type { Env } from './env';
 import { MemoryKeyRepository, SupabaseKeyRepository } from './keys/repository';

@@ -19,11 +19,9 @@
   "dependencies": {
     "@fastify/cors": "10.1.0",
     "@fontsource-variable/google-sans": "^5.3.2",
-    "@fontsource/inter": "5.1.1",
     "@fontsource/jetbrains-mono": "5.1.1",
     "@fontsource/space-grotesk": "5.1.1",
     "@remotion/bundler": "4.0.540",
-    "@remotion/cli": "4.0.540",
     "@remotion/renderer": "4.0.540",
     "@supabase/supabase-js": "2.118.0",
     "fastify": "5.12.8",
@@ -38,7 +36,6 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
-    "@testing-library/react": "16.3.3",
     "@types/node": "22.9.0",
     "@types/nodemailer": "6.4.17",
     "@types/react": "18.3.12",

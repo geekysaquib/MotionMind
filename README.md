@@ -10,7 +10,7 @@ npm run setup   # creates .env, generates secrets, tells you what's left to fill
 npm run dev     # starts the API and the web app; open http://localhost:5173
 ```
 
-Everything runs from this folder: one `package.json`, one `.env`.
+Everything runs from this folder: one `package.json`, one `.env`. For architecture, conventions and the decisions behind them, see [CLAUDE.md](CLAUDE.md).
 
 ## Stack
 
