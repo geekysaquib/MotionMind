@@ -9,5 +9,4 @@ export default defineConfig({
   envDir: fileURLToPath(new URL('..', import.meta.url)),
   // In development the web app calls /api on its own origin, like on Netlify; Vite forwards it to the local API.
   server: { port: 5173, proxy: { '/api': 'http://localhost:8787', '/health': 'http://localhost:8787' } },
-  test: { name: 'frontend', environment: 'jsdom', globals: false },
-} as Parameters<typeof defineConfig>[0]);
+});

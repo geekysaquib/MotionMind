@@ -30,8 +30,9 @@ MotionMind/
 │   │   ├── stores/           MobX: RootStore owns Auth/Profile/Project/Keys/Toast stores
 │   │   ├── pages/            auth/ (Login, Onboarding) and app/ (dashboard, library, project stages, settings)
 │   │   ├── layout/           AppShell, AuthLayout, guards (RequireAuth, RequireOnboarded, GuestOnly)
-│   │   ├── components/       ui/ (Button, Card, Field, Alert, Badge, Select, Spinner), Logo, Toasts
-│   │   └── lib/              cn, format (errorText, timeAgo), theme
+│   │   ├── components/       ui/ (Button, Card, Field, Alert, Badge, Select, Spinner), Logo, Toasts, ErrorBoundary
+│   │   ├── lib/              logger (UI logs), cn, format (errorText, timeAgo), theme
+│   │   └── test-utils.tsx    makeStore() + renderWithStore() for page tests
 │   └── vite.config.ts        alias for @motionmind/shared, envDir = repo root, /api proxy to :8787
 ├── backend/
 │   ├── src/
@@ -43,8 +44,9 @@ MotionMind/
 │   │   ├── auth/             routes (request-code, verify-code), otp, session tokens, mailer, verifiers
 │   │   ├── account/          routes: /profile, /handles/:h/available, /projects CRUD
 │   │   ├── keys/             routes, AES-256-GCM crypto, repository, provider key testers
+│   │   ├── logs/             POST /api/client-logs: browser warnings/errors into the server log
 │   │   ├── data/             DataRepository: users, login codes, profiles, projects (Memory + Supabase)
-│   │   └── app.test.ts       API tests via app.inject()
+│   │   └── app.test.ts       API tests via app.inject() (each folder also has its own *.test.ts)
 │   ├── netlify/functions/api.ts   Netlify entry: wraps the same app with app.inject()
 │   └── reel-engine/          Remotion renderer prototype (src/ compositions, render.mjs, tts.mjs)
 ├── shared/src/               used by both sides: brand, handle rules, providers, project types/STAGES
@@ -56,7 +58,8 @@ MotionMind/
 ├── netlify.toml
 ├── package.json              every dependency and command
 ├── tsconfig.base.json        shared TS options + paths alias @motionmind/shared -> shared/src
-└── vitest.workspace.ts       test projects: frontend (jsdom), backend (node), shared (node)
+├── jest.config.js            Jest projects: frontend (jsdom), backend (node), shared (node); TS via SWC, ESM
+└── test/                     Jest support: jsdom env with fetch/crypto, cookie shim, quiet app logs
 ```
 
 ## How a request flows
@@ -80,7 +83,8 @@ Every route only ever reads or writes rows for `req.userId`. Repositories take `
 | `npm run setup` | creates `.env` from `.env.example`, generates `KEY_ENCRYPTION_SECRET` + `AUTH_SECRET`, lists what's missing |
 | `npm run dev` | API on :8787 + web on :5173 together (`dev:api` / `dev:web` for one side) |
 | `npm run typecheck` | tsc for shared, backend, frontend |
-| `npm test` | vitest, all three projects (`npx vitest run --project backend` for one) |
+| `npm test` | Jest, all three projects. One project: `npm test -- --selectProjects backend`. One file: `npm test -- LoginPage` |
+| `npm run test:watch` / `npm run test:coverage` | watch mode / coverage report in `coverage/` |
 | `npm run build` | typecheck, then `vite build frontend` into `frontend/dist` |
 | `npm run reel:tts` / `npm run reel:render -- video out` | reel engine (ElevenLabs voice, then MP4) |
 
@@ -102,7 +106,8 @@ Every route only ever reads or writes rows for `req.userId`. Repositories take `
 - **Shared rules** (handles, providers, stages, brand name) live in `shared/src` and are imported as `@motionmind/shared`. Don't duplicate them.
 - **Styling:** use the Tailwind tokens in `frontend/tailwind.config.js` (`ink-*`, `line`, `accent`, `danger`, `mint`, …) and the `components/ui` pieces. Theme values are CSS variables in `index.css`, with light and dark both supported.
 - **Copy:** product name from `BRAND.name`. The UI language is plain, and nothing pretends to work when it doesn't.
-- **Tests:** add an `app.inject()` test for each new route and a store or service test for new frontend flows. Keep `npm run typecheck && npm test && npm run build` green before committing.
+- **Tests (Jest):** import `describe/it/expect/jest` from `@jest/globals`, since there are no globals. Put tests next to the code as `*.test.ts(x)`. Add an `app.inject()` test for each new route, and a page test (`renderWithStore`, Testing Library) or store/service test for each new frontend flow. Keep `npm run typecheck && npm test && npm run build` green before committing.
+- **UI logs:** use `log.info/warn/error(scope, message, data)` from `frontend/src/lib/logger.ts` for anything that helps explain a problem later (user actions, failures, unexpected states). API calls, page changes, crashes, toasts with errors and uncaught errors are logged automatically. Sensitive keys (token, apiKey, code, password, secret) are redacted. Never log request bodies. Users see the log in **Settings → Diagnostics**. Warnings and errors are batched to `/api/client-logs` and appear on the server as `[client-log] {...}` lines.
 
 ## Adding a feature (checklist)
 

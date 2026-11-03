@@ -1,0 +1,35 @@
+// Jest runs TypeScript through SWC as native ES modules (see the `test` script for the Node flag).
+// Three projects: the web app in a browser-like jsdom, the API and shared code in Node.
+const swc = [
+  '@swc/jest',
+  {
+    jsc: {
+      parser: { syntax: 'typescript', tsx: true },
+      transform: { react: { runtime: 'automatic' } },
+      target: 'es2022',
+    },
+    module: { type: 'es6' },
+  },
+];
+
+const base = {
+  transform: { '^.+\\.(t|j)sx?$': swc },
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  moduleNameMapper: {
+    '^@motionmind/shared$': '<rootDir>/shared/src/index.ts',
+    // ESM-only package that Fastify's inject() requires; see the shim for why.
+    '^cookie$': '<rootDir>/test/shims/cookie.cjs',
+  },
+  rootDir: '.',
+  setupFiles: ['<rootDir>/test/quiet-app-logs.ts'],
+};
+
+/** @type {import('jest').Config} */
+export default {
+  projects: [
+    { ...base, displayName: 'frontend', testEnvironment: '<rootDir>/test/jsdom-environment.cjs', roots: ['<rootDir>/frontend/src'] },
+    { ...base, displayName: 'backend', testEnvironment: 'node', roots: ['<rootDir>/backend/src'] },
+    { ...base, displayName: 'shared', testEnvironment: 'node', roots: ['<rootDir>/shared/src'] },
+  ],
+  collectCoverageFrom: ['{frontend,backend,shared}/src/**/*.{ts,tsx}', '!**/*.test.{ts,tsx}', '!frontend/src/main.tsx', '!backend/src/server.ts'],
+};

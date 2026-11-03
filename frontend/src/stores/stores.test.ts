@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, jest } from '@jest/globals';
 import { DEMO_CODE, memoryServices, type Storage } from '../services/memory';
 import { RootStore } from './RootStore';
 
@@ -24,11 +24,11 @@ describe('account + onboarding flow', () => {
   });
 
   it('validates and checks handle availability', async () => {
-    vi.useFakeTimers();
+    jest.useFakeTimers();
     const storage = mem();
     const first = await signedUpStore(storage, 'first@x.com');
     first.profile.setHandleInput('motion.mind', 0);
-    await vi.runAllTimersAsync();
+    await jest.runAllTimersAsync();
     await first.profile.completeOnboarding({ displayName: 'First', channelName: 'Motion Mind', niche: 'Tech', language: 'hinglish' });
 
     const second = await signedUpStore(storage, 'second@x.com');
@@ -36,15 +36,15 @@ describe('account + onboarding flow', () => {
     expect(second.profile.handleStatus).toBe('invalid');
     second.profile.setHandleInput('@Motion.Mind', 0);
     expect(second.profile.handleStatus).toBe('checking');
-    await vi.runAllTimersAsync();
+    await jest.runAllTimersAsync();
     expect(second.profile.handleStatus).toBe('taken');
     second.profile.setHandleInput('motionmind.hi', 0);
-    await vi.runAllTimersAsync();
+    await jest.runAllTimersAsync();
     expect(second.profile.handleStatus).toBe('available');
     await second.profile.completeOnboarding({ displayName: 'S', channelName: 'C', niche: 'N', language: 'hi' });
     expect(second.profile.needsOnboarding).toBe(false);
     expect(second.profile.profile?.handle).toBe('motionmind.hi');
-    vi.useRealTimers();
+    jest.useRealTimers();
   });
 
   it('refuses to finish onboarding without an available handle', async () => {

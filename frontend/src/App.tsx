@@ -13,9 +13,12 @@ import { SettingsPage } from './pages/app/SettingsPage';
 import { ProfileSettings } from './pages/app/ProfileSettings';
 import { KeysSettings } from './pages/app/KeysSettings';
 import { AccountSettings } from './pages/app/AccountSettings';
+import { DiagnosticsSettings } from './pages/app/DiagnosticsSettings';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LandingPage } from './pages/LandingPage';
 import { Toasts } from './components/Toasts';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { log } from './lib/logger';
 
 const stage = (s: Parameters<typeof StagePage>[0]['stage']) => ({ path: s, element: <StagePage stage={s} /> });
 
@@ -59,6 +62,7 @@ export const routes = [
           { index: true, element: <ProfileSettings /> },
           { path: 'keys', element: <KeysSettings /> },
           { path: 'account', element: <AccountSettings /> },
+          { path: 'diagnostics', element: <DiagnosticsSettings /> },
         ],
       },
     ],
@@ -68,10 +72,20 @@ export const routes = [
 
 const router = createBrowserRouter(routes);
 
+// Page changes go in the UI log, so a problem can be traced back to where the user was.
+let lastPath = '';
+router.subscribe((state) => {
+  const path = state.location.pathname;
+  if (path !== lastPath) log.info('router', `Opened ${path}`);
+  lastPath = path;
+});
+
 export function App() {
   return (
     <>
-      <RouterProvider router={router} />
+      <ErrorBoundary>
+        <RouterProvider router={router} />
+      </ErrorBoundary>
       <Toasts />
     </>
   );

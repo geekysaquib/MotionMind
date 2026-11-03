@@ -2,6 +2,7 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import type { Project } from '@motionmind/shared';
 import type { RootStore } from './RootStore';
 import type { NewProject } from '../services/types';
+import { log } from '../lib/logger';
 
 export class ProjectStore {
   items: Project[] = [];
@@ -41,6 +42,7 @@ export class ProjectStore {
         this.error = null;
       });
     } catch (e) {
+      log.error('projects', `Couldn't load projects: ${(e as Error).message}`);
       runInAction(() => {
         this.error = (e as Error).message;
       });
@@ -58,6 +60,7 @@ export class ProjectStore {
 
   async create(input: NewProject) {
     const p = await this.root.services.projects.create(input);
+    log.info('projects', 'Project created', { id: p.id });
     runInAction(() => {
       this.items.unshift(p);
     });
@@ -74,6 +77,7 @@ export class ProjectStore {
 
   async remove(id: string) {
     await this.root.services.projects.remove(id);
+    log.info('projects', 'Project deleted', { id });
     runInAction(() => {
       this.items = this.items.filter((x) => x.id !== id);
     });

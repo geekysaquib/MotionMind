@@ -2,6 +2,7 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import { checkHandle, HANDLE_MESSAGES, normalizeHandle, type Profile } from '@motionmind/shared';
 import type { RootStore } from './RootStore';
 import type { ProfilePatch } from '../services/types';
+import { log } from '../lib/logger';
 
 export type HandleStatus = 'idle' | 'invalid' | 'checking' | 'available' | 'taken' | 'error';
 
@@ -39,6 +40,7 @@ export class ProfileStore {
         if (!this.handleInput && p.handle) this.handleInput = p.handle;
       });
     } catch (e) {
+      log.error('profile', `Couldn't load the profile: ${(e as Error).message}`);
       runInAction(() => {
         this.error = (e as Error).message;
       });

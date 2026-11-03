@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from '@jest/globals';
 import { ConsoleMailer } from './auth/mailer';
 import { SessionTokens } from './auth/session';
 import { buildApp } from './app';
@@ -189,5 +189,14 @@ describe('profile and projects', () => {
     expect((await app.inject({ method: 'GET', url: '/api/projects/not-a-uuid', headers: H })).statusCode).toBe(404);
     expect((await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: '', topic: null, durationSec: 30, qualityTier: 'draft' } })).statusCode).toBe(400);
     expect((await app.inject({ method: 'DELETE', url: `/api/projects/${id}`, headers: H })).statusCode).toBe(200);
+  });
+});
+
+describe('error responses', () => {
+  it('keeps 4xx for malformed requests instead of turning them into 500s', async () => {
+    const { app } = await setup();
+    const res = await app.inject({ method: 'POST', url: '/api/auth/request-code', headers: { 'content-type': 'application/json' }, payload: '{not json' });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ error: expect.any(String), message: expect.any(String) });
   });
 });

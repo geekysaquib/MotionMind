@@ -14,7 +14,7 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     // One package.json for the whole repo: shared code is reached through this alias
-    // (also set in frontend/vite.config.ts and vitest.workspace.ts).
+    // (also set in frontend/vite.config.ts and jest.config.js).
     "paths": { "@motionmind/shared": ["shared/src/index.ts"] }
   }
 }

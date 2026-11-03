@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from '@jest/globals';
 import { checkHandle, normalizeHandle, handleSchema } from './handle';
 
 describe('handle rules', () => {

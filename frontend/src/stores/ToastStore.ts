@@ -1,4 +1,5 @@
 import { makeAutoObservable } from 'mobx';
+import { log } from '../lib/logger';
 
 export interface Toast {
   id: number;
@@ -15,6 +16,8 @@ export class ToastStore {
   }
 
   push(tone: Toast['tone'], text: string, ms = 4000) {
+    // Every error a user sees is in the UI log too, with the page it happened on.
+    if (tone === 'error') log.warn('ui', `Error shown to user: ${text}`, { page: typeof location !== 'undefined' ? location.pathname : undefined });
     const id = ++this.seq;
     this.items.push({ id, tone, text });
     setTimeout(() => this.dismiss(id), ms);

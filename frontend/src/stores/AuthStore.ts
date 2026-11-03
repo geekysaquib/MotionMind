@@ -1,6 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { RootStore } from './RootStore';
 import type { Session } from '../services/types';
+import { log } from '../lib/logger';
 
 export class AuthStore {
   session: Session | null = null;
@@ -32,15 +33,23 @@ export class AuthStore {
     });
   }
 
-  requestCode(email: string) {
-    return this.root.services.auth.requestCode(email.trim());
+  async requestCode(email: string) {
+    log.info('auth', 'Sign-in code requested');
+    await this.root.services.auth.requestCode(email.trim());
   }
 
-  verifyCode(email: string, code: string) {
-    return this.root.services.auth.verifyCode(email.trim(), code.trim());
+  async verifyCode(email: string, code: string) {
+    try {
+      await this.root.services.auth.verifyCode(email.trim(), code.trim());
+      log.info('auth', 'Signed in', { userId: this.session?.userId });
+    } catch (e) {
+      log.warn('auth', `Sign-in failed: ${(e as Error).message}`);
+      throw e;
+    }
   }
 
   async signOut() {
+    log.info('auth', 'Signed out');
     await this.root.services.auth.signOut();
     runInAction(() => {
       this.session = null;

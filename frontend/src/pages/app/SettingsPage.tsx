@@ -6,6 +6,7 @@ const TABS = [
   { to: '/app/settings', label: 'Profile & handle', end: true },
   { to: '/app/settings/keys', label: 'API keys' },
   { to: '/app/settings/account', label: 'Account' },
+  { to: '/app/settings/diagnostics', label: 'Diagnostics' },
 ];
 
 export function SettingsPage() {

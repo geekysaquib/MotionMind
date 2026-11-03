@@ -11,6 +11,7 @@ import type { KeyCipher } from './keys/crypto';
 import type { KeyRepository } from './keys/repository';
 import { registerKeyRoutes } from './keys/routes';
 import type { KeyTester } from './keys/testers';
+import { registerClientLogRoutes, type ClientLogReport } from './logs/routes';
 
 /** Everything the API needs, passed in so tests can swap any piece. Built from env in bootstrap.ts. */
 export interface AppDeps {
@@ -28,6 +29,8 @@ export interface AppDeps {
   testers?: Partial<Record<ProviderId, KeyTester>>;
   fetchImpl?: typeof fetch;
   logger?: boolean;
+  /** Where browser log reports go. Defaults to one console line each. */
+  clientLogSink?: (report: ClientLogReport) => void;
 }
 
 declare module 'fastify' {
@@ -49,6 +52,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   // Public
   app.register(async (auth) => registerLoginRoutes(auth, deps), { prefix: '/api/auth' });
+  app.register(async (logs) => registerClientLogRoutes(logs, deps), { prefix: '/api' });
 
   // Signed in: every route below sees req.userId
   app.register(
@@ -66,7 +70,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     { prefix: '/api' },
   );
 
-  app.setErrorHandler((err, req, reply) => {
+  app.setErrorHandler((err: Error & { statusCode?: number; code?: string }, req, reply) => {
+    // Fastify's own client errors (bad JSON, body too large, ...) keep their 4xx status.
+    if (err.statusCode && err.statusCode < 500) {
+      return reply.code(err.statusCode).send({ error: err.code?.toLowerCase() ?? 'bad_request', message: err.message });
+    }
     req.log.error({ err }, 'request failed');
     reply.code(500).send({ error: 'internal', message: 'Something went wrong on the server.' });
   });
