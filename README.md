@@ -15,6 +15,7 @@ MotionMind/
 ├── frontend/            React web app (Vite)
 ├── backend/             Fastify API server
 │   └── reel-engine/     Remotion video renderer
+├── package.json         The only package.json: every dependency and command
 ├── shared/              Types and rules used by both
 ├── supabase/            Database migrations and tests
 └── brand/               Logos
@@ -91,4 +92,4 @@ Stages that are not built yet say so plainly and have no fake buttons.
 
 ## Reel engine (prototype)
 
-`backend/reel-engine` is the Remotion "World mode" renderer used for the Where is my Train test reel. It is kept outside the npm workspaces for now (its own `npm install`); it will be wired into the app in Phase 3.
+`backend/reel-engine` is the Remotion "World mode" renderer used for the Where is my Train test reel. Its dependencies are in the root `package.json`; run it with `npm run reel:tts` and `npm run reel:render -- video out` from the repo root. It will be wired into the app in Phase 3.

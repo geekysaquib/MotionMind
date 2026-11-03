@@ -11,6 +11,10 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    // One package.json for the whole repo: shared code is reached through this alias
+    // (also set in frontend/vite.config.ts and vitest.workspace.ts).
+    "paths": { "@motionmind/shared": ["shared/src/index.ts"] }
   }
 }
