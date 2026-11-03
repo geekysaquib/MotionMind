@@ -4,15 +4,25 @@ AI studio for researched, animated explainer reels. This is Phase 1: accounts, h
 
 ## Stack
 
-- `apps/web`: React 18 + TypeScript + Vite + Tailwind CSS + MobX + React Router, Supabase Auth
-- `apps/api`: Node.js + Fastify + TypeScript. Stores provider API keys (AES-256-GCM) and tests them
-- `packages/shared`: types, handle rules, provider list, brand name
+- `frontend`: React 18 + TypeScript + Vite + Tailwind CSS + MobX + React Router, Supabase Auth
+- `backend`: Node.js + Fastify + TypeScript. Stores provider API keys (AES-256-GCM) and tests them
+- `shared`: types, handle rules, provider list, brand name
 - `supabase/migrations`: database schema with Row Level Security
 - `brand/`: logo files
 
+```
+MotionMind/
+├── frontend/            React web app (Vite)
+├── backend/             Fastify API server
+│   └── reel-engine/     Remotion video renderer
+├── shared/              Types and rules used by both
+├── supabase/            Database migrations and tests
+└── brand/               Logos
+```
+
 ## 1. Supabase setup
 
-The Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai) is already created with both migrations applied, and its URL and publishable key are filled in `apps/web/.env.example`. You still need steps 3 and 4 below (auth URLs and the server-only service_role key). For a fresh project, do all of these:
+The Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai) is already created with both migrations applied, and its URL and publishable key are filled in `frontend/.env.example`. You still need steps 3 and 4 below (auth URLs and the server-only service_role key). For a fresh project, do all of these:
 
 1. Create a project at https://supabase.com.
 2. Open **SQL Editor**, run each file in `supabase/migrations/` in order (or `supabase db push` with the CLI).
@@ -24,8 +34,8 @@ The Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai) is already
 ## 2. Configure
 
 ```bash
-cp apps/web/.env.example apps/web/.env.local   # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL
-cp apps/api/.env.example apps/api/.env         # SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, KEY_ENCRYPTION_SECRET
+cp frontend/.env.example frontend/.env.local   # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL
+cp backend/.env.example backend/.env         # SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, KEY_ENCRYPTION_SECRET
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"   # paste as KEY_ENCRYPTION_SECRET
 ```
 
@@ -35,7 +45,7 @@ Keep `KEY_ENCRYPTION_SECRET` safe. If it is lost, saved API keys can't be decryp
 
 ```bash
 npm install
-npm run dev:api    # http://localhost:8787, reads apps/api/.env
+npm run dev:api    # http://localhost:8787, reads backend/.env
 npm run dev:web    # http://localhost:5173
 ```
 
@@ -68,4 +78,4 @@ Stages that are not built yet say so plainly and have no fake buttons.
 
 ## Reel engine (prototype)
 
-`packages/reel-engine` is the Remotion "World mode" renderer used for the Where is my Train test reel. It is kept outside the npm workspaces for now (its own `npm install`); it will be wired into the app in Phase 3.
+`backend/reel-engine` is the Remotion "World mode" renderer used for the Where is my Train test reel. It is kept outside the npm workspaces for now (its own `npm install`); it will be wired into the app in Phase 3.

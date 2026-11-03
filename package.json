@@ -1,7 +1,7 @@
 {
   "name": "motion-mind",
   "private": true,
-  "workspaces": ["packages/shared", "apps/*"],
+  "workspaces": ["shared", "backend", "frontend"],
   "scripts": {
     "dev:web": "npm run dev -w @motionmind/web",
     "dev:api": "npm run dev -w @motionmind/api",

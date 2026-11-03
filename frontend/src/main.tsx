@@ -18,7 +18,7 @@ async function boot() {
             <li key={p}>{p}</li>
           ))}
         </ul>
-        <p className="mt-4 text-ink-400">Copy apps/web/.env.example to apps/web/.env.local and fill it in, or set VITE_DATA_MODE=memory for a local demo.</p>
+        <p className="mt-4 text-ink-400">Copy frontend/.env.example to frontend/.env.local and fill it in, or set VITE_DATA_MODE=memory for a local demo.</p>
       </div>,
     );
     return;
