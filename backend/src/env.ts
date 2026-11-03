@@ -23,6 +23,10 @@ const schema = z
     if (env.API_DATA_MODE === 'supabase' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY)) {
       ctx.addIssue({ code: 'custom', message: 'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required when API_DATA_MODE=supabase' });
     }
+    // Catch the template placeholder at startup instead of as "Invalid API key" on the first request.
+    if (env.API_DATA_MODE === 'supabase' && /^(PASTE_|server-only-service-role-key$)/.test(env.SUPABASE_SERVICE_ROLE_KEY ?? '')) {
+      ctx.addIssue({ code: 'custom', message: 'SUPABASE_SERVICE_ROLE_KEY is still the placeholder. Paste the service_role key from Supabase > Project Settings > API into .env' });
+    }
     if (env.SMTP_HOST && (!env.SMTP_USER || !env.SMTP_PASS)) {
       ctx.addIssue({ code: 'custom', message: 'SMTP_USER and SMTP_PASS are required when SMTP_HOST is set' });
     }

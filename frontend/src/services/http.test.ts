@@ -52,6 +52,15 @@ describe('apiRequest', () => {
     expect(lastEntry()).toMatchObject({ level: 'error', msg: 'GET /projects could not reach the server' });
   });
 
+  it('explains a 5xx that did not come from the API (dev proxy or Netlify with the API down)', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    const proxyDown = (async () => new Response('', { status: 500 })) as unknown as typeof fetch;
+    const err = (await apiRequest('', '/auth/request-code', { method: 'POST', body: {}, fetchImpl: proxyDown }).catch((e: unknown) => e)) as ServiceError;
+    expect(err.code).toBe('api_unreachable');
+    expect(err.message).toMatch(/isn't answering \(HTTP 500\)/);
+    expect(lastEntry()).toMatchObject({ level: 'error', msg: 'POST /auth/request-code: no answer from the API' });
+  });
+
   it("doesn't log calls that send logs", async () => {
     await apiRequest('', '/client-logs', { method: 'POST', body: {}, fetchImpl: respond(500, {}) }).catch(() => {});
     expect(log.all()).toHaveLength(0);

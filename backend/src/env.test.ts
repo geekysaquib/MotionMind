@@ -34,6 +34,10 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ ...rest, API_DATA_MODE: 'memory' })).not.toThrow();
   });
 
+  it('refuses to start with the placeholder service_role key', () => {
+    expect(() => loadEnv({ ...valid(), SUPABASE_SERVICE_ROLE_KEY: 'PASTE_SERVICE_ROLE_KEY_HERE' })).toThrow(/still the placeholder/);
+  });
+
   it('needs SMTP user and password once SMTP_HOST is set', () => {
     expect(() => loadEnv({ ...valid(), SMTP_HOST: 'smtp.gmail.com' })).toThrow(/SMTP_USER and SMTP_PASS are required/);
     expect(loadEnv({ ...valid(), SMTP_HOST: 'smtp.gmail.com', SMTP_USER: 'me@gmail.com', SMTP_PASS: 'app-pass', SMTP_PORT: '587' }).SMTP_PORT).toBe(587);

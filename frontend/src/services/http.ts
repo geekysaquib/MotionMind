@@ -33,6 +33,15 @@ export async function apiRequest<T>(
   }
   const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
   const meta = { status: res.status, ms: Date.now() - started };
+  // A 5xx without our { error } shape didn't come from the API: it's the Vite dev proxy or Netlify
+  // saying the API isn't answering (for example `npm run dev:api` isn't running).
+  if (res.status >= 500 && !body.error) {
+    if (!quiet) log.error('api', `${method} ${path}: no answer from the API`, meta);
+    throw new ServiceError(
+      `The Motion Mind API isn't answering (HTTP ${res.status}). ${import.meta.env?.DEV ? 'Start it with `npm run dev`.' : 'Try again in a minute.'}`,
+      'api_unreachable',
+    );
+  }
   if (!res.ok) {
     const code = body.error ?? (res.status === 401 ? 'unauthorized' : 'http');
     if (!quiet) {
