@@ -5,8 +5,6 @@ import { ConsoleMailer } from '../auth/mailer';
 import { SessionTokens } from '../auth/session';
 import { DevTokenVerifier } from '../auth/verifiers';
 import { MemoryDataRepository } from '../data/repository';
-import { KeyCipher } from '../keys/crypto';
-import { MemoryKeyRepository } from '../keys/repository';
 import { ClaudeError, claudeClient, CLAUDE_MODEL, type ClaudeClient } from './claude';
 import type { ReelScript } from './reelSchema';
 
@@ -22,18 +20,17 @@ const SCRIPT: ReelScript = {
   ],
 };
 
-async function setup(fake: Partial<ClaudeClient> = {}) {
-  const keys = new MemoryKeyRepository();
+async function setup(fake: Partial<ClaudeClient> = {}, serverKey: string | null = 'sk-ant-server-123456') {
+  const anthropicApiKey = serverKey ?? undefined;
   const data = new MemoryDataRepository();
   const seen: { apiKey: string }[] = [];
   const app = await buildApp({
-    keys,
     data,
     sessions: new SessionTokens(secret),
     mailer: new ConsoleMailer(false),
     verifier: new DevTokenVerifier(),
     authSecret: secret,
-    cipher: new KeyCipher(secret),
+    anthropicApiKey,
     webOrigin: 'http://localhost:5173',
     mode: 'memory',
     claude: (apiKey) => {
@@ -45,47 +42,46 @@ async function setup(fake: Partial<ClaudeClient> = {}) {
       };
     },
   });
-  const connect = () => app.inject({ method: 'PUT', url: '/api/keys/anthropic', headers: H, payload: { apiKey: 'sk-ant-test-123456' } });
-  return { app, data, seen, connect };
+  return { app, data, seen };
 }
 
 describe('Claude routes', () => {
-  it('reports whether Claude is connected', async () => {
-    const { app, connect } = await setup();
-    expect((await app.inject({ method: 'GET', url: '/api/claude/status', headers: H })).json()).toEqual({ connected: false, model: CLAUDE_MODEL, last4: null, working: null });
-    await connect();
-    expect((await app.inject({ method: 'GET', url: '/api/claude/status', headers: H })).json()).toMatchObject({ connected: true, last4: '3456' });
+  it('report whether Claude is set up on the server', async () => {
+    expect((await (await setup()).app.inject({ method: 'GET', url: '/api/claude/status', headers: H })).json()).toEqual({ connected: true, model: CLAUDE_MODEL });
+    expect((await (await setup({}, null)).app.inject({ method: 'GET', url: '/api/claude/status', headers: H })).json()).toEqual({ connected: false, model: CLAUDE_MODEL });
   });
 
-  it('asks Claude with the decrypted key of the signed-in user', async () => {
-    const { app, seen, connect } = await setup();
-    const before = await app.inject({ method: 'POST', url: '/api/claude/ask', headers: H, payload: { prompt: 'hi' } });
-    expect(before.statusCode).toBe(409);
-    expect(before.json().message).toMatch(/Connect Claude first/);
-    await connect();
+  it("ask Claude with the server's key, never a user's", async () => {
+    const { app, seen } = await setup();
     const res = await app.inject({ method: 'POST', url: '/api/claude/ask', headers: H, payload: { prompt: 'hi' } });
     expect(res.statusCode).toBe(200);
     expect(res.json().reply).toMatchObject({ text: 'echo: hi', model: CLAUDE_MODEL });
-    expect(seen).toEqual([{ apiKey: 'sk-ant-test-123456' }]);
+    await app.inject({ method: 'POST', url: '/api/claude/ask', headers: { authorization: 'Bearer dev:u2' }, payload: { prompt: 'again' } });
+    expect(seen).toEqual([{ apiKey: 'sk-ant-server-123456' }]);
     expect((await app.inject({ method: 'POST', url: '/api/claude/ask', headers: H, payload: { prompt: '  ' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/api/claude/ask', payload: { prompt: 'hi' } })).statusCode).toBe(401);
   });
 
-  it('passes Claude errors through with their status and message', async () => {
-    const { app, connect } = await setup({
+  it('say clearly when the server has no Anthropic key', async () => {
+    const { app } = await setup({}, null);
+    const res = await app.inject({ method: 'POST', url: '/api/claude/ask', headers: H, payload: { prompt: 'hi' } });
+    expect(res.statusCode).toBe(503);
+    expect(res.json().error).toBe('claude_not_configured');
+  });
+
+  it('pass Claude errors through with their status and message', async () => {
+    const { app } = await setup({
       ask: async () => {
-        throw new ClaudeError('Claude rejected the API key. Check it in Settings > Claude.', 'claude_key_rejected', 400);
+        throw new ClaudeError("The server's Anthropic API key was rejected. Check ANTHROPIC_API_KEY.", 'claude_key_rejected', 502);
       },
     });
-    await connect();
     const res = await app.inject({ method: 'POST', url: '/api/claude/ask', headers: H, payload: { prompt: 'hi' } });
-    expect(res.statusCode).toBe(400);
-    expect(res.json()).toEqual({ error: 'claude_key_rejected', message: 'Claude rejected the API key. Check it in Settings > Claude.' });
-    expect((await app.inject({ method: 'GET', url: '/api/claude/status', headers: H })).json().working).toBe(false);
+    expect(res.statusCode).toBe(502);
+    expect(res.json().error).toBe('claude_key_rejected');
   });
 
-  it('writes and saves a reel script for a project, and moves it to the Script stage', async () => {
-    const { app, connect } = await setup();
-    await connect();
+  it('write and save a reel script for a project, and move it to the Script stage', async () => {
+    const { app } = await setup();
     const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'How UPI works', durationSec: 60, qualityTier: 'standard' } });
     const id = created.json().project.id;
     const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
@@ -99,8 +95,7 @@ describe('Claude routes', () => {
   });
 
   it("won't write a script without a topic, for someone else's project, or a bad id", async () => {
-    const { app, connect } = await setup();
-    await connect();
+    const { app } = await setup();
     const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'Empty', topic: null, durationSec: 30, qualityTier: 'draft' } });
     const id = created.json().project.id;
     expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H })).json().error).toBe('no_topic');
@@ -144,7 +139,7 @@ describe('claudeClient (real SDK, fake network)', () => {
 
   it('turns a rejected key into a clear error', async () => {
     const api = fakeAnthropic(401, { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } });
-    await expect(claudeClient('bad', api.fetchImpl).ask('hello')).rejects.toMatchObject({ code: 'claude_key_rejected', status: 400 });
+    await expect(claudeClient('bad', api.fetchImpl).ask('hello')).rejects.toMatchObject({ code: 'claude_key_rejected', status: 502 });
   });
 
   it('reports a refusal instead of returning empty text', async () => {

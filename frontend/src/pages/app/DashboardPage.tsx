@@ -1,7 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Circle, Clapperboard, FileClock, Film, KeyRound, Layers, Compass } from 'lucide-react';
-import { useEffect } from 'react';
+import { ArrowRight, CheckCircle2, Circle, Clapperboard, FileClock, Film, Layers, Compass } from 'lucide-react';
 import { useStores } from '../../stores/RootStore';
 import { PageHeader } from '../../layout/AppShell';
 import { Card, Spinner } from '../../components/ui';
@@ -16,11 +15,8 @@ function greeting(d = new Date()) {
 }
 
 export const DashboardPage = observer(function DashboardPage() {
-  const { profile, projects, keys } = useStores();
+  const { profile, projects } = useStores();
   const [params] = useSearchParams();
-  useEffect(() => {
-    if (!keys.loaded) void keys.load();
-  }, [keys]);
   const s = projects.stats;
   const name = profile.profile?.displayName?.split(' ')[0] ?? 'creator';
 
@@ -33,7 +29,6 @@ export const DashboardPage = observer(function DashboardPage() {
 
   const setup = [
     { done: Boolean(profile.profile?.handle), label: `Claim your handle${profile.profile?.handle ? ` (@${profile.profile.handle})` : ''}`, to: '/app/settings' },
-    { done: keys.configuredCount > 0, label: keys.configuredCount > 0 ? `${keys.configuredCount} API key${keys.configuredCount > 1 ? 's' : ''} saved` : 'Add your AI provider keys', to: '/app/settings/keys' },
     { done: s.total > 0, label: 'Create your first reel project', to: '/app?new=1' },
   ];
 
@@ -113,14 +108,11 @@ export const DashboardPage = observer(function DashboardPage() {
             <h2 className="font-display text-lg font-semibold">Topic recommendations</h2>
           </div>
           <p className="mt-3 text-sm text-ink-400">
-            Live topic ideas come from web research, which is the next module we build. It will use your Tavily or Exa key.
+            Live topic ideas come from web research, which is the next module we build. Claude does the research for you.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link to="/app/discover" className="inline-flex items-center gap-1 rounded-xl bg-line/[0.06] px-3 py-2 text-sm font-medium hover:bg-line/10">
               About Discover <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link to="/app/settings/keys" className="inline-flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-medium text-accent hover:bg-line/5">
-              <KeyRound className="h-4 w-4" /> Add a research key
             </Link>
           </div>
         </Card>

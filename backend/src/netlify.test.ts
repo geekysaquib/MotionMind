@@ -6,7 +6,6 @@ import { beforeAll, describe, expect, it } from '@jest/globals';
 beforeAll(() => {
   Object.assign(process.env, {
     API_DATA_MODE: 'memory',
-    KEY_ENCRYPTION_SECRET: randomBytes(32).toString('base64'),
     AUTH_SECRET: randomBytes(32).toString('base64'),
     URL: 'https://motionmind.netlify.app',
     SMTP_HOST: '',

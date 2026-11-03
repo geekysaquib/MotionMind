@@ -14,7 +14,6 @@ export function DiscoverPage() {
           'Popularity comes from real signals (news recency, Wikipedia page views) with the source shown.',
           'Ideas you have already seen are not repeated.',
         ]}
-        needs={{ label: 'Add a Tavily or Exa key in Settings', to: '/app/settings/keys' }}
       />
     </div>
   );

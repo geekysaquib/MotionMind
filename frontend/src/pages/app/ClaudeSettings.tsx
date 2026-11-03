@@ -1,69 +1,45 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Sparkles } from 'lucide-react';
 import { useStores } from '../../stores/RootStore';
-import { Alert, Badge, Button, Card, Field, Spinner } from '../../components/ui';
+import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
 import type { ClaudeAnswer, ClaudeStatus } from '../../services/claudeHttp';
 
 const TEST_PROMPT = 'In one short sentence, confirm you are connected to Motion Mind and say which Claude model you are.';
 
-/** Settings > Claude: connect an Anthropic key, check it works, and try Claude with your own prompt. */
+/** Settings > Claude: Claude is built in (no keys to set up). Check it's working and try it with your own prompt. */
 export const ClaudeSettings = observer(function ClaudeSettings() {
-  const { services, auth, keys, toasts } = useStores();
+  const { services, auth } = useStores();
   const claude = services.claude(() => auth.session?.accessToken ?? null);
   const [status, setStatus] = useState<ClaudeStatus | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
-  const [keyInput, setKeyInput] = useState('');
   const [prompt, setPrompt] = useState('Give me 3 surprising reel topics about everyday tech in India, one line each.');
   const [answer, setAnswer] = useState<ClaudeAnswer | null>(null);
   const [askError, setAskError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<'save' | 'ask' | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  async function refresh() {
-    try {
-      setStatus(await claude.status());
-      setStatusError(null);
-    } catch (e) {
-      setStatusError(errorText(e));
-    }
-  }
   useEffect(() => {
-    void refresh();
+    claude
+      .status()
+      .then(setStatus)
+      .catch((e) => setStatusError(errorText(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function connect(e: FormEvent) {
-    e.preventDefault();
-    setBusy('save');
-    try {
-      await keys.save('anthropic', keyInput.trim());
-      setKeyInput('');
-      log.info('claude', 'Anthropic key saved');
-      await refresh();
-      await ask(TEST_PROMPT);
-    } catch (err) {
-      toasts.push('error', errorText(err));
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function ask(text: string) {
-    setBusy('ask');
+    setBusy(true);
     setAskError(null);
     try {
       const res = await claude.ask(text);
       setAnswer(res);
-      void refresh();
       log.info('claude', 'Claude answered', { model: res.reply.model, ms: res.ms, outputTokens: res.reply.outputTokens });
     } catch (err) {
       setAnswer(null);
       setAskError(errorText(err));
-      void refresh();
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
@@ -77,46 +53,26 @@ export const ClaudeSettings = observer(function ClaudeSettings() {
             <h2 className="flex items-center gap-2 font-semibold">
               <Sparkles className="h-4 w-4 text-accent" /> Claude
             </h2>
-            <p className="mt-1 text-sm text-ink-400">Claude writes your reel scripts. It runs on the Motion Mind server with your own Anthropic API key.</p>
+            <p className="mt-1 text-sm text-ink-400">Claude is built into Motion Mind and writes your reel scripts. There's nothing to set up.</p>
           </div>
-          {status &&
-            (!status.connected ? (
-              <Badge>Not connected</Badge>
-            ) : status.working === false ? (
-              <Badge tone="coral">Key not working · ends {status.last4}</Badge>
-            ) : status.working ? (
-              <Badge tone="mint">Connected · key ends {status.last4}</Badge>
-            ) : (
-              <Badge>Key saved · ends {status.last4}</Badge>
-            ))}
+          {status && (status.connected ? <Badge tone="mint">Ready</Badge> : <Badge tone="coral">Not available</Badge>)}
         </div>
         {statusError && <div className="mt-4"><Alert>{statusError}</Alert></div>}
-        {status && <p className="mt-3 text-xs text-ink-400">Model: <span className="font-mono">{status.model}</span></p>}
-
-        <form onSubmit={connect} className="mt-5 flex flex-wrap items-start gap-3">
-          <Field
-            className="min-w-[260px] flex-1"
-            label={status?.connected ? 'Replace Anthropic API key' : 'Anthropic API key'}
-            type="password"
-            autoComplete="off"
-            placeholder="sk-ant-..."
-            value={keyInput}
-            onChange={(e) => setKeyInput(e.target.value)}
-            hint={
-              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="text-accent hover:underline">
-                Get a key
-              </a>
-            }
-          />
-          <Button type="submit" className="mt-6" loading={busy === 'save'} disabled={keyInput.trim().length < 8}>
-            {status?.connected ? 'Replace' : 'Connect'}
-          </Button>
-          {status?.connected && (
-            <Button type="button" variant="secondary" className="mt-6" loading={busy === 'ask' && !prompt} onClick={() => void ask(TEST_PROMPT)}>
-              Test connection
+        {status && !status.connected && (
+          <div className="mt-4">
+            <Alert tone="info">Claude isn't set up on this server yet. Whoever runs Motion Mind needs to add ANTHROPIC_API_KEY.</Alert>
+          </div>
+        )}
+        {status?.connected && (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button variant="secondary" loading={busy} onClick={() => void ask(TEST_PROMPT)}>
+              Test Claude
             </Button>
-          )}
-        </form>
+            <span className="text-xs text-ink-400">
+              Model: <span className="font-mono">{status.model}</span>
+            </span>
+          </div>
+        )}
       </Card>
 
       {status?.connected && (
@@ -130,29 +86,26 @@ export const ClaudeSettings = observer(function ClaudeSettings() {
               void ask(prompt);
             }}
           >
-            <label className="block">
-              <span className="sr-only">Prompt</span>
-              <textarea
-                aria-label="Prompt"
-                className="min-h-[96px] w-full rounded-xl border border-line/15 bg-transparent p-3 text-sm outline-none focus:border-accent"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                maxLength={4000}
-              />
-            </label>
-            <Button type="submit" loading={busy === 'ask'} disabled={!prompt.trim()}>
+            <textarea
+              aria-label="Prompt"
+              className="min-h-[96px] w-full rounded-xl border border-line/15 bg-transparent p-3 text-sm outline-none focus:border-accent"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              maxLength={4000}
+            />
+            <Button type="submit" loading={busy} disabled={!prompt.trim()}>
               Ask Claude
             </Button>
           </form>
         </Card>
       )}
 
-      {(answer || askError || busy === 'ask') && (
+      {(answer || askError || busy) && (
         <Card>
           <h2 className="font-semibold">Result</h2>
-          {busy === 'ask' && <div className="mt-4"><Spinner label="Claude is thinking" /></div>}
+          {busy && <div className="mt-4"><Spinner label="Claude is thinking" /></div>}
           {askError && <div className="mt-4"><Alert>{askError}</Alert></div>}
-          {answer && busy !== 'ask' && (
+          {answer && !busy && (
             <>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed" data-testid="claude-answer">
                 {answer.reply.text}

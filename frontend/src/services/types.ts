@@ -1,4 +1,4 @@
-import type { Profile, Project, ProviderId, StoredKeySummary, KeyTestResult, QualityTier } from '@motionmind/shared';
+import type { Profile, Project, QualityTier } from '@motionmind/shared';
 import type { ClaudeService } from './claudeHttp';
 
 export interface Session {
@@ -45,20 +45,11 @@ export interface ProjectService {
   remove(id: string): Promise<void>;
 }
 
-export interface KeysService {
-  list(): Promise<StoredKeySummary[]>;
-  save(provider: ProviderId, apiKey: string): Promise<StoredKeySummary>;
-  remove(provider: ProviderId): Promise<void>;
-  test(provider: ProviderId): Promise<{ result: KeyTestResult; tested: boolean }>;
-}
-
 export interface Services {
   mode: 'api' | 'memory';
   auth: AuthService;
   profiles: ProfileService;
   projects: ProjectService;
   /** Built lazily because it needs the current access token. */
-  keys: (getToken: () => string | null) => KeysService;
-  /** Same: Claude calls are signed in. */
   claude: (getToken: () => string | null) => ClaudeService;
 }

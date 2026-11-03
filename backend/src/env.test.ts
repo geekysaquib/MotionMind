@@ -7,7 +7,6 @@ const valid = () => ({
   API_DATA_MODE: 'supabase',
   SUPABASE_URL: 'https://example.supabase.co',
   SUPABASE_SERVICE_ROLE_KEY: 'x'.repeat(40),
-  KEY_ENCRYPTION_SECRET: secret(),
   AUTH_SECRET: secret(),
 });
 
@@ -25,7 +24,7 @@ describe('loadEnv', () => {
   });
 
   it('lists every problem at once', () => {
-    expect(() => loadEnv({ KEY_ENCRYPTION_SECRET: 'short' })).toThrow(/KEY_ENCRYPTION_SECRET must be 32 bytes[\s\S]*AUTH_SECRET/);
+    expect(() => loadEnv({ AUTH_SECRET: 'short', SMTP_PORT: 'abc' })).toThrow(/AUTH_SECRET must be 32 bytes[\s\S]*SMTP_PORT/);
   });
 
   it('needs Supabase settings in supabase mode but not in memory mode', () => {

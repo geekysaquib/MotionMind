@@ -11,7 +11,6 @@ import { ProjectOverviewPage } from './pages/app/ProjectOverviewPage';
 import { StagePage } from './pages/app/StagePage';
 import { SettingsPage } from './pages/app/SettingsPage';
 import { ProfileSettings } from './pages/app/ProfileSettings';
-import { KeysSettings } from './pages/app/KeysSettings';
 import { AccountSettings } from './pages/app/AccountSettings';
 import { DiagnosticsSettings } from './pages/app/DiagnosticsSettings';
 import { ClaudeSettings } from './pages/app/ClaudeSettings';
@@ -63,7 +62,6 @@ export const routes = [
         children: [
           { index: true, element: <ProfileSettings /> },
           { path: 'claude', element: <ClaudeSettings /> },
-          { path: 'keys', element: <KeysSettings /> },
           { path: 'account', element: <AccountSettings /> },
           { path: 'diagnostics', element: <DiagnosticsSettings /> },
         ],

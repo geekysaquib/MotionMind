@@ -15,7 +15,7 @@ Everything runs from this folder: one `package.json`, one `.env`. For architectu
 ## Stack
 
 - `frontend`: React 18 + TypeScript + Vite + Tailwind CSS + MobX + React Router. Talks only to our API
-- `backend`: Node.js + Fastify + TypeScript. Email one-time-code sign-in (SMTP), sessions, profiles, projects, and provider API keys (AES-256-GCM)
+- `backend`: Node.js + Fastify + TypeScript. Email one-time-code sign-in (SMTP), sessions, profiles, projects, and Claude on the server's key
 - `shared`: types, handle rules, provider list, brand name
 - `supabase/migrations`: database schema. Supabase is the database only (no Supabase Auth), and every table is locked to the API server
 - `brand/`: logo files
@@ -41,9 +41,9 @@ The Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai) is already
 
 ## 2. Configure
 
-`npm run setup` copies `.env.example` to `.env` and generates `KEY_ENCRYPTION_SECRET` and `AUTH_SECRET`. It's safe to run again, because it never overwrites a value you've set. One file holds everything: the API, the web app (`VITE_*`, the only values the browser sees) and the reel engine.
+`npm run setup` copies `.env.example` to `.env` and generates `AUTH_SECRET`. It's safe to run again, because it never overwrites a value you've set. One file holds everything: the API, the web app (`VITE_*`, the only values the browser sees) and the reel engine.
 
-Keep `KEY_ENCRYPTION_SECRET` safe. If it is lost, saved API keys can't be decrypted and must be re-entered. Changing `AUTH_SECRET` signs everyone out.
+Add `ANTHROPIC_API_KEY` so Claude works for every user (users never set up keys). Changing `AUTH_SECRET` signs everyone out.
 
 ### Sign-in emails (SMTP)
 
@@ -63,7 +63,7 @@ The web app calls `/api` on its own address, and Vite forwards it to the local A
 
 1. In Netlify, choose **Add new site → Import from Git** and pick this repo. The build settings come from `netlify.toml`.
 2. Under **Site configuration → Environment variables**, add:
-   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `KEY_ENCRYPTION_SECRET`, `AUTH_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (all secret, all for the API). Use the same `KEY_ENCRYPTION_SECRET` as local if you want keys you've already saved to keep working.
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `AUTH_SECRET`, `ANTHROPIC_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (all secret, all for the API).
 
 The web app needs no environment variables on Netlify.
 
@@ -77,7 +77,7 @@ Set `VITE_DATA_MODE=memory` (web) and `API_DATA_MODE=memory` (API). Accounts and
 
 ```bash
 npm run typecheck
-npm test                    # handle rules, email-code sign-in, profiles/projects, API key encryption, MobX store flows
+npm test                    # handle rules, email-code sign-in, profiles/projects, Claude, MobX store flows
 bash supabase/test/run.sh   # applies the migrations to a throwaway Postgres and checks browser roles are locked out (Linux, non-root)
 npm run build
 ```
@@ -92,7 +92,7 @@ npm run build
 | `/app/discover` | Topic discovery (next module) |
 | `/app/library` | Project library |
 | `/app/projects/:id` + `/research`, `/script`, `/storyboard`, `/graphics`, `/voice`, `/editor`, `/export` | Project workspace by stage |
-| `/app/settings`, `/app/settings/keys`, `/app/settings/account` | Profile & handle, API keys, account |
+| `/app/settings`, `/app/settings/claude`, `/app/settings/account`, `/app/settings/diagnostics` | Profile & handle, Claude, account, app log |
 
 Stages that are not built yet say so plainly and have no fake buttons.
 

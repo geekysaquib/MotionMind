@@ -5,9 +5,6 @@ import { ServiceError } from './types';
 export interface ClaudeStatus {
   connected: boolean;
   model: string;
-  last4: string | null;
-  /** Result of the last real call: true worked, false key rejected, null not tried yet. */
-  working: boolean | null;
 }
 
 export interface ClaudeAnswer {
@@ -22,7 +19,7 @@ export interface ClaudeService {
   writeScript(projectId: string): Promise<Project>;
 }
 
-/** Claude always runs on the API, with the user's own Anthropic key (saved in Settings). */
+/** Claude always runs on the API, on the server's Anthropic key. */
 export function httpClaudeService(baseUrl: string, getToken: () => string | null, fetchImpl: typeof fetch = fetch): ClaudeService {
   async function call<T>(path: string, method = 'GET', body?: unknown) {
     const token = getToken();

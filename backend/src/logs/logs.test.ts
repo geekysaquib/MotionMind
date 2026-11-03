@@ -5,8 +5,6 @@ import { ConsoleMailer } from '../auth/mailer';
 import { SessionTokens } from '../auth/session';
 import { DevTokenVerifier } from '../auth/verifiers';
 import { MemoryDataRepository } from '../data/repository';
-import { KeyCipher } from '../keys/crypto';
-import { MemoryKeyRepository } from '../keys/repository';
 import type { ClientLogReport } from './routes';
 
 const secret = randomBytes(32).toString('base64');
@@ -14,13 +12,11 @@ const secret = randomBytes(32).toString('base64');
 async function setup() {
   const reports: ClientLogReport[] = [];
   const app = await buildApp({
-    keys: new MemoryKeyRepository(),
     data: new MemoryDataRepository(),
     sessions: new SessionTokens(secret),
     mailer: new ConsoleMailer(false),
     verifier: new DevTokenVerifier(),
     authSecret: secret,
-    cipher: new KeyCipher(secret),
     webOrigin: 'http://localhost:5173',
     mode: 'memory',
     clientLogSink: (r) => reports.push(r),

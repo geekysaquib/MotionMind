@@ -4,14 +4,11 @@ import { ConsoleMailer, SmtpMailer, type Mailer } from './auth/mailer';
 import { SessionTokens } from './auth/session';
 import { buildApp } from './app';
 import { AnyVerifier, DevTokenVerifier } from './auth/verifiers';
-import { KeyCipher } from './keys/crypto';
 import { MemoryDataRepository, SupabaseDataRepository } from './data/repository';
 import type { Env } from './env';
-import { MemoryKeyRepository, SupabaseKeyRepository } from './keys/repository';
 
 // Shared by the local server (server.ts) and the Netlify function (netlify/functions/api.ts).
 export async function createAppFromEnv(env: Env, opts: { logger: boolean }): Promise<FastifyInstance> {
-  const cipher = new KeyCipher(env.KEY_ENCRYPTION_SECRET);
   const sessions = new SessionTokens(env.AUTH_SECRET);
 
   let mailer: Mailer;
@@ -25,11 +22,11 @@ export async function createAppFromEnv(env: Env, opts: { logger: boolean }): Pro
   let deps;
   if (env.API_DATA_MODE === 'memory') {
     console.warn('API running in MEMORY mode: data kept in RAM, demo tokens accepted. Never use this in production.');
-    deps = { keys: new MemoryKeyRepository(), data: new MemoryDataRepository(), verifier: new AnyVerifier([sessions, new DevTokenVerifier()]) };
+    deps = { data: new MemoryDataRepository(), verifier: new AnyVerifier([sessions, new DevTokenVerifier()]) };
   } else {
     const db = createClient(env.SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
-    deps = { keys: new SupabaseKeyRepository(db), data: new SupabaseDataRepository(db) };
+    deps = { data: new SupabaseDataRepository(db) };
   }
 
-  return buildApp({ ...deps, sessions, mailer, authSecret: env.AUTH_SECRET, cipher, webOrigin: env.WEB_ORIGIN, mode: env.API_DATA_MODE, logger: opts.logger });
+  return buildApp({ ...deps, sessions, mailer, authSecret: env.AUTH_SECRET, anthropicApiKey: env.ANTHROPIC_API_KEY, webOrigin: env.WEB_ORIGIN, mode: env.API_DATA_MODE, logger: opts.logger });
 }

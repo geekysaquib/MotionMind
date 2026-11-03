@@ -54,7 +54,7 @@ Narration is spoken aloud: no emoji, no hashtags, no markdown. Card headlines ar
 function toClaudeError(err: unknown): never {
   if (err instanceof ClaudeError) throw err;
   if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) {
-    throw new ClaudeError('Claude rejected the API key. Check it in Settings > Claude.', 'claude_key_rejected', 400);
+    throw new ClaudeError("The server's Anthropic API key was rejected. Check ANTHROPIC_API_KEY.", 'claude_key_rejected', 502);
   }
   if (err instanceof Anthropic.RateLimitError) {
     throw new ClaudeError('Claude is rate-limiting this key. Wait a minute and try again.', 'claude_rate_limited', 429);

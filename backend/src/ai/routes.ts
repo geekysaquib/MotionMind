@@ -7,17 +7,18 @@ import { ClaudeError, claudeClient, CLAUDE_MODEL, type ClaudeClient } from './cl
 
 const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude something.').max(4000) });
 
-/** Signed-in only: Claude, using the caller's own Anthropic key from Settings. */
+/** Signed-in only: Claude, on the server's own Anthropic key. Users never set up keys. */
 export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   const makeClient = deps.claude ?? ((key: string) => claudeClient(key, deps.fetchImpl));
+  let client: ClaudeClient | null = null;
 
-  async function clientFor(userId: string, reply: FastifyReply): Promise<ClaudeClient | null> {
-    const row = await deps.keys.get(userId, 'anthropic');
-    if (!row) {
-      reply.code(409).send({ error: 'claude_not_connected', message: 'Connect Claude first: add your Anthropic API key in Settings > Claude.' });
+  function claudeOr503(reply: FastifyReply): ClaudeClient | null {
+    if (!deps.anthropicApiKey) {
+      reply.code(503).send({ error: 'claude_not_configured', message: "Claude isn't set up on the server yet (ANTHROPIC_API_KEY)." });
       return null;
     }
-    return makeClient(deps.cipher.open(row, `${userId}:anthropic`));
+    client ??= makeClient(deps.anthropicApiKey);
+    return client;
   }
 
   const sendClaudeError = (err: unknown, reply: FastifyReply) => {
@@ -25,23 +26,18 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     throw err;
   };
 
-  api.get('/claude/status', async (req) => {
-    const row = await deps.keys.get(req.userId, 'anthropic');
-    return { connected: Boolean(row), model: CLAUDE_MODEL, last4: row?.last4 ?? null, working: row?.lastTestOk ?? null };
-  });
+  api.get('/claude/status', async () => ({ connected: Boolean(deps.anthropicApiKey), model: CLAUDE_MODEL }));
 
   api.post('/claude/ask', async (req, reply) => {
     const body = askSchema.safeParse(req.body);
     if (!body.success) return reply.code(400).send({ error: 'invalid_prompt', message: firstIssue(body.error) });
-    const claude = await clientFor(req.userId, reply);
+    const claude = claudeOr503(reply);
     if (!claude) return reply;
     try {
       const started = Date.now();
       const res = await claude.ask(body.data.prompt);
-      await deps.keys.markTested(req.userId, 'anthropic', true);
       return { reply: res, ms: Date.now() - started };
     } catch (err) {
-      if (err instanceof ClaudeError && err.code === 'claude_key_rejected') await deps.keys.markTested(req.userId, 'anthropic', false);
       return sendClaudeError(err, reply);
     }
   });
@@ -51,7 +47,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     const project = z.string().uuid().safeParse(id).success ? await deps.data.getProject(req.userId, id) : null;
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
     if (!project.topic) return reply.code(400).send({ error: 'no_topic', message: 'Give the project a topic first.' });
-    const claude = await clientFor(req.userId, reply);
+    const claude = claudeOr503(reply);
     if (!claude) return reply;
     const profile = await deps.data.getProfile(req.userId);
     try {

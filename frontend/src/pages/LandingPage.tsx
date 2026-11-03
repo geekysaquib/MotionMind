@@ -58,15 +58,15 @@ const FEATURES = [
   },
   {
     icon: Wand2,
-    title: 'Bring your own AI keys',
-    text: 'Use OpenAI, Anthropic, ElevenLabs, Tavily and more. Keys are encrypted on our server and never shown again.',
+    title: 'Claude built in',
+    text: 'Claude writes the script from your topic. No accounts or API keys to set up: sign in and start creating.',
   },
 ];
 
 const FAQ = [
   { q: 'Do I need design or editing skills?', a: 'No. You choose and approve; the studio does the research, writing, visuals, voice and editing.' },
   { q: 'Which languages are supported?', a: 'Hindi, Hinglish and English narration today. Captions can be in Hinglish (Roman script) or the narration language.' },
-  { q: 'Who pays for the AI?', a: 'You connect your own provider keys, so you pay providers directly at their rates. Quality tiers let you trade cost for polish.' },
+  { q: 'Who pays for the AI?', a: 'Nothing to set up. Motion Mind runs the AI for you: Claude writes and researches, and the studio handles voice and visuals.' },
   { q: 'Is the reel above real?', a: 'Yes. It is a test reel made with the Motion Mind engine about how the Where is my Train app works offline.' },
 ];
 

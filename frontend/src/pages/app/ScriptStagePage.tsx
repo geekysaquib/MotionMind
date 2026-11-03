@@ -53,11 +53,9 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
             <div className="mt-4">
               <Alert>
                 {error}{' '}
-                {/Settings/.test(error) && (
-                  <Link to="/app/settings/claude" className="font-semibold underline">
-                    Open Settings
-                  </Link>
-                )}
+                <Link to="/app/settings/diagnostics" className="font-semibold underline">
+                  See the log
+                </Link>
               </Alert>
             </div>
           )}

@@ -24,10 +24,9 @@ MotionMind/
 │   │   ├── services/         talking to the outside world
 │   │   │   ├── http.ts       apiRequest(): the one fetch wrapper, throws ServiceError
 │   │   │   ├── api.ts        real mode: auth, profiles, projects via the API
-│   │   │   ├── keysHttp.ts   provider keys via the API (both modes)
 │   │   │   ├── memory.ts     demo mode: data in localStorage, code is always 123456
 │   │   │   └── types.ts      service interfaces + ServiceError
-│   │   ├── stores/           MobX: RootStore owns Auth/Profile/Project/Keys/Toast stores
+│   │   ├── stores/           MobX: RootStore owns Auth/Profile/Project/Toast stores
 │   │   ├── pages/            auth/ (Login, Onboarding) and app/ (dashboard, library, project stages, settings)
 │   │   ├── layout/           AppShell, AuthLayout, guards (RequireAuth, RequireOnboarded, GuestOnly)
 │   │   ├── components/       ui/ (Button, Card, Field, Alert, Badge, Select, Spinner), Logo, Toasts, ErrorBoundary
@@ -43,8 +42,7 @@ MotionMind/
 │   │   ├── http.ts           firstIssue(): zod error -> message for the UI
 │   │   ├── auth/             routes (request-code, verify-code), otp, session tokens, mailer, verifiers
 │   │   ├── account/          routes: /profile, /handles/:h/available, /projects CRUD
-│   │   ├── ai/               Claude (claude-opus-5-5, user's own Anthropic key): /claude/status, /claude/ask, /projects/:id/script
-│   │   ├── keys/             routes, AES-256-GCM crypto, repository, provider key testers
+│   │   ├── ai/               Claude (claude-opus-5-5, server's ANTHROPIC_API_KEY): /claude/status, /claude/ask, /projects/:id/script
 │   │   ├── logs/             POST /api/client-logs: browser warnings/errors into the server log
 │   │   ├── data/             DataRepository: users, login codes, profiles, projects (Memory + Supabase)
 │   │   └── app.test.ts       API tests via app.inject() (each folder also has its own *.test.ts)
@@ -52,7 +50,7 @@ MotionMind/
 │   └── reel-engine/          Remotion engine. Reel takes a ReelSpec as props ('train' or 'cards' world).
 │                             src/public.ts = what the web app imports as @motionmind/reel-engine (live preview);
 │                             render.mjs / tts.mjs = CLI MP4 render and ElevenLabs voice for the sample reel
-├── shared/src/               used by both sides: brand, handle rules, providers, project types/STAGES
+├── shared/src/               used by both sides: brand, handle rules, project types/STAGES
 ├── supabase/
 │   ├── migrations/           20261103000000_init.sql = the whole schema (reset on 2026-11-03); add new files after it
 │   └── test/                 run.sh: applies migrations to a throwaway Postgres (Linux only)
@@ -73,10 +71,10 @@ Every route only ever reads or writes rows for `req.userId`. Repositories take `
 
 ## Claude and the reel engine
 
-- Claude runs only on the API with the user's own Anthropic key (saved encrypted like other provider keys). `backend/src/ai/claude.ts` uses `@anthropic-ai/sdk`, model `claude-opus-5-5`, server-side refusal fallback (`fallbacks: 'default'`), and structured output (`betaZodOutputFormat(reelScriptSchema)`) for scripts. Tests inject `AppDeps.claude` instead of calling Anthropic.
+- Claude runs only on the API with the server's `ANTHROPIC_API_KEY`. Users never set up API keys (decided by Saquib); add any future provider the same way, as a server env var. `backend/src/ai/claude.ts` uses `@anthropic-ai/sdk`, model `claude-opus-5-5`, server-side refusal fallback (`fallbacks: 'default'`), and structured output (`betaZodOutputFormat(reelScriptSchema)`) for scripts. Tests inject `AppDeps.claude` instead of calling Anthropic.
 - A project's script is `projects.script` (jsonb) with the `ReelScript` shape in `shared/src/projects.ts`. `frontend/src/components/reelSpec.ts` turns it into the engine's `ReelSpec` (cards world, branded with the user's channel).
 - The web app embeds the engine through `@remotion/player` (`components/ReelPreview.tsx`, lazy-loaded). Keep the engine browser-safe: no Node imports in `backend/reel-engine/src`.
-- Settings → Claude connects the key, tests it and has an "Ask Claude" box. Project → Script has "Write with Claude" and the live preview.
+- Settings → Claude shows whether Claude is ready, tests it and has an "Ask Claude" box. Project → Script has "Write with Claude" and the live preview.
 - Netlify Functions time out at about 10 to 26 seconds, and a long script can take longer. If that bites, move script writing to a Netlify Background Function or stream it.
 
 ## Sign-in
@@ -91,7 +89,7 @@ Every route only ever reads or writes rows for `req.userId`. Repositories take `
 | Command | What it does |
 |---|---|
 | `npm install` | everything, including Remotion |
-| `npm run setup` | creates `.env` from `.env.example`, generates `KEY_ENCRYPTION_SECRET` + `AUTH_SECRET`, lists what's missing |
+| `npm run setup` | creates `.env` from `.env.example`, generates `AUTH_SECRET`, lists what's missing |
 | `npm run dev` | API on :8787 + web on :5173 together (`dev:api` / `dev:web` for one side) |
 | `npm run typecheck` | tsc for shared, backend, frontend |
 | `npm test` | Jest, all three projects. One project: `npm test -- --selectProjects backend`. One file: `npm test -- LoginPage` |
@@ -101,11 +99,11 @@ Every route only ever reads or writes rows for `req.userId`. Repositories take `
 
 ## Environment (`.env` at the root, template `.env.example`)
 
-- API: `API_DATA_MODE` (`supabase` | `memory`), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `KEY_ENCRYPTION_SECRET`, `AUTH_SECRET`, `SMTP_HOST/PORT/USER/PASS/FROM`, `PORT`, `WEB_ORIGIN`.
+- API: `API_DATA_MODE` (`supabase` | `memory`), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `AUTH_SECRET`, `ANTHROPIC_API_KEY`, `SMTP_HOST/PORT/USER/PASS/FROM`, `PORT`, `WEB_ORIGIN`.
 - Web: `VITE_DATA_MODE` (`api` | `memory`). Only `VITE_*` values reach the browser, so never prefix a secret with `VITE_`. `VITE_API_URL` is optional; leave it unset to use the same origin.
 - Reel engine: `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`.
 - On Netlify, set the API variables in the dashboard. The web app needs none.
-- Losing `KEY_ENCRYPTION_SECRET` makes saved provider keys unreadable. Changing `AUTH_SECRET` signs everyone out.
+- Changing `AUTH_SECRET` signs everyone out.
 
 ## Conventions
 
@@ -114,7 +112,7 @@ Every route only ever reads or writes rows for `req.userId`. Repositories take `
 - **Storage behind interfaces.** Each repository has a `Memory*` version (tests, demo mode) and a `Supabase*` version. Add a method to both.
 - **Wiring through `AppDeps`.** New services are added to `AppDeps`, built in `bootstrap.ts`, and passed in tests from `app.test.ts`'s `setup()`.
 - **Frontend data:** pages call stores, stores call `root.services.*`, and services call `apiRequest`. Pages never call fetch directly. Show errors with `errorText(err)`.
-- **Shared rules** (handles, providers, stages, brand name) live in `shared/src` and are imported as `@motionmind/shared`. Don't duplicate them.
+- **Shared rules** (handles, stages, reel script shape, brand name) live in `shared/src` and are imported as `@motionmind/shared`. Don't duplicate them.
 - **Styling:** use the Tailwind tokens in `frontend/tailwind.config.js` (`ink-*`, `line`, `accent`, `danger`, `mint`, …) and the `components/ui` pieces. Theme values are CSS variables in `index.css`, with light and dark both supported.
 - **Copy:** product name from `BRAND.name`. The UI language is plain, and nothing pretends to work when it doesn't.
 - **Tests (Jest):** import `describe/it/expect/jest` from `@jest/globals`, since there are no globals. Put tests next to the code as `*.test.ts(x)`. Add an `app.inject()` test for each new route, and a page test (`renderWithStore`, Testing Library) or store/service test for each new frontend flow. Keep `npm run typecheck && npm test && npm run build` green before committing.

@@ -1,7 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { Services } from '../services/types';
 import { AuthStore } from './AuthStore';
-import { KeysStore } from './KeysStore';
 import { ProfileStore } from './ProfileStore';
 import { ProjectStore } from './ProjectStore';
 import { ToastStore } from './ToastStore';
@@ -10,14 +9,12 @@ export class RootStore {
   readonly auth: AuthStore;
   readonly profile: ProfileStore;
   readonly projects: ProjectStore;
-  readonly keys: KeysStore;
   readonly toasts = new ToastStore();
 
   constructor(readonly services: Services) {
     this.auth = new AuthStore(this);
     this.profile = new ProfileStore(this);
     this.projects = new ProjectStore(this);
-    this.keys = new KeysStore(this);
   }
 
   async onSessionChanged() {
@@ -26,7 +23,6 @@ export class RootStore {
     } else {
       this.profile.clear();
       this.projects.clear();
-      this.keys.clear();
     }
   }
 }

@@ -1,6 +1,5 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
-import type { ProviderId } from '@motionmind/shared';
 import { registerAccountRoutes } from './account/routes';
 import type { ClaudeClient } from './ai/claude';
 import { registerClaudeRoutes } from './ai/routes';
@@ -9,15 +8,10 @@ import { registerLoginRoutes } from './auth/routes';
 import type { SessionTokens } from './auth/session';
 import type { TokenVerifier } from './auth/verifiers';
 import type { DataRepository } from './data/repository';
-import type { KeyCipher } from './keys/crypto';
-import type { KeyRepository } from './keys/repository';
-import { registerKeyRoutes } from './keys/routes';
-import type { KeyTester } from './keys/testers';
 import { registerClientLogRoutes, type ClientLogReport } from './logs/routes';
 
 /** Everything the API needs, passed in so tests can swap any piece. Built from env in bootstrap.ts. */
 export interface AppDeps {
-  keys: KeyRepository;
   data: DataRepository;
   sessions: SessionTokens;
   mailer: Mailer;
@@ -25,15 +19,15 @@ export interface AppDeps {
   verifier?: TokenVerifier;
   /** Signs session tokens and hashes login codes. */
   authSecret: string;
-  cipher: KeyCipher;
   webOrigin: string;
   mode: 'supabase' | 'memory';
-  testers?: Partial<Record<ProviderId, KeyTester>>;
   fetchImpl?: typeof fetch;
   logger?: boolean;
   /** Where browser log reports go. Defaults to one console line each. */
   clientLogSink?: (report: ClientLogReport) => void;
-  /** Builds a Claude client for a user's Anthropic key. Tests pass a fake. */
+  /** The server's Anthropic key (ANTHROPIC_API_KEY). Users never set up keys. */
+  anthropicApiKey?: string;
+  /** Builds the Claude client. Tests pass a fake. */
   claude?: (apiKey: string) => ClaudeClient;
 }
 
@@ -69,7 +63,6 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         req.userId = userId;
       });
       registerAccountRoutes(api, deps);
-      registerKeyRoutes(api, deps);
       registerClaudeRoutes(api, deps);
     },
     { prefix: '/api' },

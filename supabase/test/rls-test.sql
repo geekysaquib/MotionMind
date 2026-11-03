@@ -59,8 +59,6 @@ do $$ begin
   exception when insufficient_privilege then null; end;
   begin perform 1 from public.projects; raise exception 'anon can read projects';
   exception when insufficient_privilege then null; end;
-  begin perform 1 from public.provider_credentials; raise exception 'anon can read provider_credentials';
-  exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 
