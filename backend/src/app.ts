@@ -5,6 +5,7 @@ import type { ClaudeClient } from './ai/claude';
 import { registerClaudeRoutes } from './ai/routes';
 import { registerConnectorRoutes } from './connectors/routes';
 import { registerDiscoverRoutes } from './discover/routes';
+import { registerCoverRoutes } from './cover/routes';
 import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
 import { registerVoiceRoutes } from './voice/routes';
 import { registerEditorRoutes } from './editor/routes';
@@ -86,6 +87,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
       registerVoiceRoutes(api, deps);
       registerEditorRoutes(api, deps);
       registerExportRoutes(api, deps);
+      registerCoverRoutes(api, deps);
     },
     { prefix: '/api' },
   );

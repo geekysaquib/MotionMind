@@ -29,6 +29,9 @@ class FakeRenderer implements Renderer {
   filePath() {
     return null;
   }
+  async still() {
+    return 'unused.png';
+  }
 }
 
 async function setup(renderer?: Renderer) {

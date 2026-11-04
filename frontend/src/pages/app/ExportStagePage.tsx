@@ -5,6 +5,7 @@ import { Download, Film, Clapperboard } from 'lucide-react';
 import type { Project } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
+import { CoverMaker } from '../../components/CoverMaker';
 import { config } from '../../config';
 import { Alert, Button, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
@@ -75,6 +76,7 @@ export const ExportStagePage = observer(function ExportStagePage() {
   const videoUrl = job?.status === 'done' && job.file ? `${config.apiUrl}/api/renders/${job.file}` : null;
 
   return (
+    <div className="space-y-8">
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
       <Card>
         <h2 className="flex items-center gap-2 font-semibold">
@@ -133,6 +135,8 @@ export const ExportStagePage = observer(function ExportStagePage() {
           </div>
         )}
       </div>
+    </div>
+    <CoverMaker project={project} />
     </div>
   );
 });

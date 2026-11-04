@@ -18,6 +18,7 @@
     "reel:tts": "cd backend/reel-engine && node --env-file-if-exists=../../.env tts.mjs",
     "reel:render": "cd backend/reel-engine && node render.mjs",
     "assets:usage": "node --env-file=.env scripts/asset-usage.mjs",
+    "reel:cover": "tsx --tsconfig backend/tsconfig.json backend/reel-engine/cover.ts",
     "reel:stills": "tsx --tsconfig backend/tsconfig.json backend/reel-engine/stills.ts"
   },
   "dependencies": {

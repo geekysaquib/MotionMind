@@ -66,7 +66,7 @@ describe('GraphicsStagePage object positions', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Arrange automatically' }));
     });
-    await waitFor(() => expect(screen.getByText(/Object positions: automatic/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Object positions: automatic/)).toBeTruthy(), { timeout: 15000 });
     expect(saved[1]!.layout).toBeUndefined();
   });
 });

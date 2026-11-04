@@ -30,7 +30,7 @@ function resolveKey(k: CameraKey, frame: number, fps: number) {
   return { x, y: k.y, z: k.z, zoom: k.zoom };
 }
 
-function cameraAt(timed: TimedBeat[], storyFrames: number, frame: number, fps: number): Camera {
+export function cameraAt(timed: TimedBeat[], storyFrames: number, frame: number, fps: number): Camera {
   const f = Math.min(frame, storyFrames - 1);
   const i = Math.max(0, timed.findIndex((b) => f >= b.start && f < b.start + b.frames));
   const beat = timed[i]!;
@@ -47,7 +47,7 @@ function cameraAt(timed: TimedBeat[], storyFrames: number, frame: number, fps: n
   };
 }
 
-function fxAt(timed: TimedBeat[], frame: number): WorldProps['fx'] {
+export function fxAt(timed: TimedBeat[], frame: number): WorldProps['fx'] {
   const out = {} as WorldProps['fx'];
   const has = (b: TimedBeat, name: WorldEvent) => b.events?.includes(name) ?? false;
   for (const name of FX) {
@@ -73,7 +73,7 @@ function fxAt(timed: TimedBeat[], frame: number): WorldProps['fx'] {
   return out;
 }
 
-function pinProgressAt(timed: TimedBeat[], frame: number, fps: number): number {
+export function pinProgressAt(timed: TimedBeat[], frame: number, fps: number): number {
   const first = timed.find((b) => b.events?.includes('pins'));
   if (!first) return 0;
   return clamp01((frame - first.start - 10) / (3.5 * fps));

@@ -124,7 +124,7 @@ const COS30 = Math.cos(Math.PI / 6);
  * Frames a scene so ALL of its objects (with their icons and labels) fit inside the safe area:
  * the zoom comes from the real projected bounds, not a guess from distances.
  */
-function sceneCameraKey(scene: IsoScene | undefined, placed: Map<string, PlacedProp>, fallback: { x: number; y: number; zoom: number }) {
+function sceneCameraKey(scene: IsoScene | undefined, placed: Map<string, PlacedProp>, fallback: { x: number; y: number; zoom: number }, safe = SAFE, zoomMax = 80) {
   const ps = (scene?.props ?? []).map((p) => placed.get(p.id)).filter((p): p is PlacedProp => Boolean(p));
   if (!ps.length) return fallback;
   let minX = Infinity;
@@ -132,7 +132,8 @@ function sceneCameraKey(scene: IsoScene | undefined, placed: Map<string, PlacedP
   let minY = Infinity;
   let maxY = -Infinity;
   for (const p of ps) {
-    const top = propTop(p) + (p.spec.icon && !hasGlyph(p.spec.glyph) ? 3.0 : 1.9); // room for the icon and the label above it
+    // Room for the icon and label above the object, and for the arcs and their labels when the scene has links.
+    const top = propTop(p) + (p.spec.icon && !hasGlyph(p.spec.glyph) ? 3.0 : 1.9) + (scene?.links?.length ? 1.6 : 0);
     const [fx, fy] = footprint(p.kind, p.spec);
     for (const [dx, dy, z] of [[-fx, -fy, 0], [fx, fy, 0], [-fx, fy, 0], [fx, -fy, 0], [0, 0, top]] as const) {
       const [px, py] = project({ x: p.pos.x + dx, y: p.pos.y + dy, z });
@@ -144,11 +145,30 @@ function sceneCameraKey(scene: IsoScene | undefined, placed: Map<string, PlacedP
   }
   const w = Math.max(1, maxX - minX);
   const h = Math.max(1, maxY - minY);
-  const zoom = Math.max(26, Math.min(80, (SAFE.right - SAFE.left) / w, (SAFE.bottom - SAFE.top) / h));
+  const zoom = Math.max(26, Math.min(zoomMax, (safe.right - safe.left) / w, (safe.bottom - safe.top) / h));
   // Invert project() at z = 1.2 to find the world point that sits at the middle of the bounds.
   const sum = 2 * ((minY + maxY) / 2 + 1.2); // x + y
   const diff = (minX + maxX) / 2 / COS30; // x - y
   return { x: (sum + diff) / 2, y: (sum - diff) / 2, zoom };
+}
+
+/** A rectangle of the frame, in pixels. */
+export interface Region {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** A camera that fits all of one scene's objects, with their labels, inside `region` (used for covers). */
+export function frameScene(scene: IsoScene | undefined, placed: Map<string, PlacedProp>, region: Region, zoomMax = 110): Camera {
+  const k = sceneCameraKey(scene, placed, { x: 0, y: 0, zoom: 50 }, region, zoomMax);
+  return { target: { x: k.x, y: k.y, z: 1.2 }, zoom: k.zoom, cx: (region.left + region.right) / 2, cy: (region.top + region.bottom) / 2 };
+}
+
+/** The colour the world fades into at its edges for a theme (so text panels can match it). */
+export function themeFade(theme: WorldTheme | undefined): string {
+  return (THEMES[theme ?? 'city'] ?? THEMES.city).fade;
 }
 
 /** Camera for the iso world: holds on each scene's props and eases to the next scene's. */
@@ -423,6 +443,8 @@ export interface IsoWorldProps {
   placed: Map<string, PlacedProp>;
   /** The look of the ground and scenery. Defaults to the town. */
   theme?: WorldTheme;
+  /** Fade the top and bottom of the picture into the sky colour (the reel does, to make room for the card and captions). Default true. */
+  fade?: boolean;
 }
 
 const EMOJI_FONT = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
@@ -440,7 +462,7 @@ const THEMES: Record<WorldTheme, Look> = {
   desert: { ground: '#F3DFB5', water: '#F4E6C6', waterDeep: '#E2C791', road: '#E8CE9B', fade: '#FBF1DA', scenery: 'rocks' },
 };
 
-export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, placed, theme = 'city' }) => {
+export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, placed, theme = 'city', fade = true }) => {
   const look = THEMES[theme] ?? THEMES.city;
   const accent = TONE[beat.card.tone] ?? C.teal;
   const scene = beat.scene;
@@ -576,7 +598,7 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
           })()}
           {items.map((it) => it.el)}
         </g>
-        <rect width={1080} height={1920} fill="url(#isofade)" />
+        {fade && <rect width={1080} height={1920} fill="url(#isofade)" />}
         {/* Signal rings from the focus prop */}
         {scene?.effect === 'rings' && focusId && (() => {
           const at = top(focusId);

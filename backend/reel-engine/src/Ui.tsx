@@ -6,7 +6,7 @@ import type { Brand, CaptionStyle, Card as CardT, CardRow, Tone, TimedBeat } fro
 const TONE: Record<Tone, string> = { red: C.red, teal: C.teal, purple: C.purple, blue: C.blue, amber: C.amber };
 const SAFE_X = 60;
 
-function Highlight({ text, tone }: { text: string; tone: string }) {
+export function Highlight({ text, tone }: { text: string; tone: string }) {
   const parts = text.split(/(\*[^*]+\*)/g);
   return (
     <>

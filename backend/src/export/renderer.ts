@@ -23,6 +23,8 @@ export interface RenderJob {
 export interface Renderer {
   start(userId: string, projectId: string, inputProps: Record<string, unknown>): RenderJob;
   latest(userId: string, projectId: string): RenderJob | null;
+  /** Renders the reel's cover (a single image) and returns its file name. */
+  still(inputProps: Record<string, unknown>, format: 'png' | 'jpeg'): Promise<string>;
   /** Absolute path of a finished render, by file name; null if unknown. */
   filePath(file: string): string | null;
 }
@@ -34,6 +36,7 @@ export const RENDERS_DIR = path.resolve(here, '../../../renders');
 export class RemotionRenderer implements Renderer {
   private jobs = new Map<string, RenderJob>();
   private serveUrl: Promise<string> | null = null;
+  private stills = new Set<string>();
 
   start(userId: string, projectId: string, inputProps: Record<string, unknown>): RenderJob {
     const running = this.latest(userId, projectId);
@@ -49,8 +52,29 @@ export class RemotionRenderer implements Renderer {
   }
 
   filePath(file: string) {
-    if (!/^[0-9a-f-]{36}\.mp4$/.test(file)) return null;
-    return [...this.jobs.values()].some((j) => j.file === file) ? path.join(RENDERS_DIR, file) : null;
+    if (!/^[0-9a-f-]{36}\.(mp4|png|jpg)$/.test(file)) return null;
+    return this.stills.has(file) || [...this.jobs.values()].some((j) => j.file === file) ? path.join(RENDERS_DIR, file) : null;
+  }
+
+  async still(inputProps: Record<string, unknown>, format: 'png' | 'jpeg') {
+    try {
+      const bundlerName = '@remotion/bundler';
+      const rendererName = '@remotion/renderer';
+      const { bundle } = (await import(bundlerName)) as typeof import('@remotion/bundler');
+      const { renderStill, selectComposition } = (await import(rendererName)) as typeof import('@remotion/renderer');
+      this.serveUrl ??= bundle({ entryPoint: ENGINE_ENTRY });
+      const serveUrl = await this.serveUrl;
+      const browserExecutable = process.env.REMOTION_BROWSER || undefined;
+      const composition = await selectComposition({ serveUrl, id: 'Cover', inputProps, browserExecutable });
+      await mkdir(RENDERS_DIR, { recursive: true });
+      const file = `${randomUUID()}.${format === 'jpeg' ? 'jpg' : 'png'}`;
+      await renderStill({ serveUrl, composition, inputProps, frame: 0, output: path.join(RENDERS_DIR, file), imageFormat: format, ...(format === 'jpeg' ? { jpegQuality: 92 } : {}), browserExecutable });
+      this.stills.add(file);
+      return file;
+    } catch (err) {
+      this.serveUrl = null;
+      throw err;
+    }
   }
 
   private async run(job: RenderJob, inputProps: Record<string, unknown>) {

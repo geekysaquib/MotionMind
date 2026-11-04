@@ -91,6 +91,8 @@ Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `rese
 5. Commits are local on `main`; nothing is pushed.
 6. `supabase/test/run.sh` (database security test) needs Linux Postgres; not run on Windows.
 
+7. **Cover images** are drawn from the 3D scenes only (no uploaded photos); text is Latin and Devanagari through the reel's fonts.
+
 ## Suggested next steps
 
 1. Add `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` if you want API-key mode (copy and paste works without them).

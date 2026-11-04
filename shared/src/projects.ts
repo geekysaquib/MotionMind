@@ -120,6 +120,8 @@ export interface ReelScript {
   theme?: WorldTheme;
   /** Locked spots of the 3D objects, by object id (ground x, y in world units). Without it the engine arranges them. */
   layout?: Record<string, { x: number; y: number }>;
+  /** The cover (thumbnail) settings. Missing means the defaults. */
+  cover?: import('./cover').CoverSettings;
   steps: string[];
   beats: ReelBeat[];
   /** Which Claude model wrote it, and when. */

@@ -1,4 +1,4 @@
-import type { AudioTrack, Project, ReelEditor, ReelScript, ReelVoice } from '@motionmind/shared';
+import type { AudioTrack, CoverSettings, Project, ReelEditor, ReelScript, ReelVoice } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
 
@@ -93,6 +93,9 @@ export interface ClaudeService {
   editorFor(projectId: string): Promise<{ editor: ReelEditor | null; urls: EditorUrls }>;
   saveEditor(projectId: string, editor: ReelEditor): Promise<{ project: Project; urls: EditorUrls }>;
   /** Export: render the MP4 (only on a local server). */
+  /** Cover (thumbnail): save its settings with the script, and render the image (PNG or JPG) on this machine. */
+  saveCover(projectId: string, cover: CoverSettings): Promise<Project>;
+  renderCover(projectId: string, cover: CoverSettings, format: 'png' | 'jpeg'): Promise<{ file: string; url: string }>;
   startExport(projectId: string): Promise<{ job: RenderJob; withVoice: boolean }>;
   exportStatus(projectId: string): Promise<{ available: boolean; job: RenderJob | null }>;
   /** Storyboard: save the user's edits to the script. */
@@ -136,6 +139,8 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     importTrendingIdeas: async (text) => (await call<{ ideas: TrendIdea[] }>(`/discover/import`, 'POST', { text })).ideas,
     editorFor: (projectId) => call(`/projects/${projectId}/editor`),
     saveEditor: (projectId, editor) => call(`/projects/${projectId}/editor`, 'PUT', { editor }),
+    saveCover: async (projectId, cover) => (await call<{ project: Project }>(`/projects/${projectId}/cover`, 'PUT', { cover })).project,
+    renderCover: (projectId, cover, format) => call(`/projects/${projectId}/cover/render`, 'POST', { cover, format }),
     startExport: (projectId) => call(`/projects/${projectId}/export`, 'POST'),
     exportStatus: (projectId) => call(`/projects/${projectId}/export`),
     saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,

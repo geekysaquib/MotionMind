@@ -12,7 +12,19 @@ const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude someth
 const editSchema = z.object({ script: z.unknown() });
 // The storyboard may carry locked object spots; the schema Claude writes to does not.
 // (Same zod version as the script schema, or the two cannot be combined.)
-const scriptWithLayout = scriptSchemaV4.extend({ layout: zv4.record(zv4.string().max(60), zv4.object({ x: zv4.number().min(-200).max(200), y: zv4.number().min(-200).max(200) })).optional() });
+const scriptWithLayout = scriptSchemaV4.extend({
+  cover: zv4
+    .object({
+      scene: zv4.number().int().min(0).max(60),
+      headline: zv4.string().max(120),
+      kicker: zv4.string().max(40),
+      style: zv4.enum(['bold', 'center', 'split']),
+      size: zv4.enum(['reel', 'feed', 'square']),
+      tone: zv4.enum(['red', 'teal', 'purple', 'blue', 'amber']).nullable().optional(),
+      brand: zv4.boolean(),
+    })
+    .optional(),
+  layout: zv4.record(zv4.string().max(60), zv4.object({ x: zv4.number().min(-200).max(200), y: zv4.number().min(-200).max(200) })).optional() });
 const importSchema = z.object({ text: z.string().min(1, "Paste Claude's answer first.").max(100_000) });
 
 /** Model label for scripts written in claude.ai and pasted in. */
@@ -191,7 +203,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     const id = (req.params as { id: string }).id;
     const project = z.string().uuid().safeParse(id).success ? await deps.data.getProject(req.userId, id) : null;
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
-    const saved: ReelScript = { ...parsed.data, layout: parsed.data.layout as ReelScript['layout'], model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
+    const saved: ReelScript = { ...parsed.data, layout: parsed.data.layout as ReelScript['layout'], cover: parsed.data.cover as ReelScript['cover'], model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
     return {
       project: await deps.data.updateProject(req.userId, project.id, { script: saved, stage: project.stage === 'script' ? 'storyboard' : project.stage }),
     };

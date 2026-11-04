@@ -77,10 +77,11 @@ export function registerRenderDownload(app: FastifyInstance, deps: AppDeps) {
   app.get('/api/renders/:file', async (req, reply) => {
     const file = (req.params as { file: string }).file;
     const full = deps.renderer?.filePath(file);
-    if (!full) return reply.code(404).send({ error: 'not_found', message: 'That video is not available.' });
+    if (!full) return reply.code(404).send({ error: 'not_found', message: 'That file is not available.' });
     const info = await stat(full).catch(() => null);
-    if (!info) return reply.code(404).send({ error: 'not_found', message: 'That video is not available.' });
-    reply.header('Content-Type', 'video/mp4').header('Content-Length', info.size).header('Content-Disposition', `inline; filename="motion-mind-reel.mp4"`);
+    if (!info) return reply.code(404).send({ error: 'not_found', message: 'That file is not available.' });
+    const kind = file.endsWith('.png') ? { type: 'image/png', name: 'motion-mind-cover.png' } : file.endsWith('.jpg') ? { type: 'image/jpeg', name: 'motion-mind-cover.jpg' } : { type: 'video/mp4', name: 'motion-mind-reel.mp4' };
+    reply.header('Content-Type', kind.type).header('Content-Length', info.size).header('Content-Disposition', `inline; filename="${kind.name}"`);
     return reply.send(createReadStream(full));
   });
 }

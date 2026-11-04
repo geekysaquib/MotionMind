@@ -1,0 +1,59 @@
+import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
+import { COVER_SIZES, COVER_STYLES, MAX_HEADLINE, MAX_KICKER, type Project } from '@motionmind/shared';
+import type { AppDeps } from '../app';
+import { firstIssue } from '../http';
+import { reelSpecFor } from '../export/routes';
+
+const coverSchema = z
+  .object({
+    scene: z.number().int().min(0).max(60),
+    headline: z.string().trim().min(1, 'Write a headline for the cover.').max(MAX_HEADLINE),
+    kicker: z.string().trim().max(MAX_KICKER),
+    style: z.enum(COVER_STYLES),
+    size: z.enum(Object.keys(COVER_SIZES) as [keyof typeof COVER_SIZES, ...(keyof typeof COVER_SIZES)[]]),
+    tone: z.enum(['red', 'teal', 'purple', 'blue', 'amber']).nullable().optional(),
+    brand: z.boolean(),
+  })
+  .strict();
+
+const renderSchema = z.object({ cover: coverSchema, format: z.enum(['png', 'jpeg']).default('png') });
+
+const unavailable = { error: 'export_unavailable', message: 'Making the cover runs on your PC. Open Motion Mind from your computer with npm run dev.' };
+
+/** Signed-in only: the reel's cover image (thumbnail). Settings are saved with the script; the image is rendered on this machine. */
+export function registerCoverRoutes(api: FastifyInstance, deps: AppDeps) {
+  async function owned(userId: string, id: string): Promise<Project | null> {
+    return z.string().uuid().safeParse(id).success ? deps.data.getProject(userId, id) : null;
+  }
+
+  // The cover settings live in the script's JSON. Saving them does not count as editing the storyboard.
+  api.put('/projects/:id/cover', async (req, reply) => {
+    const body = z.object({ cover: coverSchema }).safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: 'invalid_cover', message: firstIssue(body.error) });
+    const project = await owned(req.userId, (req.params as { id: string }).id);
+    if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
+    if (!project.script?.beats.length) return reply.code(400).send({ error: 'no_script', message: 'Write the script first.' });
+    if (body.data.cover.scene >= project.script.beats.length) return reply.code(400).send({ error: 'invalid_cover', message: "That scene doesn't exist." });
+    return { project: await deps.data.updateProject(req.userId, project.id, { script: { ...project.script, cover: body.data.cover } }) };
+  });
+
+  api.post('/projects/:id/cover/render', async (req, reply) => {
+    if (!deps.renderer) return reply.code(501).send(unavailable);
+    const body = renderSchema.safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: 'invalid_cover', message: firstIssue(body.error) });
+    const project = await owned(req.userId, (req.params as { id: string }).id);
+    if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
+    if (!project.script?.beats.length) return reply.code(400).send({ error: 'no_script', message: 'Write the script first.' });
+    if (body.data.cover.scene >= project.script.beats.length) return reply.code(400).send({ error: 'invalid_cover', message: "That scene doesn't exist." });
+    const { spec } = await reelSpecFor(deps, req.userId, project);
+    try {
+      const file = await deps.renderer.still({ ...spec, cover: body.data.cover }, body.data.format);
+      req.log.info({ projectId: project.id, file, style: body.data.cover.style, size: body.data.cover.size }, 'cover rendered');
+      return { file, url: `/api/renders/${file}` };
+    } catch (err) {
+      req.log.error({ err }, 'cover render failed');
+      return reply.code(500).send({ error: 'cover_failed', message: `The cover could not be made: ${err instanceof Error ? err.message.split('\n')[0] : 'unknown error'}` });
+    }
+  });
+}
