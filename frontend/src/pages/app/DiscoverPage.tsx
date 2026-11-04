@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Banknote, Brain, Cpu, Info, Smartphone, TrainFront, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Banknote, Brain, Cpu, Flame, Info, Smartphone, TrainFront, type LucideIcon } from 'lucide-react';
 import { PageHeader } from '../../layout/AppShell';
 import { Reveal } from '../../components/motion';
 import { cn } from '../../lib/cn';
+import { TrendingPanel } from './TrendingPanel';
 
 interface Idea {
   topic: string;
@@ -74,15 +75,26 @@ const CATEGORIES: { id: string; label: string; icon: LucideIcon; tone: string; i
   },
 ];
 
-/** Starter ideas by category. Each one opens the new-reel form with the topic filled in. */
+/** Discover: what is trending now (real numbers from Wikipedia), and starter ideas by category. Each idea opens the new-reel form with the topic filled in. */
 export function DiscoverPage() {
-  const [active, setActive] = useState(CATEGORIES[0]!.id);
-  const cat = CATEGORIES.find((c) => c.id === active)!;
+  const [active, setActive] = useState<string>('trending');
+  const cat = CATEGORIES.find((c) => c.id === active);
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
-      <PageHeader title="Discover topics" subtitle="Starter ideas that work as short explainers. Pick one and the new-reel form opens with it filled in." />
+      <PageHeader title="Discover topics" subtitle="See what people are reading right now, or start from an idea. Pick one and the new-reel form opens with it filled in." />
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Topic categories">
+        <button
+          role="tab"
+          aria-selected={active === 'trending'}
+          onClick={() => setActive('trending')}
+          className={cn(
+            'inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition',
+            active === 'trending' ? 'border-coral-500/50 bg-coral-500/10 text-coral-500' : 'border-line/[0.12] bg-ink-900 text-ink-300 hover:bg-ink-800',
+          )}
+        >
+          <Flame className="h-4 w-4" /> Trending now
+        </button>
         {CATEGORIES.map((c) => (
           <button
             key={c.id}
@@ -99,6 +111,8 @@ export function DiscoverPage() {
         ))}
       </div>
 
+      {!cat && <TrendingPanel />}
+      {cat && (
       <div key={cat.id} className="grid gap-4 md:grid-cols-2">
         {cat.ideas.map((idea, i) => (
           <Reveal key={idea.topic} delay={i * 70}>
@@ -118,10 +132,13 @@ export function DiscoverPage() {
           </Reveal>
         ))}
       </div>
+      )}
 
-      <p className="flex items-start gap-2 rounded-lg bg-ink-700/60 p-3 text-xs text-ink-400">
-        <Info className="mt-0.5 h-4 w-4 shrink-0" /> These are ideas we picked, not live trends. Searching for what is trending now is not built yet.
-      </p>
+      {cat && (
+        <p className="flex items-start gap-2 rounded-lg bg-ink-700/60 p-3 text-xs text-ink-400">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" /> These are ideas we picked, not live trends. For what people are reading right now, open Trending now.
+        </p>
+      )}
     </div>
   );
 }

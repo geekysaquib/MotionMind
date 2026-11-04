@@ -85,21 +85,18 @@ Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `rese
 ## Known limits / open items
 
 1. **Export is local only:** it needs Chrome and runs on the machine hosting the API. A 3-scene reel takes about 20 seconds.
-2. **Reel editor:** no SFX tracks yet, and no trim of the recording's start or end. Scene breaks are per recording (re-uploading re-guesses them).
-3. **Discover** is curated starter ideas, not live trends.
-4. **AI mode** (copy-paste or API keys) is saved per browser, not per account (per account needs a migration).
-5. **Object positions** in the 3D world are recalculated on every draw, so an engine change can shift them in a saved reel.
-6. **Graphics:** objects are chosen by keywords in automatic scenes; four large objects in one scene still make the camera pull back.
-7. Commits are local on `main`; nothing is pushed.
-8. `supabase/test/run.sh` (database security test) needs Linux Postgres; not run on Windows.
+2. **Migration not applied yet:** `supabase/migrations/20261105000000_profile_ai_mode.sql` (`profiles.ai_mode`). Until it is applied to the live database, the AI-mode choice is kept in the browser only and saving it to the account logs a warning.
+3. **Graphics:** objects are chosen by keywords in automatic scenes; four large objects in one scene still make the camera pull back.
+4. **Trending** uses Wikipedia page views (a real signal, but about encyclopedia curiosity, not social media).
+5. Commits are local on `main`; nothing is pushed.
+6. `supabase/test/run.sh` (database security test) needs Linux Postgres; not run on Windows.
 
 ## Suggested next steps
 
-1. Add `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` if you want API-key mode (copy and paste works without them).
-2. Run `npm run assets:usage` after 20 to 30 real reels and hand-build the most-used missing 3D models.
-3. Reel editor: SFX tracks, trim of the recording's start and end. (Done: marking where the follow line starts, so the end card plays it.)
-4. Real trending topics for Discover.
-5. Push the branch.
+1. Apply the AI-mode migration to motion-mind (needs a database go-ahead).
+2. Add `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` if you want API-key mode (copy and paste works without them).
+3. Run `npm run assets:usage` after 20 to 30 real reels and hand-build the most-used missing 3D models.
+4. Push the branch.
 
 ## Commit history (newest first)
 

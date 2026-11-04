@@ -44,7 +44,31 @@ export interface RenderJob {
   finishedAt?: string;
 }
 
+/** A page that many people read yesterday (Wikipedia). */
+export interface TrendingTopic {
+  title: string;
+  views: number;
+  url: string;
+}
+export interface Trending {
+  date: string;
+  lang: 'en' | 'hi';
+  items: TrendingTopic[];
+}
+/** A reel idea made from the trending pages. */
+export interface TrendIdea {
+  topic: string;
+  hook: string;
+  seconds: 15 | 30 | 45 | 60 | 90;
+  why: string;
+}
+
 export interface ClaudeService {
+  /** Discover: what people are reading right now, and reel ideas made from it. */
+  trending(lang: 'en' | 'hi'): Promise<Trending>;
+  trendingPrompt(lang: 'en' | 'hi'): Promise<string>;
+  trendingIdeas(lang: 'en' | 'hi'): Promise<{ date: string; ideas: TrendIdea[] }>;
+  importTrendingIdeas(text: string): Promise<TrendIdea[]>;
   /** The app's connectors (Claude, ElevenLabs), all on server keys. */
   connectors(): Promise<Connector[]>;
   testElevenLabs(): Promise<ElevenLabsCheck>;
@@ -106,6 +130,10 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
         raw: { data: file, contentType: 'application/octet-stream', headers: { 'X-File-Name': encodeURIComponent(fileName) } },
       });
     },
+    trending: (lang) => call(`/discover/trending?lang=${lang}`),
+    trendingPrompt: async (lang) => (await call<{ prompt: string }>(`/discover/prompt?lang=${lang}`)).prompt,
+    trendingIdeas: (lang) => call(`/discover/ideas`, 'POST', { lang }),
+    importTrendingIdeas: async (text) => (await call<{ ideas: TrendIdea[] }>(`/discover/import`, 'POST', { text })).ideas,
     editorFor: (projectId) => call(`/projects/${projectId}/editor`),
     saveEditor: (projectId, editor) => call(`/projects/${projectId}/editor`, 'PUT', { editor }),
     startExport: (projectId) => call(`/projects/${projectId}/export`, 'POST'),

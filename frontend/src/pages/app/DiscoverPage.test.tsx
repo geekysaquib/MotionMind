@@ -11,7 +11,9 @@ describe('DiscoverPage', () => {
     await act(async () => {
       renderWithStore(<DiscoverPage />, store);
     });
-    // The first category is open. Each idea links to the dashboard form with its topic.
+    // Trending now is the first tab; the curated ideas are behind the others.
+    fireEvent.click(screen.getByRole('tab', { name: /Payments & money/ }));
+    // Each idea links to the dashboard form with its topic.
     const first = screen.getByRole('link', { name: /How does a UPI Soundbox know the money arrived\?/ });
     expect(first.getAttribute('href')).toBe(`/app?new=1&topic=${encodeURIComponent('How does a UPI Soundbox know the money arrived?')}`);
 
@@ -25,6 +27,7 @@ describe('DiscoverPage', () => {
     await act(async () => {
       renderWithStore(<DiscoverPage />, store);
     });
+    fireEvent.click(screen.getByRole('tab', { name: /Payments & money/ }));
     expect(screen.getByText(/not live trends/)).toBeTruthy();
   });
 });

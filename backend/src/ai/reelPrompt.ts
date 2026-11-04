@@ -89,7 +89,7 @@ ${schema}`;
 export class PastedScriptError extends Error {}
 
 /** Finds the JSON object in a chat answer (with or without a ```json fence and text around it). */
-function extractJson(text: string, what: string): unknown {
+export function extractJson(text: string, what: string): unknown {
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
   if (start < 0 || end <= start) throw new PastedScriptError(`That doesn't look like ${what}. Paste Claude's whole answer (the part in { }).`);
