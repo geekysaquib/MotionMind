@@ -12,6 +12,10 @@ function fakeService(connectors: Connector[]): ClaudeService {
     writeScript: async () => {
       throw new Error('not used');
     },
+    scriptPrompt: async () => '',
+    importScript: async () => {
+      throw new Error('not used');
+    },
     testElevenLabs: async () => ({ ok: true, detail: 'Connected. 2 voices available.', voices: [{ id: 'v1', name: 'Aarav' }, { id: 'v2', name: 'Diya' }] }),
   };
 }

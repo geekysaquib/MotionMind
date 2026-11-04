@@ -7,6 +7,7 @@ import { useStores } from '../../stores/RootStore';
 import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
 import { errorText, timeAgo } from '../../lib/format';
 import { brandFor, specFromScript } from '../../components/reelSpec';
+import { PasteScriptPanel } from './PasteScriptPanel';
 
 // The player pulls in the whole reel engine, so it loads only on this page.
 const ReelPreview = lazy(() => import('../../components/ReelPreview'));
@@ -39,9 +40,9 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-semibold">Reel script</h2>
+              <h2 className="font-semibold">Write with Claude</h2>
               <p className="mt-1 text-sm text-ink-400">
-                Claude writes the hook, the step-by-step explanation and the on-screen cards for <span className="text-ink-100">{project.topic ?? 'this topic'}</span>, about {project.durationSec}s long.
+                Uses the server's Claude API key. Claude writes the hook, the step-by-step explanation and the on-screen cards for <span className="text-ink-100">{project.topic ?? 'this topic'}</span>, about {project.durationSec}s long.
               </p>
             </div>
             <Button icon={<Sparkles className="h-4 w-4" />} loading={busy} disabled={!project.topic} onClick={() => void write()}>
@@ -61,6 +62,8 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
           )}
           {busy && <p className="mt-4 text-sm text-ink-400">Claude is writing. This usually takes 20 to 60 seconds.</p>}
         </Card>
+
+        <PasteScriptPanel project={project} />
 
         {script && (
           <Card>
@@ -85,7 +88,7 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
             </ol>
             {script.model && (
               <p className="mt-4 text-xs text-ink-400">
-                Written by {script.model}
+                {script.model === 'claude.ai (pasted)' ? 'Pasted from claude.ai' : `Written by ${script.model}`}
                 {script.writtenAt ? ` · ${timeAgo(script.writtenAt)}` : ''}
               </p>
             )}

@@ -34,6 +34,9 @@ export interface ClaudeService {
   ask(prompt: string): Promise<ClaudeAnswer>;
   /** Claude writes the project's reel script; returns the updated project. */
   writeScript(projectId: string): Promise<Project>;
+  /** For claude.ai: the prompt to copy, then the answer to paste back. */
+  scriptPrompt(projectId: string): Promise<string>;
+  importScript(projectId: string, text: string): Promise<Project>;
 }
 
 /** Claude always runs on the API, on the server's Anthropic key. */
@@ -49,5 +52,7 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     status: () => call<ClaudeStatus>('/claude/status'),
     ask: (prompt) => call<ClaudeAnswer>('/claude/ask', 'POST', { prompt }),
     writeScript: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'POST')).project,
+    scriptPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt`)).prompt,
+    importScript: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/script/import`, 'POST', { text })).project,
   };
 }

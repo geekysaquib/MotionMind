@@ -87,6 +87,16 @@ export class ProjectStore {
     return p;
   }
 
+  /** Saves a script written in claude.ai and pasted back (for people without an API key). */
+  async importScript(id: string, text: string) {
+    const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).importScript(id, text);
+    log.info('claude', 'Pasted script imported', { projectId: id, beats: p.script?.beats.length });
+    runInAction(() => {
+      this.items = [p, ...this.items.filter((x) => x.id !== id)];
+    });
+    return p;
+  }
+
   async remove(id: string) {
     await this.root.services.projects.remove(id);
     log.info('projects', 'Project deleted', { id });

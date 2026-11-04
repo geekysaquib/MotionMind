@@ -1,20 +1,15 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
+import { REEL_SYSTEM, reelRequest, type ReelBrief } from './reelPrompt';
 import { reelScriptSchema, type ReelScript } from './reelSchema';
+
+export type { ReelBrief };
 
 /** The model every Claude call uses. */
 export const CLAUDE_MODEL = 'claude-opus-5-5';
 
 // If Claude declines a request, the API retries it on a suitable fallback model inside the same call.
 const FALLBACK = { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const };
-
-export interface ReelBrief {
-  topic: string;
-  durationSec: number;
-  language: 'en' | 'hi' | 'hinglish';
-  niche: string | null;
-  channelName: string | null;
-}
 
 export interface ClaudeReply {
   text: string;
@@ -38,18 +33,6 @@ export class ClaudeError extends Error {
     super(message);
   }
 }
-
-const LANGUAGE: Record<ReelBrief['language'], string> = {
-  en: 'English',
-  hi: 'Hindi in Devanagari script',
-  hinglish: 'Hinglish (Hindi written in Latin script, with common English tech words), like a friendly Indian tech creator',
-};
-
-const REEL_SYSTEM = `You write scripts for short vertical explainer reels (Instagram Reels, 1080x1920).
-The style: a curious hook in the first beat, then a clear step-by-step explanation of how something really works, then a short payoff.
-Each beat is one or two short spoken sentences plus an on-screen card that makes the point visual (chips, a flow of 2-4 arrows, a key/value fact, or a note).
-Be accurate. If a number or claim is uncertain, phrase it carefully or leave it out rather than invent it.
-Narration is spoken aloud: no emoji, no hashtags, no markdown. Card headlines are punchy and under 9 words.`;
 
 function toClaudeError(err: unknown): never {
   if (err instanceof ClaudeError) throw err;
@@ -87,16 +70,7 @@ export function claudeClient(apiKey: string, fetchImpl?: typeof fetch): ClaudeCl
     },
 
     async writeReel(brief) {
-      const seconds = brief.durationSec;
-      const prompt = [
-        `Write a reel about: ${brief.topic}`,
-        `Length: about ${seconds} seconds spoken (roughly ${Math.round(seconds * 2.7)} words of narration in total).`,
-        `Language for narration, card text and step names: ${LANGUAGE[brief.language]}.`,
-        brief.niche ? `Channel niche: ${brief.niche}.` : '',
-        brief.channelName ? `Channel name: ${brief.channelName}.` : '',
-      ]
-        .filter(Boolean)
-        .join('\n');
+      const prompt = reelRequest(brief);
       try {
         const res = await client.beta.messages.parse({
           ...FALLBACK,

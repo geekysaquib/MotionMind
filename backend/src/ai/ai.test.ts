@@ -157,3 +157,43 @@ describe('claudeClient (real SDK, fake network)', () => {
     expect(body.messages[0]!.content).toContain('Hinglish');
   });
 });
+
+describe('script from claude.ai (no API key)', () => {
+  async function projectId(app: Awaited<ReturnType<typeof setup>>['app']) {
+    const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'How UPI works', durationSec: 45, qualityTier: 'standard' } });
+    return created.json().project.id as string;
+  }
+
+  it('gives a ready-to-copy prompt with the topic, length and JSON format, even without a server key', async () => {
+    const { app } = await setup({}, null);
+    const id = await projectId(app);
+    const res = await app.inject({ method: 'GET', url: `/api/projects/${id}/script/prompt`, headers: H });
+    expect(res.statusCode).toBe(200);
+    const prompt = res.json().prompt as string;
+    expect(prompt).toContain('Write a reel about: How UPI works');
+    expect(prompt).toContain('about 45 seconds');
+    expect(prompt).toContain('Answer with only one JSON object');
+    expect(prompt).toContain('"beats"');
+  });
+
+  it('imports a pasted answer, fenced or not, and saves it like a written script', async () => {
+    const { app } = await setup({}, null);
+    const id = await projectId(app);
+    const pasted = `Here is your reel:\n\`\`\`json\n${JSON.stringify(SCRIPT, null, 2)}\n\`\`\`\nHope it helps!`;
+    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: pasted } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().project).toMatchObject({ stage: 'script', script: { title: SCRIPT.title, model: 'claude.ai (pasted)', beats: SCRIPT.beats } });
+  });
+
+  it('explains what is wrong with a bad paste and saves nothing', async () => {
+    const { app } = await setup({}, null);
+    const id = await projectId(app);
+    const post = (text: string) => app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text } });
+    expect((await post('sorry, I cannot help')).json().message).toMatch(/doesn't look like a script/);
+    expect((await post('{"title": "x", ')).json().message).toMatch(/whole answer|isn't complete/);
+    expect((await post(JSON.stringify({ title: 'x', steps: [] }))).json().message).toMatch(/missing something.*beats/);
+    expect((await post(JSON.stringify({ ...SCRIPT, beats: [] }))).json().message).toMatch(/no beats/);
+    const project = await app.inject({ method: 'GET', url: `/api/projects/${id}`, headers: H });
+    expect(project.json().project.script).toBeNull();
+  });
+});
