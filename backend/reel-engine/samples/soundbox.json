@@ -1,0 +1,63 @@
+{
+  "title": "Soundbox kaise bolta hai",
+  "world": "iso",
+  "steps": ["Scan", "NPCI", "Server", "Awaaz"],
+  "brand": { "name": "Decodifyx", "initials": "D", "handle": "@decodify_x", "tagline": "Roz ki tech, andar ki baat" },
+  "voice": [],
+  "beats": [
+    {
+      "id": "b1", "chapter": 0, "keywords": ["paise", "soundbox"],
+      "narration": "Interviewer bola: Soundbox banao jo paise aate hi bol de. Ye dabba itni jaldi kaise jaanta hai?",
+      "card": { "eyebrow": "Interview question", "headline": "Dabba *paise* kaise jaanta hai?", "tone": "purple", "rows": [] },
+      "scene": { "props": [{ "id": "you", "kind": "phone", "label": "Tum" }, { "id": "shop", "kind": "shop", "label": "Dukaan" }, { "id": "box", "kind": "chip", "label": "Soundbox" }], "links": [{ "from": "you", "to": "shop", "label": "₹50" }], "effect": "pulse", "focus": "box" }
+    },
+    {
+      "id": "b2", "chapter": 1, "keywords": ["npci"],
+      "narration": "Pehle tum QR scan karke UPI PIN daalte ho. Tumhari payment app request NPCI ke UPI switch ko bhejti hai.",
+      "card": { "eyebrow": "Step 1 · Scan aur PIN", "headline": "Request jaati hai *NPCI* ko", "tone": "blue", "rows": [] },
+      "scene": { "props": [{ "id": "you", "kind": "phone", "label": "Tum" }, { "id": "npci", "kind": "server", "label": "NPCI switch" }], "links": [{ "from": "you", "to": "npci", "label": "payment request" }], "effect": "none", "focus": "npci" }
+    },
+    {
+      "id": "b3", "chapter": 1, "keywords": ["paisa"],
+      "narration": "NPCI dukaan ka address, yaani VPA, dhoondhta hai. Phir dono banks ke beech paisa move hota hai aur result dono taraf wapas jaata hai.",
+      "card": { "eyebrow": "Step 2 · NPCI switch", "headline": "Banks ke beech *paisa* move", "tone": "teal", "rows": [] },
+      "scene": { "props": [{ "id": "shop", "kind": "shop", "label": "Dukaan" }, { "id": "npci", "kind": "server", "label": "NPCI switch" }, { "id": "banks", "kind": "bank", "label": "Banks" }], "links": [{ "from": "npci", "to": "shop", "label": "credit" }, { "from": "npci", "to": "banks", "label": "paisa move" }], "effect": "pulse", "focus": "npci" }
+    },
+    {
+      "id": "b4", "chapter": 2, "keywords": ["callback"],
+      "narration": "Dukaandar ka payment provider yeh confirmation pakadta hai. Phir woh apne server ko callback bhej deta hai.",
+      "card": { "eyebrow": "Step 2 · Callback", "headline": "Server ko milta hai *callback*", "tone": "blue", "rows": [] },
+      "scene": { "props": [{ "id": "npci", "kind": "server", "label": "NPCI switch" }, { "id": "prov", "kind": "cloud", "label": "Provider server" }], "links": [{ "from": "npci", "to": "prov", "label": "confirmation" }], "effect": "none", "focus": "prov" }
+    },
+    {
+      "id": "b5", "chapter": 2, "keywords": ["bank", "trigger"],
+      "narration": "Dhyaan do, speaker bank ko khud check nahi karta. Server ka confirmation hi uska trigger hai.",
+      "card": { "eyebrow": "Step 3 · Asli trick", "headline": "Speaker *bank* nahi dekhta", "tone": "red", "rows": [] },
+      "scene": { "props": [{ "id": "box", "kind": "chip", "label": "Soundbox" }, { "id": "banks", "kind": "bank", "label": "Bank" }, { "id": "prov", "kind": "cloud", "label": "Provider server" }], "links": [{ "from": "prov", "to": "box", "label": "trigger" }], "effect": "pulse", "focus": "box" }
+    },
+    {
+      "id": "b6", "chapter": 2, "keywords": ["message", "wi-fi"],
+      "narration": "Server us dabbe ko SIM ya Wi-Fi se ek chhota message push karta hai, jisme amount hota hai.",
+      "card": { "eyebrow": "Step 3 · Push message", "headline": "SIM ya *Wi-Fi* se message", "tone": "amber", "rows": [] },
+      "scene": { "props": [{ "id": "prov", "kind": "cloud", "label": "Provider server" }, { "id": "box", "kind": "chip", "label": "Soundbox" }, { "id": "srv", "kind": "server", "label": "Server" }], "links": [{ "from": "srv", "to": "box", "label": "amount message" }], "effect": "rings", "focus": "box" }
+    },
+    {
+      "id": "b7", "chapter": 3, "keywords": ["awaaz"],
+      "narration": "Dabba amount padhkar bol deta hai: ₹50 prapt hue. Poori payment mein lagbhag 2 second lagte hain.",
+      "card": { "eyebrow": "Step 4 · Awaaz", "headline": "₹50 *prapt* hue", "tone": "teal", "rows": [] },
+      "scene": { "props": [{ "id": "you", "kind": "phone", "label": "Tum" }, { "id": "shop", "kind": "shop", "label": "Dukaan" }, { "id": "box", "kind": "chip", "label": "Soundbox" }], "links": [], "effect": "rings", "focus": "box" }
+    },
+    {
+      "id": "b8", "chapter": 3, "keywords": ["diy"],
+      "narration": "Hobby wale DIY clones SMS alert padhkar amount bolte hain. Idea wahi hai: alert aaya, awaaz bajao.",
+      "card": { "eyebrow": "Bonus · DIY version", "headline": "Alert aaya, *awaaz* bajao", "tone": "purple", "rows": [] },
+      "scene": { "props": [{ "id": "sms", "kind": "document", "label": "SMS alert" }, { "id": "esp", "kind": "chip", "label": "ESP32" }], "links": [{ "from": "sms", "to": "esp", "label": "amount" }], "effect": "pulse", "focus": "esp" }
+    },
+    {
+      "id": "b9", "chapter": 3, "keywords": ["speed"],
+      "narration": "Interview mein bolna: speed UPI ki chhoti chain aur halke push message se aati hai. Pakka protocol kaunsa hai, yeh confirm nahi hua.",
+      "card": { "eyebrow": "Interview answer", "headline": "Chhoti chain, *halka* push", "tone": "blue", "rows": [] },
+      "scene": { "props": [{ "id": "box", "kind": "chip", "label": "Soundbox" }, { "id": "npci", "kind": "server", "label": "NPCI" }, { "id": "prov", "kind": "cloud", "label": "Provider server" }], "links": [{ "from": "box", "to": "npci", "label": "push" }, { "from": "npci", "to": "prov", "label": "confirmation" }], "effect": "none", "focus": "box" }
+    }
+  ]
+}

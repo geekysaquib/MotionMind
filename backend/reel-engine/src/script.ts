@@ -48,15 +48,35 @@ export type WorldEvent =
   | 'none';
 
 /** Objects the 3D isometric scene kit can draw ('iso' world). */
-export const PROP_KINDS = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite'] as const;
+export const PROP_KINDS = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'custom'] as const;
 export type PropKind = (typeof PROP_KINDS)[number];
+
+/** Body of a 'custom' object (anything the 16 named kinds can't draw): a block, a tall tower, a wide slab, a flat pad or a ball. */
+export const PROP_SHAPES = ['block', 'tall', 'wide', 'flat', 'round'] as const;
+export type PropShape = (typeof PROP_SHAPES)[number];
+
+/** The look of the 3D world around the props. */
+export const WORLD_THEMES = ['city', 'nature', 'lab', 'plain'] as const;
+export type WorldTheme = (typeof WORLD_THEMES)[number];
+
+export interface ScenePropSpec {
+  id: string;
+  kind: PropKind;
+  label?: string;
+  /** One emoji floated above the object. For 'custom' objects it is what makes them recognisable. */
+  icon?: string;
+  /** 'custom' only: the body shape. */
+  shape?: PropShape;
+  /** Colour of a 'custom' body. Defaults to the scene's tone. */
+  tone?: Tone;
+}
 
 /**
  * One scene in the 3D isometric world. Props with the same id are the same object in every scene,
  * so the camera travels around one persistent world; a prop appears the first time a scene uses it.
  */
 export interface IsoScene {
-  props: { id: string; kind: PropKind; label?: string }[];
+  props: ScenePropSpec[];
   /** Animated signal lines between props, drawn as arcs with a travelling packet. */
   links?: { from: string; to: string; label?: string }[];
   /** rings = signal waves from the focus prop; pulse = it glows; none. */
@@ -105,6 +125,8 @@ export type ReelSpec = {
   title: string;
   /** 'train' = the isometric railway world; 'iso' = the 3D isometric scene kit for any topic; 'cards' = flat animated graphics. */
   world: 'train' | 'iso' | 'cards';
+  /** Iso world: what the ground and background look like. */
+  theme?: WorldTheme;
   /** Names of the progress steps shown in the header (chapters 1..n). */
   steps: string[];
   brand: Brand;

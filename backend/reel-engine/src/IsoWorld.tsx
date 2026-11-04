@@ -1,8 +1,8 @@
 import React from 'react';
 import { spring } from 'remotion';
-import { Camera, Vec3, cameraTransform, clamp01, easeInOutCubic, lerp, pts, shade, toScreen } from './iso';
+import { Camera, Vec3, cameraTransform, clamp01, easeInOutCubic, lerp, project, pts, shade, toScreen } from './iso';
 import { C, Pill, box, rand, shadow, tree, windowsOnHouse, type Item } from './World';
-import type { IsoScene, PropKind, TimedBeat, Tone } from './script';
+import type { IsoScene, PropKind, PropShape, ScenePropSpec, TimedBeat, Tone, WorldTheme } from './script';
 
 // ---------- layout: one persistent world for the whole reel ----------
 
@@ -10,38 +10,94 @@ export interface PlacedProp {
   id: string;
   kind: PropKind;
   pos: Vec3;
+  /** How it looks: label, icon and, for custom objects, shape and colour (from the first scene that uses it). */
+  spec: ScenePropSpec;
   /** Frame at which the prop first appears (the start of the first scene that uses it). */
   appearsAt: number;
 }
 
-const SPACING = 6.5;
+const STEP_X = 6.4;
+const STEP_Y = 5.2;
 
 /**
- * Gives every distinct prop a fixed spot along a gentle zig-zag, in the order the scenes first use them,
- * so the camera can glide from one part of the world to the next like in the train reel.
+ * Gives every distinct prop a fixed spot, so the camera can glide from one part of the world to the next.
+ * A new prop goes on the free grid cell closest to the props it shares its first scene with (and a little
+ * further along the story's direction), so each scene's objects sit close together and fit in one shot.
  */
 export function layoutProps(timed: TimedBeat[]): Map<string, PlacedProp> {
   const placed = new Map<string, PlacedProp>();
+  const cells = new Map<string, [number, number]>();
+  const taken = new Set<string>();
+  let frontier: [number, number] = [-1, 0];
   for (const b of timed) {
-    for (const p of b.scene?.props ?? []) {
-      if (placed.has(p.id)) continue;
-      const i = placed.size;
-      placed.set(p.id, { id: p.id, kind: p.kind, pos: { x: i * SPACING, y: i % 2 === 0 ? -2.2 : 2.2, z: 0 }, appearsAt: b.start });
+    const specs = b.scene?.props ?? [];
+    for (const sp of specs) {
+      const have = placed.get(sp.id);
+      // A later scene can add the icon, shape or colour the first one left out.
+      if (have) have.spec = { ...have.spec, icon: have.spec.icon ?? sp.icon, shape: have.spec.shape ?? sp.shape, tone: have.spec.tone ?? sp.tone };
+    }
+    const known = specs.map((sp) => cells.get(sp.id)).filter((c): c is [number, number] => Boolean(c));
+    const anchor: [number, number] = known.length
+      ? [known.reduce((n, c) => n + c[0], 0) / known.length, known.reduce((n, c) => n + c[1], 0) / known.length]
+      : [frontier[0] + 1, 0];
+    for (const sp of specs) {
+      if (placed.has(sp.id)) continue;
+      let best: [number, number] = [0, 0];
+      let bestCost = Infinity;
+      for (let i = -3; i < 80; i++) {
+        for (let j = -1; j <= 1; j++) {
+          if (taken.has(`${i},${j}`)) continue;
+          const dx = i - anchor[0];
+          const dy = j - anchor[1];
+          const cost = dx * dx * 0.8 + dy * dy * 1.2 + (dx < 0 ? 2.5 : 0) + i * 0.001;
+          if (cost < bestCost) {
+            bestCost = cost;
+            best = [i, j];
+          }
+        }
+      }
+      taken.add(`${best[0]},${best[1]}`);
+      cells.set(sp.id, best);
+      frontier = best;
+      placed.set(sp.id, { id: sp.id, kind: sp.kind, spec: sp, pos: { x: best[0] * STEP_X, y: best[1] * STEP_Y, z: 0 }, appearsAt: b.start });
     }
   }
   return placed;
 }
 
+/** The part of the 1080x1920 frame that is clear of the title card (top) and the captions (bottom). */
+const SAFE = { left: 110, right: 970, top: 600, bottom: 1480 };
+const CAM_CY = (SAFE.top + SAFE.bottom) / 2;
+const COS30 = Math.cos(Math.PI / 6);
+
+/**
+ * Frames a scene so ALL of its objects (with their icons and labels) fit inside the safe area:
+ * the zoom comes from the real projected bounds, not a guess from distances.
+ */
 function sceneCameraKey(scene: IsoScene | undefined, placed: Map<string, PlacedProp>, fallback: { x: number; y: number; zoom: number }) {
   const ps = (scene?.props ?? []).map((p) => placed.get(p.id)).filter((p): p is PlacedProp => Boolean(p));
   if (!ps.length) return fallback;
-  const xs = ps.map((p) => p.pos.x);
-  const ys = ps.map((p) => p.pos.y);
-  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
-  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-  // Screen spread of the props (isometric x-y), so a lone prop is a close-up and a chain is a wide shot.
-  const spread = Math.max(4, Math.max(...xs) - Math.min(...xs) + Math.abs(Math.max(...ys) - Math.min(...ys)) + 4);
-  return { x: cx, y: cy, zoom: Math.max(34, Math.min(95, 1250 / spread)) };
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of ps) {
+    const top = propTop(p) + (p.spec.icon ? 3.0 : 1.9); // room for the icon and the label above it
+    for (const [dx, dy, z] of [[-1.5, -1.5, 0], [1.5, 1.5, 0], [-1.5, 1.5, 0], [1.5, -1.5, 0], [0, 0, top]] as const) {
+      const [px, py] = project({ x: p.pos.x + dx, y: p.pos.y + dy, z });
+      minX = Math.min(minX, px);
+      maxX = Math.max(maxX, px);
+      minY = Math.min(minY, py);
+      maxY = Math.max(maxY, py);
+    }
+  }
+  const w = Math.max(1, maxX - minX);
+  const h = Math.max(1, maxY - minY);
+  const zoom = Math.max(26, Math.min(80, (SAFE.right - SAFE.left) / w, (SAFE.bottom - SAFE.top) / h));
+  // Invert project() at z = 1.2 to find the world point that sits at the middle of the bounds.
+  const sum = 2 * ((minY + maxY) / 2 + 1.2); // x + y
+  const diff = (minX + maxX) / 2 / COS30; // x - y
+  return { x: (sum + diff) / 2, y: (sum - diff) / 2, zoom };
 }
 
 /** Camera for the iso world: holds on each scene's props and eases to the next scene's. */
@@ -58,13 +114,13 @@ export function isoCamera(timed: TimedBeat[], placed: Map<string, PlacedProp>, s
   const cur = keys[i]!;
   const prev = i > 0 ? keys[i - 1]! : cur;
   const t = easeInOutCubic(clamp01((f - beat.start) / 36));
-  const drift = 1 + 0.04 * clamp01((f - beat.start) / beat.frames);
+  const drift = 1 + 0.03 * clamp01((f - beat.start) / beat.frames);
   const endPull = frame >= storyFrames ? 1 - 0.1 * clamp01((frame - storyFrames) / 60) : 1;
   return {
     target: { x: lerp(prev.x, cur.x, t), y: lerp(prev.y, cur.y, t), z: 1.2 },
     zoom: lerp(prev.zoom, cur.zoom, t) * drift * endPull,
     cx: 540,
-    cy: 1160,
+    cy: CAM_CY,
   };
 }
 
@@ -91,8 +147,47 @@ function dot(key: string, p: Vec3, r: number, fill: string, depth: number): Item
 /** The top of each kind, where labels and links attach. */
 export const PROP_TOP: Record<PropKind, number> = {
   phone: 2.1, laptop: 1.5, tower: 6.0, server: 2.4, cloud: 4.4, bank: 3.2, shop: 2.4, building: 4.6, house: 2.6, factory: 3.6,
-  person: 2.1, document: 0.6, money: 1.0, chip: 0.7, car: 1.4, satellite: 6.6,
+  person: 2.1, document: 0.6, money: 1.0, chip: 0.7, car: 1.4, satellite: 6.6, custom: 2.4,
 };
+
+const SHAPE_TOP: Record<PropShape, number> = { block: 2.2, tall: 4.2, wide: 1.5, flat: 0.5, round: 2.7 };
+
+/** Height of a prop: where its icon, label and links attach. */
+export function propTop(p: PlacedProp): number {
+  if (p.kind === 'custom') return SHAPE_TOP[p.spec.shape ?? 'block'] ?? SHAPE_TOP.block;
+  return PROP_TOP[p.kind] ?? SHAPE_TOP.block;
+}
+
+/** Any object the named kinds can't draw: a body in the object's colour and shape; its emoji floats above it. */
+function customItems(p: PlacedProp, accent: string): Item[] {
+  const { x, y } = p.pos;
+  const k = p.id;
+  const col = hexShade(p.spec.tone ? (TONE[p.spec.tone] ?? accent) : accent, 0.1);
+  const out: Item[] = [shadow(`sh${k}`, x - 1.3, y - 1.3, 2.6, 2.6)];
+  switch (p.spec.shape ?? 'block') {
+    case 'tall':
+      out.push(box(`cu${k}`, x - 0.6, y - 0.6, 0, 1.2, 1.2, 3.7, col, windowsOnHouse(x - 0.6, y - 0.6, 1.2, 1.2, 3.7)));
+      out.push({ ...box(`cc${k}`, x - 0.78, y - 0.78, 3.7, 1.56, 1.56, 0.35, hexShade(col, -0.2)), depth: x + y + 0.3 });
+      break;
+    case 'wide':
+      out.push(box(`cu${k}`, x - 1.4, y - 0.9, 0, 2.8, 1.8, 1.1, col, windowsOnHouse(x - 1.4, y - 0.9, 2.8, 1.8, 0.8)));
+      out.push({ ...box(`cc${k}`, x - 1.5, y - 1.0, 1.1, 3.0, 2.0, 0.2, hexShade(col, -0.2)), depth: x + y + 0.3 });
+      break;
+    case 'flat':
+      out.push(box(`cu${k}`, x - 1.4, y - 1.4, 0, 2.8, 2.8, 0.25, col));
+      out.push({ ...box(`ci${k}`, x - 0.9, y - 0.9, 0.25, 1.8, 1.8, 0.12, hexShade(col, 0.35)), depth: x + y + 0.2 });
+      break;
+    case 'round':
+      out.push(box(`cb${k}`, x - 0.6, y - 0.6, 0, 1.2, 1.2, 0.25, '#D5D9E0'));
+      out.push(dot(`cu${k}`, { x, y, z: 1.55 }, 1.2, shade(col, 0), x + y + 0.5));
+      out.push(dot(`ch${k}`, { x: x - 0.25, y: y - 0.25, z: 1.95 }, 0.45, shade(col, 0.45), x + y + 0.6));
+      break;
+    default:
+      out.push(box(`cu${k}`, x - 0.85, y - 0.85, 0, 1.7, 1.7, 1.8, col, windowsOnHouse(x - 0.85, y - 0.85, 1.7, 1.7, 1.5)));
+      out.push({ ...box(`cc${k}`, x - 1.0, y - 1.0, 1.8, 2.0, 2.0, 0.3, hexShade(col, -0.2)), depth: x + y + 0.3 });
+  }
+  return out;
+}
 
 function propItems(p: PlacedProp, accent: string, frame: number): Item[] {
   const { x, y } = p.pos;
@@ -222,6 +317,8 @@ function propItems(p: PlacedProp, accent: string, frame: number): Item[] {
       for (const dx of [-1.5, 0.4]) out.push({ ...box(`sp${k}${dx}`, x + dx, y - 0.1, 5.8 + bob, 1.1, 0.2, 0.05, C.blue), depth: x + y + 3.1 });
       break;
     }
+    default:
+      return customItems(p, accent);
   }
   return out;
 }
@@ -236,9 +333,21 @@ export interface IsoWorldProps {
   cam: Camera;
   beat: TimedBeat;
   placed: Map<string, PlacedProp>;
+  /** The look of the ground and scenery. Defaults to the town. */
+  theme?: WorldTheme;
 }
 
-export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, placed }) => {
+const EMOJI_FONT = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+
+const THEMES: Record<WorldTheme, { ground: string; water: string; waterDeep: string; road: string | null }> = {
+  city: { ground: C.ground, water: C.water, waterDeep: C.waterDeep, road: C.ballast },
+  nature: { ground: '#E4F0D2', water: '#BFE0F2', waterDeep: '#9CCBE6', road: '#D9E6C3' },
+  lab: { ground: '#EEF0F8', water: '#DCE1F2', waterDeep: '#BCC5E3', road: null },
+  plain: { ground: '#F3EFE6', water: '#E8EBF2', waterDeep: '#CFD5E2', road: null },
+};
+
+export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, placed, theme = 'city' }) => {
+  const look = THEMES[theme] ?? THEMES.city;
   const accent = TONE[beat.card.tone] ?? C.teal;
   const scene = beat.scene;
   const inScene = new Set((scene?.props ?? []).map((p) => p.id));
@@ -248,11 +357,14 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
   const maxX = Math.max(30, ...props.map((p) => p.pos.x)) + 12;
 
   const items: Item[] = [];
-  // Background town: houses and trees away from the props, so the world never looks empty.
-  for (const d of DECOR) {
+  // Scenery away from the props, so the world never looks empty: a town, a meadow, or nothing at all.
+  for (const d of theme === 'city' || theme === 'nature' ? DECOR : []) {
     if (d.x > maxX) continue;
-    if (props.some((p) => Math.abs(p.pos.x - d.x) < 3 && Math.abs(p.pos.y - d.y) < 3.2)) continue;
-    if (d.i % 3 === 0) items.push(tree(`dt${d.i}`, d.x, d.y, 0.7 + rand(d.i) * 0.4));
+    if (props.some((p) => Math.abs(p.pos.x - d.x) < 3.4 && Math.abs(p.pos.y - d.y) < 3.6)) continue;
+    if (theme === 'nature') {
+      if (d.i % 4 === 0) items.push(dot(`rk${d.i}`, { x: d.x, y: d.y, z: 0.3 }, 0.38 + rand(d.i) * 0.2, '#C9CED8', d.x + d.y + 0.3));
+      else items.push(tree(`dt${d.i}`, d.x, d.y, 0.8 + rand(d.i) * 0.7));
+    } else if (d.i % 3 === 0) items.push(tree(`dt${d.i}`, d.x, d.y, 0.7 + rand(d.i) * 0.4));
     else {
       const h = 0.8 + rand(d.i + 5) * 1.6;
       items.push(shadow(`ds${d.i}`, d.x, d.y, 1.4, 1.3));
@@ -296,7 +408,7 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
 
   const top = (id: string): [number, number] | null => {
     const p = placed.get(id);
-    return p ? toScreen({ ...p.pos, z: PROP_TOP[p.kind] + 0.3 }, cam) : null;
+    return p ? toScreen({ ...p.pos, z: propTop(p) + 0.3 }, cam) : null;
   };
 
   return (
@@ -310,11 +422,19 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
             <stop offset="1" stopColor={C.bg} stopOpacity="0.9" />
           </linearGradient>
         </defs>
-        <rect width={1080} height={1920} fill={C.water} />
+        <rect width={1080} height={1920} fill={look.water} />
         <g transform={cameraTransform(cam)}>
-          <polygon points={pts(front)} fill={C.waterDeep} />
-          <polygon points={pts(ground)} fill={C.ground} stroke={C.outline} strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
-          <polygon points={pts(road)} fill={C.ballast} />
+          <polygon points={pts(front)} fill={look.waterDeep} />
+          <polygon points={pts(ground)} fill={look.ground} stroke={C.outline} strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
+          {look.road && <polygon points={pts(road)} fill={look.road} />}
+          {theme === 'lab' &&
+            Array.from({ length: Math.ceil(slab.w / 3) + 1 }, (_, g) => (
+              <polyline key={`gx${g}`} points={pts([{ x: slab.x + g * 3, y: slab.y, z: 0.02 }, { x: slab.x + g * 3, y: slab.y + slab.d, z: 0.02 }])} fill="none" stroke="rgba(59,130,246,0.14)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+            ))}
+          {theme === 'lab' &&
+            Array.from({ length: 7 }, (_, g) => (
+              <polyline key={`gy${g}`} points={pts([{ x: slab.x, y: slab.y + g * 3.4, z: 0.02 }, { x: slab.x + slab.w, y: slab.y + g * 3.4, z: 0.02 }])} fill="none" stroke="rgba(59,130,246,0.14)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+            ))}
           {/* Pulse: a glowing pad under the focus prop */}
           {scene?.effect === 'pulse' && focusId && placed.get(focusId) && (() => {
             const f = placed.get(focusId)!.pos;
@@ -343,8 +463,8 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
           const b = placed.get(l.to);
           if (!a || !b) return null;
           const grow = spring({ frame: local - 12 - i * 10, fps, config: { damping: 200 } });
-          const A = { ...a.pos, z: PROP_TOP[a.kind] * 0.7 };
-          const B = { ...b.pos, z: PROP_TOP[b.kind] * 0.7 };
+          const A = { ...a.pos, z: propTop(a) * 0.7 };
+          const B = { ...b.pos, z: propTop(b) * 0.7 };
           const N = 24;
           const pt = (t: number) => toScreen({ x: lerp(A.x, B.x, t), y: lerp(A.y, B.y, t), z: lerp(A.z, B.z, t) + Math.sin(Math.PI * t) * 2.2 }, cam);
           const path = Array.from({ length: Math.max(2, Math.round(N * grow)) }, (_, j) => pt((j / (N - 1)) * grow));
@@ -358,19 +478,49 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
           );
         })}
       </svg>
-      {/* Labels: constant size, above the scene's props */}
+      {/* Icons and labels: constant size, above the scene's props and kept inside the frame */}
       {(scene?.props ?? []).map((sp, i) => {
-        const at = top(sp.id);
-        if (!at || !sp.label) return null;
-        const s = spring({ frame: local - 10 - i * 6, fps, config: { damping: 14 } });
-        return <Pill key={`lb${sp.id}`} x={at[0]} y={at[1] - 8} text={sp.label} tone={sp.id === focusId ? accent : '#B8BCC6'} scale={s} />;
+        const pp = placed.get(sp.id);
+        if (!pp) return null;
+        const pop = spring({ frame: local - 10 - i * 6, fps, config: { damping: 14 } });
+        const icon = pp.spec.icon;
+        const at = toScreen({ ...pp.pos, z: propTop(pp) + (icon ? 1.2 : 0.3) }, cam);
+        const cx = Math.max(150, Math.min(930, at[0]));
+        const bob = Math.sin((frame + i * 9) / 14) * 6;
+        return (
+          <React.Fragment key={`lb${sp.id}`}>
+            {icon && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: cx,
+                  top: at[1] + bob,
+                  transform: `translate(-50%, -50%) scale(${pop})`,
+                  fontSize: 92,
+                  lineHeight: 1,
+                  fontFamily: EMOJI_FONT,
+                  filter: 'drop-shadow(0 8px 8px rgba(31,36,48,0.28))',
+                }}
+              >
+                {icon}
+              </div>
+            )}
+            {sp.label && <Pill x={cx} y={at[1] - (icon ? 58 : 8)} text={sp.label} tone={sp.id === focusId ? accent : '#B8BCC6'} scale={pop} />}
+          </React.Fragment>
+        );
       })}
       {(scene?.links ?? []).map((l, i) => {
         if (!l.label) return null;
         const a = placed.get(l.from);
         const b = placed.get(l.to);
         if (!a || !b) return null;
-        const mid = toScreen({ x: (a.pos.x + b.pos.x) / 2, y: (a.pos.y + b.pos.y) / 2, z: (PROP_TOP[a.kind] + PROP_TOP[b.kind]) * 0.35 + 2.4 }, cam);
+        // Sit on the arc itself (the same curve the packet follows); several links in a scene take different spots so labels don't pile up.
+        const n = scene?.links?.length ?? 1;
+        const t = n > 1 ? [0.5, 0.3, 0.7, 0.4][i % 4]! : 0.5;
+        const mid = toScreen(
+          { x: lerp(a.pos.x, b.pos.x, t), y: lerp(a.pos.y, b.pos.y, t), z: lerp(propTop(a) * 0.7, propTop(b) * 0.7, t) + Math.sin(Math.PI * t) * 2.2 + 0.9 },
+          cam,
+        );
         const s = spring({ frame: local - 22 - i * 10, fps, config: { damping: 14 } });
         return <Pill key={`ll${i}`} x={mid[0]} y={mid[1]} text={l.label} tone={accent} scale={s * 0.9} />;
       })}

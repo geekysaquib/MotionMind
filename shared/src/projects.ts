@@ -65,11 +65,17 @@ export type ReelRow =
   | { kind: 'note'; text: string };
 
 /** Objects the 3D isometric world can draw (same list as the reel engine's PROP_KINDS). */
-export type ScenePropKind = 'phone' | 'laptop' | 'tower' | 'server' | 'cloud' | 'bank' | 'shop' | 'building' | 'house' | 'factory' | 'person' | 'document' | 'money' | 'chip' | 'car' | 'satellite';
+export type ScenePropKind = 'phone' | 'laptop' | 'tower' | 'server' | 'cloud' | 'bank' | 'shop' | 'building' | 'house' | 'factory' | 'person' | 'document' | 'money' | 'chip' | 'car' | 'satellite' | 'custom';
+
+/** Body of a 'custom' object. */
+export type ScenePropShape = 'block' | 'tall' | 'wide' | 'flat' | 'round';
+
+/** The look of the ground and background in the iso world. */
+export type WorldTheme = 'city' | 'nature' | 'lab' | 'plain';
 
 /** A beat's 3D scene: which objects are on screen, what moves between them, and the effect. */
 export interface ReelScene {
-  props: { id: string; kind: ScenePropKind; label?: string }[];
+  props: { id: string; kind: ScenePropKind; label?: string; icon?: string; shape?: ScenePropShape; tone?: 'red' | 'teal' | 'purple' | 'blue' | 'amber' }[];
   links?: { from: string; to: string; label?: string }[];
   effect?: 'rings' | 'pulse' | 'none';
   focus?: string;
@@ -105,6 +111,8 @@ export interface ReelScript {
   title: string;
   /** Which 3D world renders it. Missing on older scripts, which render as flat cards. */
   world?: 'iso' | 'train';
+  /** Iso world: the look of the ground and background. */
+  theme?: WorldTheme;
   steps: string[];
   beats: ReelBeat[];
   /** Which Claude model wrote it, and when. */

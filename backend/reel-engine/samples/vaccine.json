@@ -1,0 +1,40 @@
+{
+  "title": "Vaccine kaise kaam karta hai",
+  "world": "iso",
+  "theme": "lab",
+  "steps": ["Vaccine", "Pehchaan", "Yaad", "Suraksha"],
+  "brand": { "name": "Decodifyx", "initials": "D", "handle": "@decodify_x", "tagline": "Roz ki tech, andar ki baat" },
+  "voice": [],
+  "beats": [
+    {
+      "id": "b1", "chapter": 0, "keywords": ["vaccine"],
+      "narration": "Ek chhota sa injection aapko saalon tak bimari se kaise bachata hai?",
+      "card": { "eyebrow": "Hook", "headline": "Injection se *suraksha* kaise?", "tone": "teal", "rows": [] },
+      "scene": { "props": [{ "id": "shot", "kind": "custom", "label": "Vaccine", "icon": "💉", "shape": "tall", "tone": "teal" }, { "id": "you", "kind": "person", "label": "Aap" }], "links": [{ "from": "shot", "to": "you", "label": "dose" }], "effect": "pulse", "focus": "shot" }
+    },
+    {
+      "id": "b2", "chapter": 1, "keywords": ["virus"],
+      "narration": "Vaccine mein kamzor ya bekaar kiya hua virus ka hissa hota hai, jo bimari nahi karta.",
+      "card": { "eyebrow": "Step 1 · Vaccine", "headline": "Kamzor *virus* ka hissa", "tone": "red", "rows": [] },
+      "scene": { "props": [{ "id": "shot", "kind": "custom", "label": "Vaccine", "icon": "💉", "shape": "tall", "tone": "teal" }, { "id": "virus", "kind": "custom", "label": "Kamzor virus", "icon": "🦠", "shape": "round", "tone": "red" }], "links": [{ "from": "virus", "to": "shot", "label": "hissa" }], "effect": "none", "focus": "virus" }
+    },
+    {
+      "id": "b3", "chapter": 2, "keywords": ["immune"],
+      "narration": "Aapka immune system us hisse ko dushman maankar pehchan leta hai aur safed koshikaayein hamla karti hain.",
+      "card": { "eyebrow": "Step 2 · Pehchaan", "headline": "Immune system *pehchanta* hai", "tone": "blue", "rows": [] },
+      "scene": { "props": [{ "id": "virus", "kind": "custom", "label": "Kamzor virus", "icon": "🦠", "shape": "round", "tone": "red" }, { "id": "cells", "kind": "custom", "label": "Safed koshika", "icon": "🛡️", "shape": "block", "tone": "blue" }, { "id": "dna", "kind": "custom", "label": "Antibody", "icon": "🧬", "shape": "flat", "tone": "purple" }], "links": [{ "from": "cells", "to": "virus", "label": "hamla" }, { "from": "cells", "to": "dna", "label": "banata hai" }], "effect": "rings", "focus": "cells" }
+    },
+    {
+      "id": "b4", "chapter": 3, "keywords": ["yaad"],
+      "narration": "Phir memory cells yeh pehchaan yaad rakh leti hain, taaki asli virus aane par jawab turant mile.",
+      "card": { "eyebrow": "Step 3 · Yaad", "headline": "Memory cells *yaad* rakhti hain", "tone": "purple", "rows": [] },
+      "scene": { "props": [{ "id": "dna", "kind": "custom", "label": "Antibody", "icon": "🧬", "shape": "flat", "tone": "purple" }, { "id": "mem", "kind": "custom", "label": "Memory cell", "icon": "🧠", "shape": "round", "tone": "amber" }], "links": [{ "from": "dna", "to": "mem", "label": "yaad" }], "effect": "pulse", "focus": "mem" }
+    },
+    {
+      "id": "b5", "chapter": 4, "keywords": ["suraksha"],
+      "narration": "Isliye asli virus se milne par aapka sharir pehle se taiyaar hota hai aur aap bimar nahi padte.",
+      "card": { "eyebrow": "Payoff", "headline": "Pehle se *taiyaar* sharir", "tone": "teal", "rows": [] },
+      "scene": { "props": [{ "id": "mem", "kind": "custom", "label": "Memory cell", "icon": "🧠", "shape": "round", "tone": "amber" }, { "id": "you", "kind": "person", "label": "Aap", "icon": "💪" }, { "id": "virus", "kind": "custom", "label": "Asli virus", "icon": "🦠", "shape": "round", "tone": "red" }], "links": [{ "from": "mem", "to": "virus", "label": "turant jawab" }], "effect": "rings", "focus": "you" }
+    }
+  ]
+}

@@ -324,6 +324,15 @@ describe('3D scenes in the script format', () => {
     expect(parsePastedScript(JSON.stringify(train)).beats[0]!.shot).toBe('tower');
   });
 
+  it('keeps custom objects (icon, shape, colour) and the world theme', async () => {
+    const { parsePastedScript } = await import('./reelPrompt');
+    const scene = { props: [{ id: 'v', kind: 'custom', label: 'Virus', icon: '🦠', shape: 'round', tone: 'red' }], effect: 'pulse', focus: 'v' };
+    const script = { ...SCRIPT, world: 'iso', theme: 'lab', beats: SCRIPT.beats.map((b) => ({ ...b, scene })) };
+    const parsed = parsePastedScript(JSON.stringify(script));
+    expect(parsed.theme).toBe('lab');
+    expect(parsed.beats[0]!.scene!.props[0]).toEqual({ id: 'v', kind: 'custom', label: 'Virus', icon: '🦠', shape: 'round', tone: 'red' });
+  });
+
   it('rejects objects the 3D kit cannot draw', async () => {
     const { parsePastedScript } = await import('./reelPrompt');
     const bad = { ...SCRIPT, beats: [{ ...SCRIPT.beats[0], scene: { props: [{ id: 'x', kind: 'dragon' }] } }] };
