@@ -14,7 +14,7 @@ const row = z.discriminatedUnion('kind', [
 ]);
 
 // Same lists as PROP_KINDS / TRAIN_SHOTS / WorldEvent in the engine.
-const propKind = z.enum(['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'custom']);
+const propKind = z.enum(['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'qr', 'speaker', 'lock', 'database', 'router', 'battery', 'heart', 'gear', 'truck', 'plane', 'train', 'tree', 'hospital', 'school', 'cart', 'camera', 'bulb', 'globe', 'envelope', 'clock', 'rocket', 'syringe', 'chart', 'atm', 'custom']);
 
 const scene = z
   .object({
@@ -32,7 +32,7 @@ const trainEvent = z.enum(['rings', 'towerIds', 'pins', 'gpsLog', 'stationGlow',
 
 export const reelScriptSchema = z.object({
   world: z.enum(['iso', 'train']).optional().describe("'train' only for railway / train-tracking topics; 'iso' for everything else"),
-  theme: z.enum(['city', 'nature', 'lab', 'plain']).optional().describe('iso world: the look of the ground and background that fits the topic'),
+  theme: z.enum(['city', 'nature', 'lab', 'plain', 'night', 'sunset', 'ocean', 'desert']).optional().describe('iso world: the look of the ground and background that fits the topic'),
   title: z.string().describe('Short reel title, 2 to 6 words'),
   steps: z.array(z.string()).describe('3 or 4 one-word step names for the progress header'),
   beats: z

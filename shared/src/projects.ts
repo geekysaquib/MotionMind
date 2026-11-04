@@ -65,18 +65,18 @@ export type ReelRow =
   | { kind: 'note'; text: string };
 
 /** Objects the 3D isometric world can draw (same list as the reel engine's PROP_KINDS). */
-export type ScenePropKind = 'phone' | 'laptop' | 'tower' | 'server' | 'cloud' | 'bank' | 'shop' | 'building' | 'house' | 'factory' | 'person' | 'document' | 'money' | 'chip' | 'car' | 'satellite' | 'custom';
+export type ScenePropKind = 'phone' | 'laptop' | 'tower' | 'server' | 'cloud' | 'bank' | 'shop' | 'building' | 'house' | 'factory' | 'person' | 'document' | 'money' | 'chip' | 'car' | 'satellite' | 'qr' | 'speaker' | 'lock' | 'database' | 'router' | 'battery' | 'heart' | 'gear' | 'truck' | 'plane' | 'train' | 'tree' | 'hospital' | 'school' | 'cart' | 'camera' | 'bulb' | 'globe' | 'envelope' | 'clock' | 'rocket' | 'syringe' | 'chart' | 'atm' | 'custom';
 
 /** Every kind the scene editor offers (the engine's PROP_KINDS). */
-export const SCENE_PROP_KINDS: ScenePropKind[] = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'custom'];
+export const SCENE_PROP_KINDS: ScenePropKind[] = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'qr', 'speaker', 'lock', 'database', 'router', 'battery', 'heart', 'gear', 'truck', 'plane', 'train', 'tree', 'hospital', 'school', 'cart', 'camera', 'bulb', 'globe', 'envelope', 'clock', 'rocket', 'syringe', 'chart', 'atm', 'custom'];
 export const SCENE_PROP_SHAPES: ScenePropShape[] = ['block', 'tall', 'wide', 'flat', 'round'];
-export const WORLD_THEMES: WorldTheme[] = ['city', 'nature', 'lab', 'plain'];
+export const WORLD_THEMES: WorldTheme[] = ['city', 'nature', 'lab', 'plain', 'night', 'sunset', 'ocean', 'desert'];
 
 /** Body of a 'custom' object. */
 export type ScenePropShape = 'block' | 'tall' | 'wide' | 'flat' | 'round';
 
 /** The look of the ground and background in the iso world. */
-export type WorldTheme = 'city' | 'nature' | 'lab' | 'plain';
+export type WorldTheme = 'city' | 'nature' | 'lab' | 'plain' | 'night' | 'sunset' | 'ocean' | 'desert';
 
 /** A beat's 3D scene: which objects are on screen, what moves between them, and the effect. */
 export interface ReelScene {

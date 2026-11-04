@@ -1,6 +1,7 @@
 import React from 'react';
 import { spring } from 'remotion';
 import { Camera, Vec3, cameraTransform, clamp01, easeInOutCubic, lerp, project, pts, shade, toScreen } from './iso';
+import { EXTRA_TOP, extraItems, type ExtraKind } from './props3d';
 import { C, Pill, box, rand, shadow, tree, windowsOnHouse, type Item } from './World';
 import type { IsoScene, PropKind, PropShape, ScenePropSpec, TimedBeat, Tone, WorldTheme } from './script';
 
@@ -145,7 +146,7 @@ function dot(key: string, p: Vec3, r: number, fill: string, depth: number): Item
 }
 
 /** The top of each kind, where labels and links attach. */
-export const PROP_TOP: Record<PropKind, number> = {
+export const PROP_TOP: Partial<Record<PropKind, number>> = {
   phone: 2.1, laptop: 1.5, tower: 6.0, server: 2.4, cloud: 4.4, bank: 3.2, shop: 2.4, building: 4.6, house: 2.6, factory: 3.6,
   person: 2.1, document: 0.6, money: 1.0, chip: 0.7, car: 1.4, satellite: 6.6, custom: 2.4,
 };
@@ -155,7 +156,7 @@ const SHAPE_TOP: Record<PropShape, number> = { block: 2.2, tall: 4.2, wide: 1.5,
 /** Height of a prop: where its icon, label and links attach. */
 export function propTop(p: PlacedProp): number {
   if (p.kind === 'custom') return SHAPE_TOP[p.spec.shape ?? 'block'] ?? SHAPE_TOP.block;
-  return PROP_TOP[p.kind] ?? SHAPE_TOP.block;
+  return PROP_TOP[p.kind as keyof typeof PROP_TOP] ?? EXTRA_TOP[p.kind as ExtraKind] ?? SHAPE_TOP.block;
 }
 
 /** Any object the named kinds can't draw: a body in the object's colour and shape; its emoji floats above it. */
@@ -318,7 +319,7 @@ function propItems(p: PlacedProp, accent: string, frame: number): Item[] {
       break;
     }
     default:
-      return customItems(p, accent);
+      return extraItems(p.kind, p, accent, frame) ?? customItems(p, accent);
   }
   return out;
 }
@@ -339,11 +340,17 @@ export interface IsoWorldProps {
 
 const EMOJI_FONT = '"Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
 
-const THEMES: Record<WorldTheme, { ground: string; water: string; waterDeep: string; road: string | null }> = {
-  city: { ground: C.ground, water: C.water, waterDeep: C.waterDeep, road: C.ballast },
-  nature: { ground: '#E4F0D2', water: '#BFE0F2', waterDeep: '#9CCBE6', road: '#D9E6C3' },
-  lab: { ground: '#EEF0F8', water: '#DCE1F2', waterDeep: '#BCC5E3', road: null },
-  plain: { ground: '#F3EFE6', water: '#E8EBF2', waterDeep: '#CFD5E2', road: null },
+type Look = { ground: string; water: string; waterDeep: string; road: string | null; fade: string; scenery: 'town' | 'meadow' | 'rocks' | 'none'; grid?: string };
+
+const THEMES: Record<WorldTheme, Look> = {
+  city: { ground: C.ground, water: C.water, waterDeep: C.waterDeep, road: C.ballast, fade: C.bg, scenery: 'town' },
+  nature: { ground: '#E4F0D2', water: '#BFE0F2', waterDeep: '#9CCBE6', road: '#D9E6C3', fade: '#F1F7E8', scenery: 'meadow' },
+  lab: { ground: '#EEF0F8', water: '#DCE1F2', waterDeep: '#BCC5E3', road: null, fade: '#F4F6FC', scenery: 'none', grid: 'rgba(59,130,246,0.14)' },
+  plain: { ground: '#F3EFE6', water: '#E8EBF2', waterDeep: '#CFD5E2', road: null, fade: '#F6F4EE', scenery: 'none' },
+  night: { ground: '#2B3350', water: '#151A30', waterDeep: '#0D1124', road: '#3A4466', fade: '#10142A', scenery: 'town', grid: 'rgba(129,140,248,0.16)' },
+  sunset: { ground: '#FBE4D3', water: '#F8C2B2', waterDeep: '#EE9C8C', road: '#F2C9B5', fade: '#FFEFE6', scenery: 'town' },
+  ocean: { ground: '#DDF1F7', water: '#7CC4E8', waterDeep: '#4FA3D1', road: null, fade: '#E3F4FC', scenery: 'none' },
+  desert: { ground: '#F3DFB5', water: '#F4E6C6', waterDeep: '#E2C791', road: '#E8CE9B', fade: '#FBF1DA', scenery: 'rocks' },
 };
 
 export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, placed, theme = 'city' }) => {
@@ -358,10 +365,12 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
 
   const items: Item[] = [];
   // Scenery away from the props, so the world never looks empty: a town, a meadow, or nothing at all.
-  for (const d of theme === 'city' || theme === 'nature' ? DECOR : []) {
+  for (const d of look.scenery === 'none' ? [] : DECOR) {
     if (d.x > maxX) continue;
     if (props.some((p) => Math.abs(p.pos.x - d.x) < 3.4 && Math.abs(p.pos.y - d.y) < 3.6)) continue;
-    if (theme === 'nature') {
+    if (look.scenery === 'rocks') {
+      items.push(dot(`rk${d.i}`, { x: d.x, y: d.y, z: 0.35 }, 0.45 + rand(d.i) * 0.45, d.i % 3 ? '#D9B77C' : '#C49A5B', d.x + d.y + 0.3));
+    } else if (look.scenery === 'meadow') {
       if (d.i % 4 === 0) items.push(dot(`rk${d.i}`, { x: d.x, y: d.y, z: 0.3 }, 0.38 + rand(d.i) * 0.2, '#C9CED8', d.x + d.y + 0.3));
       else items.push(tree(`dt${d.i}`, d.x, d.y, 0.8 + rand(d.i) * 0.7));
     } else if (d.i % 3 === 0) items.push(tree(`dt${d.i}`, d.x, d.y, 0.7 + rand(d.i) * 0.4));
@@ -416,10 +425,10 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
       <svg width={1080} height={1920} style={{ position: 'absolute', inset: 0 }}>
         <defs>
           <linearGradient id="isofade" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={C.bg} stopOpacity="1" />
-            <stop offset="0.3" stopColor={C.bg} stopOpacity="0" />
-            <stop offset="0.86" stopColor={C.bg} stopOpacity="0" />
-            <stop offset="1" stopColor={C.bg} stopOpacity="0.9" />
+            <stop offset="0" stopColor={look.fade} stopOpacity="1" />
+            <stop offset="0.3" stopColor={look.fade} stopOpacity="0" />
+            <stop offset="0.86" stopColor={look.fade} stopOpacity="0" />
+            <stop offset="1" stopColor={look.fade} stopOpacity="0.9" />
           </linearGradient>
         </defs>
         <rect width={1080} height={1920} fill={look.water} />
@@ -427,13 +436,13 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
           <polygon points={pts(front)} fill={look.waterDeep} />
           <polygon points={pts(ground)} fill={look.ground} stroke={C.outline} strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
           {look.road && <polygon points={pts(road)} fill={look.road} />}
-          {theme === 'lab' &&
+          {look.grid &&
             Array.from({ length: Math.ceil(slab.w / 3) + 1 }, (_, g) => (
-              <polyline key={`gx${g}`} points={pts([{ x: slab.x + g * 3, y: slab.y, z: 0.02 }, { x: slab.x + g * 3, y: slab.y + slab.d, z: 0.02 }])} fill="none" stroke="rgba(59,130,246,0.14)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+              <polyline key={`gx${g}`} points={pts([{ x: slab.x + g * 3, y: slab.y, z: 0.02 }, { x: slab.x + g * 3, y: slab.y + slab.d, z: 0.02 }])} fill="none" stroke={look.grid} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
             ))}
-          {theme === 'lab' &&
+          {look.grid &&
             Array.from({ length: 7 }, (_, g) => (
-              <polyline key={`gy${g}`} points={pts([{ x: slab.x, y: slab.y + g * 3.4, z: 0.02 }, { x: slab.x + slab.w, y: slab.y + g * 3.4, z: 0.02 }])} fill="none" stroke="rgba(59,130,246,0.14)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+              <polyline key={`gy${g}`} points={pts([{ x: slab.x, y: slab.y + g * 3.4, z: 0.02 }, { x: slab.x + slab.w, y: slab.y + g * 3.4, z: 0.02 }])} fill="none" stroke={look.grid} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
             ))}
           {/* Pulse: a glowing pad under the focus prop */}
           {scene?.effect === 'pulse' && focusId && placed.get(focusId) && (() => {

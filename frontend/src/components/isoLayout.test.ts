@@ -47,3 +47,16 @@ describe('custom objects', () => {
     expect(propTop(placed.get('shot')!)).toBeGreaterThan(propTop(placed.get('cells')!)); // tall > block
   });
 });
+
+describe('3D model library', () => {
+  it('every extra model builds items and has a height', async () => {
+    const { EXTRA_KINDS, EXTRA_TOP, extraItems } = await import('../../../backend/reel-engine/src/props3d');
+    expect(EXTRA_KINDS.length).toBeGreaterThanOrEqual(24);
+    for (const kind of EXTRA_KINDS) {
+      const items = extraItems(kind, { id: kind, pos: { x: 0, y: 0, z: 0 } }, '#8B5CF6', 12);
+      expect(items && items.length).toBeGreaterThan(1);
+      expect(EXTRA_TOP[kind]).toBeGreaterThan(0);
+    }
+    expect(extraItems('nope', { id: 'n', pos: { x: 0, y: 0, z: 0 } }, '#000', 0)).toBeNull();
+  });
+});

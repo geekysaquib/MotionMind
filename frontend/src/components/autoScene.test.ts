@@ -33,9 +33,14 @@ describe('autoScene', () => {
 });
 
 describe('autoScene for objects the 3D kit has no model for', () => {
-  it('draws a custom object with a fitting emoji instead of a grey block', () => {
+  it('uses a real 3D model when the library has one (a vaccine is a syringe)', () => {
     const s = autoScene(beat({ narration: 'Vaccine ka dose aapke sharir mein jaata hai.', keywords: ['vaccine'], card: { headline: '*Vaccine* ka dose', tone: 'purple' } }), undefined);
-    expect(s.props[0]).toMatchObject({ kind: 'custom', icon: '💉', shape: 'tall', tone: 'purple' });
+    expect(s.props[0]).toMatchObject({ kind: 'syringe' });
+  });
+
+  it('draws a custom object with a fitting emoji when no model fits', () => {
+    const s = autoScene(beat({ narration: 'Virus aapke sharir mein jaata hai.', keywords: ['virus'], card: { headline: '*Virus* aata hai', tone: 'purple' } }), undefined);
+    expect(s.props[0]).toMatchObject({ kind: 'custom', icon: '🦠', shape: 'round', tone: 'purple' });
   });
 
   it('still falls back to a custom object (with a generic icon) for unknown words', () => {

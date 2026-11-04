@@ -11,7 +11,7 @@ import { brandFor, specFromScript } from '../../components/reelSpec';
 import { cn } from '../../lib/cn';
 import { SceneEditor } from '../../components/SceneEditor';
 
-const THEME_LABELS: Record<WorldTheme, string> = { city: 'City (apps, payments, services)', nature: 'Nature (food, biology, outdoors)', lab: 'Lab (science, chips, AI)', plain: 'Plain (anything abstract)' };
+const THEME_LABELS: Record<WorldTheme, string> = { city: 'City (apps, payments, services)', nature: 'Nature (food, biology, outdoors)', lab: 'Lab (science, chips, AI)', plain: 'Plain (anything abstract)', night: 'Night (security, space, late-night tech)', sunset: 'Sunset (stories, culture, travel)', ocean: 'Ocean (water, ships, climate)', desert: 'Desert (energy, mining, history)' };
 
 const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 

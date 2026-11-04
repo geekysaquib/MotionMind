@@ -1,0 +1,315 @@
+{
+ "title": "Showcase",
+ "world": "iso",
+ "theme": "city",
+ "steps": [
+  "A",
+  "B",
+  "C",
+  "D"
+ ],
+ "brand": {
+  "name": "Decodifyx",
+  "initials": "D",
+  "handle": "@decodify_x",
+  "tagline": ""
+ },
+ "voice": [],
+ "beats": [
+  {
+   "id": "b0",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 1",
+    "headline": "Scene *1*",
+    "tone": "teal",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "qr",
+      "kind": "qr",
+      "label": "qr"
+     },
+     {
+      "id": "speaker",
+      "kind": "speaker",
+      "label": "speaker"
+     },
+     {
+      "id": "lock",
+      "kind": "lock",
+      "label": "lock"
+     }
+    ],
+    "links": [
+     {
+      "from": "qr",
+      "to": "speaker",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "qr"
+   }
+  },
+  {
+   "id": "b1",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 2",
+    "headline": "Scene *2*",
+    "tone": "blue",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "database",
+      "kind": "database",
+      "label": "database"
+     },
+     {
+      "id": "router",
+      "kind": "router",
+      "label": "router"
+     },
+     {
+      "id": "battery",
+      "kind": "battery",
+      "label": "battery"
+     },
+     {
+      "id": "atm",
+      "kind": "atm",
+      "label": "atm"
+     }
+    ],
+    "links": [
+     {
+      "from": "database",
+      "to": "router",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "database"
+   }
+  },
+  {
+   "id": "b2",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 3",
+    "headline": "Scene *3*",
+    "tone": "purple",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "heart",
+      "kind": "heart",
+      "label": "heart"
+     },
+     {
+      "id": "syringe",
+      "kind": "syringe",
+      "label": "syringe"
+     },
+     {
+      "id": "hospital",
+      "kind": "hospital",
+      "label": "hospital"
+     }
+    ],
+    "links": [
+     {
+      "from": "heart",
+      "to": "syringe",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "heart"
+   }
+  },
+  {
+   "id": "b3",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 4",
+    "headline": "Scene *4*",
+    "tone": "amber",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "gear",
+      "kind": "gear",
+      "label": "gear"
+     },
+     {
+      "id": "truck",
+      "kind": "truck",
+      "label": "truck"
+     },
+     {
+      "id": "chart",
+      "kind": "chart",
+      "label": "chart"
+     }
+    ],
+    "links": [
+     {
+      "from": "gear",
+      "to": "truck",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "gear"
+   }
+  },
+  {
+   "id": "b4",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 5",
+    "headline": "Scene *5*",
+    "tone": "red",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "plane",
+      "kind": "plane",
+      "label": "plane"
+     },
+     {
+      "id": "train",
+      "kind": "train",
+      "label": "train"
+     },
+     {
+      "id": "globe",
+      "kind": "globe",
+      "label": "globe"
+     },
+     {
+      "id": "clock",
+      "kind": "clock",
+      "label": "clock"
+     }
+    ],
+    "links": [
+     {
+      "from": "plane",
+      "to": "train",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "plane"
+   }
+  },
+  {
+   "id": "b5",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 6",
+    "headline": "Scene *6*",
+    "tone": "teal",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "rocket",
+      "kind": "rocket",
+      "label": "rocket"
+     },
+     {
+      "id": "bulb",
+      "kind": "bulb",
+      "label": "bulb"
+     },
+     {
+      "id": "camera",
+      "kind": "camera",
+      "label": "camera"
+     }
+    ],
+    "links": [
+     {
+      "from": "rocket",
+      "to": "bulb",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "rocket"
+   }
+  },
+  {
+   "id": "b6",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 7",
+    "headline": "Scene *7*",
+    "tone": "blue",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "school",
+      "kind": "school",
+      "label": "school"
+     },
+     {
+      "id": "cart",
+      "kind": "cart",
+      "label": "cart"
+     },
+     {
+      "id": "envelope",
+      "kind": "envelope",
+      "label": "envelope"
+     },
+     {
+      "id": "tree",
+      "kind": "tree",
+      "label": "tree"
+     }
+    ],
+    "links": [
+     {
+      "from": "school",
+      "to": "cart",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "school"
+   }
+  }
+ ]
+}
