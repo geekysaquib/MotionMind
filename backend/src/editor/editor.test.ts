@@ -91,6 +91,19 @@ describe('reel editor routes', () => {
     expect(get.json().editor.pace).toBe(1.1);
   });
 
+  it('saves again what the page loaded, including the old save time, and stamps a new one', async () => {
+    const { app, id } = await setup();
+    const track = (await upload(app, id, 'voice', mp3())).json().track;
+    const first = await app.inject({ method: 'PUT', url: `/api/projects/${id}/editor`, headers: H, payload: { editor: editorFor(track) } });
+    const loaded = (await app.inject({ method: 'GET', url: `/api/projects/${id}/editor`, headers: H })).json().editor;
+    expect(loaded.updatedAt).toBeTruthy();
+    const again = await app.inject({ method: 'PUT', url: `/api/projects/${id}/editor`, headers: H, payload: { editor: { ...loaded, pace: 1.2, updatedAt: '2000-01-01T00:00:00.000Z' } } });
+    expect(again.statusCode).toBe(200);
+    expect(again.json().project.editor.pace).toBe(1.2);
+    expect(again.json().project.editor.updatedAt).not.toBe('2000-01-01T00:00:00.000Z');
+    expect(first.statusCode).toBe(200);
+  });
+
   it('refuses audio from another project, cuts out of order, and a cut count that does not match the scenes', async () => {
     const { app, id } = await setup();
     const track = (await upload(app, id, 'voice', mp3())).json().track;

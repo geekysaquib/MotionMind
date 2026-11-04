@@ -28,6 +28,8 @@ export const editorSchema = z
     scenePace: z.array(pace).max(80),
     music: z.object({ track: trackSchema, volume: z.number().min(0).max(1) }).nullable(),
     captions: z.object({ size: z.enum(['small', 'medium', 'large']), position: z.enum(['bottom', 'middle']), look: z.enum(['box', 'plain']) }),
+    // The page sends back what it loaded, which includes the last save time. The server stamps its own, so this is ignored.
+    updatedAt: z.string().max(40).optional(),
   })
   .strict();
 
