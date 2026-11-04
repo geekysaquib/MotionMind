@@ -34,7 +34,7 @@ export async function apiRequest<T>(
   }
   const body = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
   const meta = { status: res.status, ms: Date.now() - started };
-  // A 5xx without our { error } shape didn't come from the API: it's the Vite dev proxy or Netlify
+  // A 5xx without our { error } shape didn't come from the API: it's the Vite dev proxy
   // saying the API isn't answering (for example `npm run dev:api` isn't running).
   if (res.status >= 500 && !body.error) {
     if (!quiet) log.error('api', `${method} ${path}: no answer from the API`, meta);

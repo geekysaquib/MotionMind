@@ -52,7 +52,7 @@ describe('apiRequest', () => {
     expect(lastEntry()).toMatchObject({ level: 'error', msg: 'GET /projects could not reach the server' });
   });
 
-  it('explains a 5xx that did not come from the API (dev proxy or Netlify with the API down)', async () => {
+  it('explains a 5xx that did not come from the API (the dev proxy with the API down)', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     const proxyDown = (async () => new Response('', { status: 500 })) as unknown as typeof fetch;
     const err = (await apiRequest('', '/auth/request-code', { method: 'POST', body: {}, fetchImpl: proxyDown }).catch((e: unknown) => e)) as ServiceError;

@@ -67,7 +67,7 @@ describe('MP4 export', () => {
     expect(renderer.started[0]!.props.audioUrls).toBeUndefined();
   });
 
-  it('explains that export runs locally when the server cannot render (Netlify)', async () => {
+  it('explains that export runs locally when the server has no renderer', async () => {
     const { app, id, H } = await setup();
     const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/export`, headers: H });
     expect(res.statusCode).toBe(501);

@@ -7,7 +7,7 @@ import { config } from './config';
 import { log, type LogEntry } from './lib/logger';
 import { RootStore, StoreContext } from './stores/RootStore';
 
-/** Warnings and errors also go to the API, so they appear in the server log (Netlify function logs). */
+/** Warnings and errors also go to the API, so they appear in the API terminal. */
 function reportToServer(entries: LogEntry[]) {
   void fetch(`${config.apiUrl}/api/client-logs`, {
     method: 'POST',

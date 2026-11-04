@@ -4,10 +4,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * MP4 export with Remotion, on the machine running the API (your PC). It can't run on Netlify:
- * rendering needs a headless Chrome and minutes of CPU. Remotion downloads its Chrome on first use.
+ * MP4 export with Remotion, on the machine running the API (your PC). Rendering needs a headless Chrome and
+ * minutes of CPU; Remotion downloads its Chrome on first use.
  *
- * The Remotion packages are imported by name at runtime so the Netlify function bundle never includes them.
+ * The Remotion packages are imported by name at runtime, so the API starts fast and tests never load them.
  */
 export interface RenderJob {
   id: string;

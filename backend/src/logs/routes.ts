@@ -22,7 +22,7 @@ export interface ClientLogReport {
   userId: string | null;
 }
 
-/** Default sink: one JSON line per report, so it shows up in Netlify's function log and the dev terminal. */
+/** Default sink: one JSON line per report, so it shows up in the API terminal. */
 export const consoleClientLogSink = (report: ClientLogReport) => console.warn(`[client-log] ${JSON.stringify(report)}`);
 
 /**

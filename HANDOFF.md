@@ -30,7 +30,7 @@ Checks: `npm run typecheck`, `npm test` (Jest, 140 tests), `npm run build`.
 
 | Decision | Detail |
 |---|---|
-| Hosting | **Netlify only.** Static web app + API as one Netlify Function at `/api/*`. |
+| Hosting | **Runs locally** (API :8787, web :5173). Netlify was dropped on 2026-11-05. |
 | Layout | `frontend/`, `backend/`, `backend/reel-engine/`, `shared/`, `supabase/`. **One `package.json` and one `.env`, at the root.** |
 | Database | Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai). **Never OrbitDev.** Database only: browser never talks to it, all tables locked to the API (service_role). |
 | Sign-in | **No Supabase Auth.** 6-digit email code over **SMTP with a Gmail app password**; our API issues the session token. |
@@ -47,7 +47,6 @@ Checks: `npm run typecheck`, `npm test` (Jest, 140 tests), `npm run build`.
 - Email-code sign-in (SMTP, or code printed in the API terminal when SMTP is empty), sessions, onboarding (handle, channel, niche, language), dashboard, project library, settings.
 - Settings tabs: **Profile & handle, Connectors (Claude + ElevenLabs: Ready/Not available, test, Ask Claude), Account, Diagnostics (app log: filter, copy, download)**.
 - Crash screen with "Copy log"; errors batched to `/api/client-logs`.
-- Netlify: `netlify.toml`, function wrapper `backend/netlify/functions/api.ts`.
 
 ### Stages (project tabs)
 | Stage | What it does | Needs |
@@ -82,26 +81,25 @@ Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `rese
 | `ANTHROPIC_API_KEY` | **empty**: Write/Research with Claude show "not set up" until added (claude.ai route works without it) |
 | `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` | **empty**: Voice stage needs it |
 
-On Netlify, set the same API variables in the dashboard (the web app needs none).
 
 ## Known limits / open items
 
-1. **Netlify time limit (~10–26 s):** research, Claude script writing and voice recording can take longer. Move them to Netlify Background Functions or stream them before deploying.
-2. **Export on Netlify:** can't render there. Options: Remotion Lambda or a small render server (Saquib's call).
-3. Reel editor: no SFX tracks yet; scene breaks are per-recording (re-uploading re-guesses them). Real render verified with test tones: slices, per-scene pace and music all come out right.
-4. **Storyboard** edits words/colours but not the 3D scene objects yet (Claude or `autoScene` sets them).
-5. **3D kit polish:** more object types, better auto-guessing of objects, scene-specific camera angles.
-6. Branch not pushed / no PR yet.
-7. `supabase/test/run.sh` (database security test) needs Linux Postgres; not run on Windows.
+1. **Export is local only:** it needs Chrome and runs on the machine hosting the API. A 3-scene reel takes about 20 seconds.
+2. **Reel editor:** no SFX tracks yet, and no trim of the recording's start or end. Scene breaks are per recording (re-uploading re-guesses them).
+3. **Discover** is curated starter ideas, not live trends.
+4. **AI mode** (copy-paste or API keys) is saved per browser, not per account (per account needs a migration).
+5. **Object positions** in the 3D world are recalculated on every draw, so an engine change can shift them in a saved reel.
+6. **Graphics:** objects are chosen by keywords in automatic scenes; four large objects in one scene still make the camera pull back.
+7. Commits are local on `main`; nothing is pushed.
+8. `supabase/test/run.sh` (database security test) needs Linux Postgres; not run on Windows.
 
 ## Suggested next steps
 
-1. Add `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY`, then try a full reel: Research → Script → Voice → Export.
-2. Let the Storyboard edit each scene's 3D objects (pick object type, label, links).
-3. Background functions for Claude/voice so it works on Netlify.
-4. Decide on cloud rendering (Remotion Lambda vs render server).
-5. Reel editor: SFX tracks, trim of the recording's start/end.
-6. Push the branch and open a PR.
+1. Add `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` if you want API-key mode (copy and paste works without them).
+2. Run `npm run assets:usage` after 20 to 30 real reels and hand-build the most-used missing 3D models.
+3. Reel editor: SFX tracks, trim of the recording's start and end.
+4. Real trending topics for Discover.
+5. Push the branch.
 
 ## Commit history (newest first)
 

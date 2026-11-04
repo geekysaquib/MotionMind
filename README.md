@@ -55,19 +55,11 @@ Sign-in is a 6-digit code sent by email, and a first sign-in creates the account
 npm run dev        # API on :8787 and web app on :5173 together. Ctrl+C stops both
 ```
 
-The web app calls `/api` on its own address, and Vite forwards it to the local API, just as Netlify does in production. To run one side alone, use `npm run dev:api` or `npm run dev:web`.
+The web app calls `/api` on its own address, and Vite forwards it to the local API. To run one side alone, use `npm run dev:api` or `npm run dev:web`.
 
-## Deploy to Netlify
+## Where it runs
 
-`netlify.toml` sets up a single site. The web app is served from `frontend/dist`, and the API runs as a Netlify Function (`backend/netlify/functions/api.ts`) on the same domain at `/api/*`, so you don't need CORS or `VITE_API_URL`.
-
-1. In Netlify, choose **Add new site → Import from Git** and pick this repo. The build settings come from `netlify.toml`.
-2. Under **Site configuration → Environment variables**, add:
-   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `AUTH_SECRET`, `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (all secret, all for the API).
-
-The web app needs no environment variables on Netlify.
-
-`backend/reel-engine` does not run on Netlify. Remotion rendering needs Chromium, ffmpeg and minutes of compute, which is beyond Netlify Function limits. In Phase 3 it will run on Remotion Lambda or a separate render worker, and the Netlify API will hand jobs to it.
+Motion Mind runs on your own machine: `npm run dev` starts the API and the web app. There is no hosted deployment. MP4 export renders on the same machine with Remotion, which downloads its own headless Chrome the first time.
 
 ### Demo mode (no database)
 

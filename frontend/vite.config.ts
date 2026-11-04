@@ -16,6 +16,6 @@ export default defineConfig({
   },
   // The single .env lives in the repo root. Only VITE_* values are exposed to the browser.
   envDir: fileURLToPath(new URL('..', import.meta.url)),
-  // In development the web app calls /api on its own origin, like on Netlify; Vite forwards it to the local API.
+  // The web app calls /api on its own origin; Vite forwards it to the local API.
   server: { port: 5173, proxy: { '/api': api, '/health': api } },
 });

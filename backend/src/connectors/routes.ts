@@ -6,7 +6,7 @@ import { checkElevenLabs } from './elevenlabs';
 export type ConnectorId = 'claude' | 'elevenlabs';
 
 /**
- * Signed-in only: the app's two connectors. Both run on server keys from .env (or Netlify env vars),
+ * Signed-in only: the app's two connectors. Both run on server keys from .env,
  * so users only see whether each one is ready and can test it.
  */
 export function registerConnectorRoutes(api: FastifyInstance, deps: AppDeps) {

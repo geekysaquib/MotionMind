@@ -4,7 +4,7 @@
  * - Every entry goes to the browser console with a [MotionMind:scope] prefix.
  * - The last MAX_ENTRIES are kept in localStorage, so they survive a crash and reload.
  *   See them in Settings > Diagnostics (copy or download them for a bug report).
- * - Errors are also sent to the API (/api/client-logs), so they show up in the server log on Netlify.
+ * - Errors are also sent to the API (/api/client-logs), so they show up in the API terminal.
  * - Values under sensitive keys (tokens, API keys, codes, passwords) are never recorded.
  * - Debug entries are recorded only in development or after `localStorage.motionmind-debug = '1'`.
  */

@@ -39,7 +39,7 @@ export interface AppDeps {
   defaultVoiceId?: string;
   /** Where voiceover MP3s are stored. Defaults to memory (tests, demo). */
   audio: AudioStore;
-  /** MP4 export (Remotion). Only on a local server, never on Netlify. */
+  /** MP4 export (Remotion), rendered on the machine running the API. Absent in tests. */
   renderer?: Renderer;
   /** Builds the Claude client. Tests pass a fake. */
   claude?: (apiKey: string) => ClaudeClient;
