@@ -44,8 +44,8 @@ describe('autoScene for objects the 3D kit has no model for', () => {
   });
 
   it('turns a word that names a Lucide icon into that icon tile', () => {
-    const s = autoScene(beat({ narration: 'Microscope se dekho.', keywords: ['microscope'], card: { eyebrow: 'Step', headline: '*Microscope* se', tone: 'blue' } }), undefined);
-    expect(s.props[0]).toMatchObject({ kind: 'custom', glyph: 'microscope' });
+    const s = autoScene(beat({ narration: 'Magnet se dekho.', keywords: ['magnet'], card: { eyebrow: 'Step', headline: '*Magnet* se', tone: 'blue' } }), undefined);
+    expect(s.props[0]).toMatchObject({ kind: 'custom', glyph: 'magnet' });
   });
 
   it('draws a custom object with a fitting emoji when no model fits', () => {
@@ -75,5 +75,14 @@ describe('withScenes', () => {
     );
     expect(out.beats.map((b) => b.shot)).toEqual(['phone', 'tower', 'station', 'wide']);
     expect(out.beats[1]!.events).toEqual(['rings', 'towerIds']);
+  });
+});
+
+describe('keyword tables', () => {
+  it('contain no stray control characters (a backslash-b mangled into a backspace silently breaks a pattern)', async () => {
+    const { readFileSync } = await import('node:fs');
+    for (const f of ['backend/reel-engine/src/autoScene.ts', 'backend/reel-engine/src/props3d.tsx', 'backend/reel-engine/src/props3d-more.tsx']) {
+      expect(readFileSync(f, 'utf8').includes(String.fromCharCode(8))).toBe(false);
+    }
   });
 });
