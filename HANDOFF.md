@@ -85,7 +85,7 @@ Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `rese
 ## Known limits / open items
 
 1. **Export is local only:** it needs Chrome and runs on the machine hosting the API. A 3-scene reel takes about 20 seconds.
-2. **Migration not applied yet:** `supabase/migrations/20261105000000_profile_ai_mode.sql` (`profiles.ai_mode`). Until it is applied to the live database, the AI-mode choice is kept in the browser only and saving it to the account logs a warning.
+2. **AI mode migration applied** to motion-mind on 2026-11-05 (`profiles.ai_mode`, migration `20261105000000_profile_ai_mode.sql`).
 3. **Graphics:** objects are chosen by keywords in automatic scenes; four large objects in one scene still make the camera pull back.
 4. **Trending** uses Wikipedia page views (a real signal, but about encyclopedia curiosity, not social media).
 5. Commits are local on `main`; nothing is pushed.
@@ -93,10 +93,9 @@ Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `rese
 
 ## Suggested next steps
 
-1. Apply the AI-mode migration to motion-mind (needs a database go-ahead).
-2. Add `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` if you want API-key mode (copy and paste works without them).
-3. Run `npm run assets:usage` after 20 to 30 real reels and hand-build the most-used missing 3D models.
-4. Push the branch.
+1. Add `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` if you want API-key mode (copy and paste works without them).
+2. Run `npm run assets:usage` after 20 to 30 real reels and hand-build the most-used missing 3D models.
+3. Push the branch.
 
 ## Commit history (newest first)
 
