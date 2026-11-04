@@ -13,6 +13,16 @@ function fakeService(connectors: Connector[]): ClaudeService {
       throw new Error('not used');
     },
     scriptPrompt: async () => '',
+    researchPrompt: async () => '',
+    research: async () => {
+      throw new Error('not used');
+    },
+    importResearch: async () => {
+      throw new Error('not used');
+    },
+    approveResearch: async () => {
+      throw new Error('not used');
+    },
     importScript: async () => {
       throw new Error('not used');
     },

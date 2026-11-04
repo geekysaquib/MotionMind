@@ -34,3 +34,19 @@ export const reelScriptSchema = z.object({
 });
 
 export type ReelScript = z.infer<typeof reelScriptSchema>;
+
+export const researchSchema = z.object({
+  summary: z.string().describe('2 to 4 sentences: how it really works, in plain words'),
+  facts: z
+    .array(
+      z.object({
+        claim: z.string().describe('One checkable fact useful for the reel'),
+        status: z.enum(['verified', 'single_source', 'estimate', 'conflicting']).describe('verified = 2+ independent reliable sources agree'),
+        sources: z.array(z.number().int()).describe('Indexes into sources[] that support this claim'),
+      }),
+    )
+    .describe('6 to 12 facts'),
+  sources: z.array(z.object({ title: z.string(), url: z.string() })).describe('Every page used, most reliable first'),
+});
+
+export type Research = z.infer<typeof researchSchema>;

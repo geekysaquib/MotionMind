@@ -87,6 +87,38 @@ export class ProjectStore {
     return p;
   }
 
+  private get claude() {
+    return this.root.services.claude(() => this.root.auth.session?.accessToken ?? null);
+  }
+
+  private replace(p: Project) {
+    runInAction(() => {
+      this.items = [p, ...this.items.filter((x) => x.id !== p.id)];
+    });
+    return p;
+  }
+
+  /** Claude researches the topic on the web (server key). Saved unapproved until the user approves it. */
+  async research(id: string) {
+    log.info('claude', 'Researching topic', { projectId: id });
+    const started = Date.now();
+    const p = await this.claude.research(id);
+    log.info('claude', 'Research done', { projectId: id, facts: p.research?.facts.length, sources: p.research?.sources.length, ms: Date.now() - started });
+    return this.replace(p);
+  }
+
+  async importResearch(id: string, text: string) {
+    const p = await this.claude.importResearch(id, text);
+    log.info('claude', 'Pasted research imported', { projectId: id, facts: p.research?.facts.length });
+    return this.replace(p);
+  }
+
+  async approveResearch(id: string) {
+    const p = await this.claude.approveResearch(id);
+    log.info('claude', 'Research approved', { projectId: id });
+    return this.replace(p);
+  }
+
   /** Saves a script written in claude.ai and pasted back (for people without an API key). */
   async importScript(id: string, text: string) {
     const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).importScript(id, text);

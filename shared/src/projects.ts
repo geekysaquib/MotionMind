@@ -14,8 +14,30 @@ export interface Project {
   durationSec: number;
   /** The reel script Claude wrote for this project, or null before the Script stage. */
   script: ReelScript | null;
+  /** Fact-checked research for the topic, or null before the Research stage. */
+  research: ResearchReport | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type FactStatus = 'verified' | 'single_source' | 'estimate' | 'conflicting';
+
+export const FACT_STATUS_LABELS: Record<FactStatus, string> = {
+  verified: 'Verified',
+  single_source: 'Single source',
+  estimate: 'Estimate',
+  conflicting: 'Conflicting',
+};
+
+/** What Claude found about a topic: checked facts, each pointing at the sources it came from. */
+export interface ResearchReport {
+  summary: string;
+  facts: { claim: string; status: FactStatus; sources: number[] }[];
+  sources: { title: string; url: string }[];
+  /** Set when the user approves it; the script is then written from these facts. */
+  approvedAt?: string | null;
+  model?: string;
+  writtenAt?: string;
 }
 
 export type ReelTone = 'red' | 'teal' | 'purple' | 'blue' | 'amber';

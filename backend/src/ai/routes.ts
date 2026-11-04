@@ -3,8 +3,9 @@ import { z } from 'zod';
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 import { ClaudeError, claudeClient, CLAUDE_MODEL, type ClaudeClient } from './claude';
-import { manualReelPrompt, parsePastedScript, PastedScriptError, type ReelBrief } from './reelPrompt';
-import type { Project, ReelScript } from '@motionmind/shared';
+import { manualReelPrompt, manualResearchPrompt, parsePastedScript, parseResearch, PastedScriptError, type ReelBrief } from './reelPrompt';
+import type { Research } from './reelSchema';
+import type { Project, ReelScript, ResearchReport } from '@motionmind/shared';
 
 const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude something.').max(4000) });
 const importSchema = z.object({ text: z.string().min(1, "Paste Claude's answer first.").max(100_000) });
@@ -69,6 +70,8 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
       language: profile?.language ?? 'hinglish',
       niche: profile?.niche ?? null,
       channelName: profile?.channelName ?? null,
+      // Only research the user approved feeds the script.
+      research: project.research?.approvedAt ? project.research : null,
     };
   }
 
@@ -81,6 +84,60 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     });
   }
 
+  function saveResearch(userId: string, project: Project, research: Research, model: string) {
+    const saved: ResearchReport = { ...research, approvedAt: null, model, writtenAt: new Date().toISOString() };
+    return deps.data.updateProject(userId, project.id, {
+      research: saved,
+      stage: project.stage === 'topic' ? 'research' : project.stage,
+      status: project.status === 'draft' ? 'in_progress' : project.status,
+    });
+  }
+
+  // ---------- Research ----------
+  // Option 1: Claude searches the web on the server's key.
+  api.post('/projects/:id/research', async (req, reply) => {
+    const project = await projectFor(req, reply);
+    if (!project) return reply;
+    const claude = claudeOr503(reply);
+    if (!claude) return reply;
+    try {
+      const { research, model, searches } = await claude.research({ topic: project.topic! });
+      req.log.info({ projectId: project.id, searches, facts: research.facts.length }, 'research done');
+      return { project: await saveResearch(req.userId, project, research, model) };
+    } catch (err) {
+      return sendClaudeError(err, reply);
+    }
+  });
+
+  // Option 2: run the prompt in claude.ai (with web search on) and paste the answer back.
+  api.get('/projects/:id/research/prompt', async (req, reply) => {
+    const project = await projectFor(req, reply);
+    if (!project) return reply;
+    return { prompt: manualResearchPrompt({ topic: project.topic! }) };
+  });
+
+  api.post('/projects/:id/research/import', async (req, reply) => {
+    const body = importSchema.safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: 'invalid_research', message: firstIssue(body.error) });
+    const project = await projectFor(req, reply);
+    if (!project) return reply;
+    try {
+      return { project: await saveResearch(req.userId, project, parseResearch(body.data.text), PASTED_MODEL) };
+    } catch (err) {
+      if (err instanceof PastedScriptError) return reply.code(400).send({ error: 'invalid_research', message: err.message });
+      throw err;
+    }
+  });
+
+  api.post('/projects/:id/research/approve', async (req, reply) => {
+    const project = await projectFor(req, reply);
+    if (!project) return reply;
+    if (!project.research) return reply.code(400).send({ error: 'no_research', message: 'Research the topic first.' });
+    const updated = await deps.data.updateProject(req.userId, project.id, { research: { ...project.research, approvedAt: new Date().toISOString() } });
+    return { project: updated };
+  });
+
+  // ---------- Script ----------
   // Option 1: the server calls Claude with its API key.
   api.post('/projects/:id/script', async (req, reply) => {
     const project = await projectFor(req, reply);

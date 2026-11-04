@@ -15,6 +15,7 @@ import { AccountSettings } from './pages/app/AccountSettings';
 import { DiagnosticsSettings } from './pages/app/DiagnosticsSettings';
 import { ConnectorsSettings } from './pages/app/ConnectorsSettings';
 import { ScriptStagePage } from './pages/app/ScriptStagePage';
+import { ResearchStagePage } from './pages/app/ResearchStagePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LandingPage } from './pages/LandingPage';
 import { Toasts } from './components/Toasts';
@@ -47,7 +48,7 @@ export const routes = [
         element: <ProjectLayout />,
         children: [
           { index: true, element: <ProjectOverviewPage /> },
-          stage('research'),
+          { path: 'research', element: <ResearchStagePage /> },
           { path: 'script', element: <ScriptStagePage /> },
           stage('storyboard'),
           stage('graphics'),

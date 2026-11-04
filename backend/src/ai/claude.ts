@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { z } from 'zod/v4';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
-import { REEL_SYSTEM, reelRequest, type ReelBrief } from './reelPrompt';
-import { reelScriptSchema, type ReelScript } from './reelSchema';
+import { PastedScriptError, parseResearch, RESEARCH_SYSTEM, REEL_SYSTEM, reelRequest, researchRequest, type ReelBrief } from './reelPrompt';
+import { reelScriptSchema, researchSchema, type ReelScript, type Research } from './reelSchema';
 
 export type { ReelBrief };
 
@@ -21,6 +22,8 @@ export interface ClaudeReply {
 export interface ClaudeClient {
   ask(prompt: string): Promise<ClaudeReply>;
   writeReel(brief: ReelBrief): Promise<{ script: ReelScript; model: string }>;
+  /** Searches the web and returns checked facts with their sources. */
+  research(brief: Pick<ReelBrief, 'topic'>): Promise<{ research: Research; model: string; searches: number }>;
 }
 
 /** What went wrong, in words the UI can show as-is. */
@@ -83,6 +86,46 @@ export function claudeClient(apiKey: string, fetchImpl?: typeof fetch): ClaudeCl
         if (res.stop_reason === 'refusal') throw new ClaudeError('Claude declined to write a reel on this topic.', 'claude_refused', 422);
         if (!res.parsed_output) throw new ClaudeError("Claude's script came back incomplete. Try again.", 'claude_bad_output', 502);
         return { script: res.parsed_output, model: res.model };
+      } catch (err) {
+        toClaudeError(err);
+      }
+    },
+
+    async research(brief) {
+      // Web search runs on Anthropic's side. A long search can pause the turn; we resume it a few times.
+      const messages: Anthropic.Beta.BetaMessageParam[] = [
+        {
+          role: 'user',
+          content: `${researchRequest(brief)}\n\nSearch the web first. Then answer with only one JSON object, no other text, matching this JSON Schema:\n${JSON.stringify(z.toJSONSchema(researchSchema))}`,
+        },
+      ];
+      try {
+        let searches = 0;
+        for (let turn = 0; turn < 4; turn++) {
+          const res = await client.beta.messages.create({
+            ...FALLBACK,
+            model: CLAUDE_MODEL,
+            max_tokens: 16000,
+            output_config: { effort: 'medium' },
+            system: RESEARCH_SYSTEM,
+            tools: [{ type: 'web_search_20260209', name: 'web_search', max_uses: 6 }],
+            messages,
+          });
+          searches += res.content.filter((b) => b.type === 'server_tool_use').length;
+          if (res.stop_reason === 'refusal') throw new ClaudeError('Claude declined to research this topic.', 'claude_refused', 422);
+          if (res.stop_reason === 'pause_turn') {
+            messages.push({ role: 'assistant', content: res.content });
+            continue;
+          }
+          const text = res.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
+          try {
+            return { research: parseResearch(text, 'research'), model: res.model, searches };
+          } catch (err) {
+            if (err instanceof PastedScriptError) throw new ClaudeError(`Claude's research came back in the wrong shape. Try again. ${err.message}`, 'claude_bad_output', 502);
+            throw err;
+          }
+        }
+        throw new ClaudeError('The research took too long. Try again.', 'claude_unavailable', 504);
       } catch (err) {
         toClaudeError(err);
       }

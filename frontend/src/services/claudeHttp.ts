@@ -37,6 +37,11 @@ export interface ClaudeService {
   /** For claude.ai: the prompt to copy, then the answer to paste back. */
   scriptPrompt(projectId: string): Promise<string>;
   importScript(projectId: string, text: string): Promise<Project>;
+  /** Research: Claude searches the web (API), or the same through claude.ai, then the user approves it. */
+  research(projectId: string): Promise<Project>;
+  researchPrompt(projectId: string): Promise<string>;
+  importResearch(projectId: string, text: string): Promise<Project>;
+  approveResearch(projectId: string): Promise<Project>;
 }
 
 /** Claude always runs on the API, on the server's Anthropic key. */
@@ -54,5 +59,9 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     writeScript: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'POST')).project,
     scriptPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt`)).prompt,
     importScript: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/script/import`, 'POST', { text })).project,
+    research: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research`, 'POST')).project,
+    researchPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt`)).prompt,
+    importResearch: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/research/import`, 'POST', { text })).project,
+    approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,
   };
 }

@@ -20,6 +20,18 @@ const SCRIPT: ReelScript = {
   ],
 };
 
+const RESEARCH = {
+  summary: 'UPI sends a payment request through NPCI to the receiving bank.',
+  facts: [
+    { claim: 'NPCI runs the UPI switch', status: 'verified' as const, sources: [0, 1] },
+    { claim: 'Most payments settle in a few seconds', status: 'estimate' as const, sources: [1] },
+  ],
+  sources: [
+    { title: 'NPCI: UPI product overview', url: 'https://www.npci.org.in/what-we-do/upi/product-overview' },
+    { title: 'RBI payments report', url: 'https://www.rbi.org.in/' },
+  ],
+};
+
 async function setup(fake: Partial<ClaudeClient> = {}, serverKey: string | null = 'sk-ant-server-123456') {
   const anthropicApiKey = serverKey ?? undefined;
   const data = new MemoryDataRepository();
@@ -38,6 +50,7 @@ async function setup(fake: Partial<ClaudeClient> = {}, serverKey: string | null 
       return {
         ask: async (prompt) => ({ text: `echo: ${prompt}`, model: CLAUDE_MODEL, inputTokens: 10, outputTokens: 5 }),
         writeReel: async () => ({ script: SCRIPT, model: CLAUDE_MODEL }),
+        research: async () => ({ research: RESEARCH, model: CLAUDE_MODEL, searches: 3 }),
         ...fake,
       };
     },
@@ -195,5 +208,85 @@ describe('script from claude.ai (no API key)', () => {
     expect((await post(JSON.stringify({ ...SCRIPT, beats: [] }))).json().message).toMatch(/no beats/);
     const project = await app.inject({ method: 'GET', url: `/api/projects/${id}`, headers: H });
     expect(project.json().project.script).toBeNull();
+  });
+});
+
+describe('research', () => {
+  async function projectId(app: Awaited<ReturnType<typeof setup>>['app']) {
+    const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'How UPI works', durationSec: 60, qualityTier: 'standard' } });
+    return created.json().project.id as string;
+  }
+
+  it('researches with Claude, saves facts and sources unapproved, and moves to the Research stage', async () => {
+    const { app } = await setup();
+    const id = await projectId(app);
+    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/research`, headers: H });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().project).toMatchObject({ stage: 'research', research: { summary: RESEARCH.summary, approvedAt: null, model: CLAUDE_MODEL } });
+    expect(res.json().project.research.sources).toHaveLength(2);
+  });
+
+  it('feeds only approved research into the script', async () => {
+    const briefs: unknown[] = [];
+    const { app } = await setup({
+      writeReel: async (brief) => {
+        briefs.push(brief.research ?? null);
+        return { script: SCRIPT, model: CLAUDE_MODEL };
+      },
+    });
+    const id = await projectId(app);
+    await app.inject({ method: 'POST', url: `/api/projects/${id}/research`, headers: H });
+    await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
+    expect(briefs[0]).toBeNull();
+    const approved = await app.inject({ method: 'POST', url: `/api/projects/${id}/research/approve`, headers: H });
+    expect(approved.json().project.research.approvedAt).toEqual(expect.any(String));
+    await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
+    expect(briefs[1]).toMatchObject({ summary: RESEARCH.summary });
+  });
+
+  it('works without a server key through claude.ai: prompt, paste, approve', async () => {
+    const { app } = await setup({}, null);
+    const id = await projectId(app);
+    expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/research`, headers: H })).statusCode).toBe(503);
+    const prompt = (await app.inject({ method: 'GET', url: `/api/projects/${id}/research/prompt`, headers: H })).json().prompt as string;
+    expect(prompt).toContain('Research this topic for a reel: How UPI works');
+    expect(prompt).toContain('"facts"');
+    const pasted = { ...RESEARCH, facts: [...RESEARCH.facts, { claim: 'Bad index', status: 'single_source', sources: [7] }] };
+    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/research/import`, headers: H, payload: { text: `Sure!\n${JSON.stringify(pasted)}` } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().project.research.model).toBe('claude.ai (pasted)');
+    expect(res.json().project.research.facts[2].sources).toEqual([]);
+    const bad = await app.inject({ method: 'POST', url: `/api/projects/${id}/research/import`, headers: H, payload: { text: '{"summary":"x","facts":[],"sources":[]}' } });
+    expect(bad.json().message).toMatch(/no facts/);
+  });
+
+  it("can't approve research that doesn't exist", async () => {
+    const { app } = await setup();
+    const id = await projectId(app);
+    expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/research/approve`, headers: H })).json().error).toBe('no_research');
+  });
+});
+
+describe('claudeClient.research (real SDK, fake network)', () => {
+  it('resumes a paused turn and parses the final JSON answer', async () => {
+    const bodies: Record<string, unknown>[] = [];
+    let call = 0;
+    const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
+      const req = new Request(input, init);
+      bodies.push(JSON.parse(await req.text()));
+      call++;
+      const msg = (content: unknown[], stop: string) => ({ id: `m${call}`, type: 'message', role: 'assistant', model: CLAUDE_MODEL, content, stop_reason: stop, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } });
+      const body =
+        call === 1
+          ? msg([{ type: 'server_tool_use', id: 'srv_1', name: 'web_search', input: { query: 'UPI NPCI' } }], 'pause_turn')
+          : msg([{ type: 'text', text: '```json\n' + JSON.stringify(RESEARCH) + '\n```' }], 'end_turn');
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+    }) as unknown as typeof fetch;
+    const out = await claudeClient('k', fetchImpl).research({ topic: 'How UPI works' });
+    expect(out.research.summary).toBe(RESEARCH.summary);
+    expect(out.searches).toBe(1);
+    expect(bodies).toHaveLength(2);
+    expect((bodies[0]!.tools as { type: string }[])[0]!.type).toBe('web_search_20260209');
+    expect((bodies[1]!.messages as unknown[]).length).toBe(2);
   });
 });
