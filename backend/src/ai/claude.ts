@@ -60,7 +60,7 @@ export function claudeClient(apiKey: string, fetchImpl?: typeof fetch): ClaudeCl
         const res = await client.beta.messages.create({
           ...FALLBACK,
           model: CLAUDE_MODEL,
-          max_tokens: 4000,
+          max_tokens: 8000,
           output_config: { effort: 'low' },
           messages: [{ role: 'user', content: prompt }],
         });

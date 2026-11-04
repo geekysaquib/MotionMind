@@ -7,7 +7,7 @@ import { manualReelPrompt, manualResearchPrompt, parsePastedScript, parseResearc
 import { reelScriptSchema as scriptSchemaV4, type Research } from './reelSchema';
 import type { Project, ReelScript, ResearchReport } from '@motionmind/shared';
 
-const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude something.').max(4000) });
+const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude something.').max(12000) });
 const editSchema = z.object({ script: z.unknown() });
 const importSchema = z.object({ text: z.string().min(1, "Paste Claude's answer first.").max(100_000) });
 

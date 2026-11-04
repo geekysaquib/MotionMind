@@ -1,13 +1,14 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
-import { AudioLines, ClipboardCopy, Upload } from 'lucide-react';
+import { AudioLines, Upload } from 'lucide-react';
 import type { Project, ReelVoice } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
 import { errorText, timeAgo } from '../../lib/format';
 import { log } from '../../lib/logger';
 import { brandFor, specFromScript } from '../../components/reelSpec';
+import { NarrationScript } from '../../components/NarrationScript';
 import { attachVoice, AudioFileError } from '../../lib/editorActions';
 import type { EditorUrls } from '../../services/claudeHttp';
 
@@ -16,7 +17,7 @@ const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 /** Voice stage: ElevenLabs reads every scene (server key); the preview plays the reel with the voiceover. */
 export const VoiceStagePage = observer(function VoiceStagePage() {
   const project = useOutletContext<Project>();
-  const { projects, profile, services, auth, aiMode, toasts } = useStores();
+  const { projects, profile, services, auth, aiMode } = useStores();
   const api = services.claude(() => auth.session?.accessToken ?? null);
   const [voices, setVoices] = useState<{ id: string; name: string }[] | null>(null);
   const [voiceId, setVoiceId] = useState('');
@@ -72,15 +73,6 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
     }
   }
 
-  async function copy(text: string, what: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      toasts.push('success', `${what} copied.`);
-    } catch {
-      toasts.push('error', "Couldn't copy. Select the text and copy it by hand.");
-    }
-  }
-
   async function generate() {
     setBusy(true);
     setError(null);
@@ -112,45 +104,10 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
     );
   }
 
-  const fullText = script.beats.map((b) => b.narration.trim()).join('\n\n');
-  const words = fullText.split(/\s+/).filter(Boolean).length;
-
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <div className="space-y-6">
-        <Card>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-semibold">Your narration script</h2>
-              <p className="mt-1 text-sm text-ink-400">
-                {words} words, about {Math.max(1, Math.round(words / 2.5))} seconds spoken. Copy it into any text-to-speech tool (or read it yourself), then upload the recording below.
-              </p>
-            </div>
-            <Button variant="secondary" icon={<ClipboardCopy className="h-4 w-4" />} onClick={() => void copy(fullText, 'Script')}>
-              Copy the whole script
-            </Button>
-          </div>
-          <ol className="mt-4 space-y-3">
-            {script.beats.map((b, i) => (
-              <li key={b.id} className="rounded-xl border border-line/10 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">Scene {i + 1}</span>
-                  <Button variant="ghost" aria-label={`Copy scene ${i + 1}`} onClick={() => void copy(b.narration, `Scene ${i + 1}`)}>
-                    Copy
-                  </Button>
-                </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{b.narration}</p>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-3 text-xs text-ink-400">
-            Want to change a line? Edit it on the{' '}
-            <Link to={`/app/projects/${project.id}/storyboard`} className="text-accent hover:underline">
-              Storyboard
-            </Link>
-            . Speak the scenes in order, with a short pause between them: you set where each scene starts after you upload.
-          </p>
-        </Card>
+        <NarrationScript project={project} />
 
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-2">

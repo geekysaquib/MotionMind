@@ -7,6 +7,7 @@ import type { ClaudeService } from '../../services/claudeHttp';
 import { StoreContext } from '../../stores/RootStore';
 import { makeStore } from '../../test-utils';
 import { specFromScript } from '../../components/reelSpec';
+import { parseTranslation } from '../../lib/translate';
 import { VoiceStagePage } from './VoiceStagePage';
 
 const SCRIPT: ReelScript = {
@@ -28,8 +29,8 @@ const VOICE: ReelVoice = {
   createdAt: '2026-11-04T10:00:00Z',
 };
 
-async function setup(initial: { voice: ReelVoice | null; urls: string[]; stale: boolean }) {
-  const store = await makeStore({ signedIn: true });
+async function setup(initial: { voice: ReelVoice | null; urls: string[]; stale: boolean }, aiMode: 'keys' | 'paste' = 'keys') {
+  const store = await makeStore({ signedIn: true, aiMode });
   const created = await store.projects.create({ title: 'UPI', topic: 'UPI', durationSec: 30, qualityTier: 'draft' });
   store.projects.upsert({ ...created, script: SCRIPT });
   const generated: string[] = [];
@@ -38,6 +39,8 @@ async function setup(initial: { voice: ReelVoice | null; urls: string[]; stale: 
       voices: async () => ({ voices: [{ id: 'v1', name: 'Aarav' }, { id: 'v2', name: 'Diya' }], defaultVoiceId: 'v1' }),
       voiceFor: async () => initial,
       editorFor: async () => ({ editor: null, urls: {} }),
+      ask: async () => ({ reply: { text: '```json\n["In one second.", "NPCI sits between."]\n```', model: 'm', inputTokens: 1, outputTokens: 1 }, ms: 1 }),
+      saveScript: async (_id: string, script: ReelScript) => ({ ...created, script }) as Project,
       generateVoice: async (_id: string, voiceId?: string) => {
         generated.push(voiceId ?? '');
         return { project: { ...created, script: SCRIPT, voice: { ...VOICE, voiceId: voiceId! } } as Project, urls: ['u0', 'u1'] };
@@ -57,7 +60,7 @@ async function setup(initial: { voice: ReelVoice | null; urls: string[]; stale: 
       </StoreContext.Provider>,
     );
   });
-  return { generated };
+  return { generated, store, id: created.id };
 }
 
 describe('VoiceStagePage', () => {
@@ -93,6 +96,35 @@ describe('VoiceStagePage', () => {
     expect(writes).toEqual(['Ek second.\n\nNPCI.', 'NPCI.']);
   });
 
+  it('translates the script with Claude in key mode, then uses it in the reel', async () => {
+    const { store, id } = await setup({ voice: null, urls: [], stale: false });
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'hi' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Translate with Claude' }));
+    });
+    expect(screen.getByText('NPCI sits between.')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use in the reel' }));
+    });
+    expect(store.projects.byId(id)!.script!.beats.map((b) => b.narration)).toEqual(['In one second.', 'NPCI sits between.']);
+  });
+
+  it('in copy-paste mode gives a prompt and takes the pasted translation', async () => {
+    await setup({ voice: null, urls: [], stale: false }, 'paste');
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'en' } });
+    expect(screen.queryByRole('button', { name: 'Translate with Claude' })).toBeNull();
+    fireEvent.change(screen.getByLabelText('Translated lines'), { target: { value: '["Only one"]' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use this translation' }));
+    });
+    expect(screen.getByText(/Expected 2 lines/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Translated lines'), { target: { value: '["One.", "Two."]' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use this translation' }));
+    });
+    expect(screen.getByText('Two.')).toBeTruthy();
+  });
+
   it('warns when the narration changed after recording and plays without it', async () => {
     await setup({ voice: VOICE, urls: ['u0', 'u1'], stale: true });
     expect(screen.getByText('Script changed since')).toBeTruthy();
@@ -105,5 +137,14 @@ describe('specFromScript with voice', () => {
     expect(specFromScript(SCRIPT, undefined, { voice: VOICE, urls: ['a', 'b'] }).audioUrls).toEqual(['a', 'b']);
     expect(specFromScript(SCRIPT, undefined, { voice: { ...VOICE, beats: [VOICE.beats[0]!] }, urls: ['a'] }).audioUrls).toBeUndefined();
     expect(specFromScript(SCRIPT, undefined, { voice: VOICE, urls: ['a', ''] }).voice).toBeUndefined();
+  });
+});
+
+describe('parseTranslation', () => {
+  it('reads a plain or fenced JSON list and checks the count', () => {
+    expect(parseTranslation('Sure!\n```json\n["a","b"]\n```', 2)).toEqual(['a', 'b']);
+    expect(parseTranslation('["a"]', 1)).toEqual(['a']);
+    expect(() => parseTranslation('["a"]', 2)).toThrow(/Expected 2 lines/);
+    expect(() => parseTranslation('nope', 1)).toThrow();
   });
 });
