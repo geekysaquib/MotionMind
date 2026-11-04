@@ -232,7 +232,8 @@ function Row({ row, tone, appear }: { row: CardRow; tone: string; appear: number
   }
 }
 
-export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start: number }> = ({ card, frame, fps, start }) => {
+/** `compact` hides the rows: the 'cards' world draws them large in the middle of the frame instead. */
+export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start: number; compact?: boolean }> = ({ card, frame, fps, start, compact }) => {
   const local = frame - start;
   const inS = spring({ frame: local, fps, config: { damping: 18, mass: 0.7 } });
   const tone = TONE[card.tone];
@@ -268,7 +269,7 @@ export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start
       >
         <Highlight text={card.headline} tone={tone} />
       </div>
-      {card.rows?.map((r, i) => {
+      {!compact && card.rows?.map((r, i) => {
         const appear = spring({ frame: local - 14 - i * 10, fps, config: { damping: 200 } });
         return <Row key={i} row={r} tone={tone} appear={appear} />;
       })}

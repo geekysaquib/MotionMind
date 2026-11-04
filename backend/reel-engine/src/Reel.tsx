@@ -3,6 +3,7 @@ import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoCon
 import { hasVoice, reelTiming, type Brand, type CameraKey, type ReelSpec, type TimedBeat, type WorldEvent } from './script';
 import { World, phonePos, type WorldProps } from './World';
 import { Backdrop } from './Backdrop';
+import { CardsScene } from './CardsScene';
 import { Header, InfoCard, Captions, EndCard } from './Ui';
 import { Camera, clamp01, easeInOutCubic, lerp } from './iso';
 
@@ -82,7 +83,8 @@ export const Reel: React.FC<ReelSpec> = (spec) => {
         <Backdrop frame={frame} fps={fps} tone={beat.card.tone} chapter={beat.chapter} progress={progress} />
       )}
       <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} steps={spec.steps} brand={spec.brand} />
-      {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} />}
+      {inStory && spec.world === 'cards' && <CardsScene key={`scene-${beat.id}`} beat={beat} frame={frame} fps={fps} />}
+      {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards'} />}
       {inStory && <Captions beat={beat} frame={frame} />}
       {hasVoice(spec) &&
         timed.map((b, i) => (
