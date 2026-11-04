@@ -60,3 +60,15 @@ describe('3D model library', () => {
     expect(extraItems('nope', { id: 'n', pos: { x: 0, y: 0, z: 0 } }, '#000', 0)).toBeNull();
   });
 });
+
+describe('icon tiles', () => {
+  it('draws any known Lucide icon as a 3D tile and rejects unknown names', async () => {
+    const { glyphItems, hasGlyph, glyphNames } = await import('../../../backend/reel-engine/src/glyph');
+    expect(glyphNames().length).toBeGreaterThan(1000);
+    expect(hasGlyph('microscope')).toBe(true);
+    expect(hasGlyph('not-an-icon')).toBe(false);
+    expect(hasGlyph(undefined)).toBe(false);
+    const items = glyphItems({ id: 'g', pos: { x: 0, y: 0, z: 0 }, glyph: 'wheat', tone: '#F59E0B' }, 5);
+    expect(items.length).toBe(4); // shadow, base, tile, icon layers
+  });
+});

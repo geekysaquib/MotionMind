@@ -111,6 +111,16 @@ export function SceneEditor({ beat, index, known, previous, onChange }: Props) {
             </div>
             {p.kind === 'custom' && (
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-400">
+                Icon name
+                <input
+                  className={cn(inputCls, 'w-36')}
+                  aria-label={`Scene ${n} object ${i + 1} icon name`}
+                  placeholder="e.g. microscope"
+                  title="A Lucide icon name, drawn as a raised 3D tile. Leave empty to use the emoji and shape."
+                  maxLength={40}
+                  value={p.glyph ?? ''}
+                  onChange={(e) => setProp(i, { glyph: e.target.value.trim().toLowerCase().replace(/\s+/g, '-') || undefined })}
+                />
                 Shape
                 <select className={inputCls} aria-label={`Scene ${n} object ${i + 1} shape`} value={p.shape ?? 'block'} onChange={(e) => setProp(i, { shape: e.target.value as SceneProp['shape'] })}>
                   {SCENE_PROP_SHAPES.map((s) => (

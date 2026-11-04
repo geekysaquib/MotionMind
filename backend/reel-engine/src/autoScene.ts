@@ -1,3 +1,4 @@
+import { hasGlyph } from './glyph';
 import type { Beat, IsoScene, PropKind, PropShape, ReelSpec, ScenePropSpec, Tone, TrainShot, WorldEvent } from './script';
 
 // Fills in 3D scenes for beats that don't describe one (older scripts, hand-added scenes), so every
@@ -51,43 +52,46 @@ function kindFor(text: string): PropKind | null {
 }
 
 // Words the named kinds can't draw. They become a custom object with a fitting emoji; the body shape follows the thing's size.
-const ICON_WORDS: [RegExp, string, PropShape][] = [
-  [/virus|bacteri|germ|infect/i, '🦠', 'round'],
-  [/vaccin|injection|\bdose\b|medicine|dawai|tablet/i, '💉', 'tall'],
-  [/\bdna\b|\bgene|antibod|protein|\bcells?\b|koshika/i, '🧬', 'flat'],
-  [/heart|\bdil\b|pulse|blood|khoon/i, '❤️', 'round'],
-  [/brain|dimaag|memory|neuron|yaad/i, '🧠', 'round'],
-  [/doctor|hospital|clinic|health/i, '🏥', 'block'],
-  [/\bfood\b|\beat\b|khana|recipe|cook|kitchen|\bpan\b/i, '🍳', 'round'],
-  [/water|paani|\brain\b|river|ocean|\bsea\b/i, '💧', 'round'],
-  [/plant|\btrees?\b|\bseeds?\b|\bcrops?\b|\bfarm|kheti|\bleaf|flower/i, '🌱', 'round'],
-  [/\bsun\b|solar|surya|\blight\b|bijli|electric|\bpower\b|energy|battery/i, '⚡', 'tall'],
-  [/\bfire\b|\bheat\b|garmi|temperature|\bburn/i, '🔥', 'round'],
-  [/\batoms?\b|molecule|chemical|reaction|\blab\b|science|experiment/i, '⚗️', 'round'],
-  [/planet|\bearth\b|\bspace\b|\bmoon\b|\bstars?\b|galaxy|rocket/i, '🌍', 'round'],
-  [/\btrains?\b|\brail|metro|station/i, '🚆', 'wide'],
-  [/\bplane\b|flight|airport/i, '✈️', 'wide'],
-  [/\bship\b|\bboat\b|\bport\b/i, '🚢', 'wide'],
-  [/\bbooks?\b|school|\bexam|student|padhai|\blearn|teacher/i, '📚', 'block'],
-  [/\bclock\b|\btime\b|samay|\bsecond|\bminute|\bspeed\b|jaldi|\bfast\b/i, '⏱️', 'round'],
-  [/\block\b|secure|\bsafe\b|privacy|password|\bpin\b|\bhack|security|suraksha/i, '🔒', 'block'],
-  [/\bkey\b|\bcode\b|software|program|algorithm/i, '💻', 'block'],
-  [/camera|photo|video|\bfilm\b|\breel|screenshot/i, '📷', 'block'],
-  [/music|\bsong\b|\bsound|audio|awaaz|speaker|voice|\bmic\b/i, '🔊', 'block'],
-  [/\bmail\b|email|message|\bchat\b|notification|\balert/i, '✉️', 'flat'],
-  [/\bgame|\bplay\b|\bscore\b|\bmatch\b|cricket|football/i, '🎮', 'block'],
-  [/\bgold\b|\bsona\b|\bcoin|crypto|bitcoin|invest|\bstocks?\b|\bshares?\b/i, '🪙', 'round'],
-  [/\bidea|\bthink|question|sawal|\bwhy\b|kyun|\bhow\b|kaise/i, '💡', 'round'],
+const ICON_WORDS: [RegExp, string, PropShape, string][] = [
+  [/virus|bacteri|germ|infect/i, '🦠', 'round', 'bug'],
+  [/vaccin|injection|\bdose\b|medicine|dawai|tablet/i, '💉', 'tall', 'syringe'],
+  [/\bdna\b|\bgene|antibod|protein|\bcells?\b|koshika/i, '🧬', 'flat', 'dna'],
+  [/heart|\bdil\b|pulse|blood|khoon/i, '❤️', 'round', 'heart-pulse'],
+  [/brain|dimaag|memory|neuron|yaad/i, '🧠', 'round', 'brain'],
+  [/doctor|hospital|clinic|health/i, '🏥', 'block', 'hospital'],
+  [/\bfood\b|\beat\b|khana|recipe|cook|kitchen|\bpan\b/i, '🍳', 'round', 'utensils'],
+  [/water|paani|\brain\b|river|ocean|\bsea\b/i, '💧', 'round', 'droplets'],
+  [/plant|\btrees?\b|\bseeds?\b|\bcrops?\b|\bfarm|kheti|\bleaf|flower/i, '🌱', 'round', 'sprout'],
+  [/\bsun\b|solar|surya|\blight\b|bijli|electric|\bpower\b|energy|battery/i, '⚡', 'tall', 'zap'],
+  [/\bfire\b|\bheat\b|garmi|temperature|\bburn/i, '🔥', 'round', 'flame'],
+  [/\batoms?\b|molecule|chemical|reaction|\blab\b|science|experiment/i, '⚗️', 'round', 'flask-conical'],
+  [/planet|\bearth\b|\bspace\b|\bmoon\b|\bstars?\b|galaxy|rocket/i, '🌍', 'round', 'globe'],
+  [/\btrains?\b|\brail|metro|station/i, '🚆', 'wide', 'train-front'],
+  [/\bplane\b|flight|airport/i, '✈️', 'wide', 'plane'],
+  [/\bship\b|\bboat\b|\bport\b/i, '🚢', 'wide', 'ship'],
+  [/\bbooks?\b|school|\bexam|student|padhai|\blearn|teacher/i, '📚', 'block', 'book-open'],
+  [/\bclock\b|\btime\b|samay|\bsecond|\bminute|\bspeed\b|jaldi|\bfast\b/i, '⏱️', 'round', 'timer'],
+  [/\block\b|secure|\bsafe\b|privacy|password|\bpin\b|\bhack|security|suraksha/i, '🔒', 'block', 'shield-check'],
+  [/\bkey\b|\bcode\b|software|program|algorithm/i, '💻', 'block', 'code'],
+  [/camera|photo|video|\bfilm\b|\breel|screenshot/i, '📷', 'block', 'camera'],
+  [/music|\bsong\b|\bsound|audio|awaaz|speaker|voice|\bmic\b/i, '🔊', 'block', 'volume-2'],
+  [/\bmail\b|email|message|\bchat\b|notification|\balert/i, '✉️', 'flat', 'mail'],
+  [/\bgame|\bplay\b|\bscore\b|\bmatch\b|cricket|football/i, '🎮', 'block', 'gamepad-2'],
+  [/\bgold\b|\bsona\b|\bcoin|crypto|bitcoin|invest|\bstocks?\b|\bshares?\b/i, '🪙', 'round', 'coins'],
+  [/\bidea|\bthink|question|sawal|\bwhy\b|kyun|\bhow\b|kaise/i, '💡', 'round', 'lightbulb'],
 ];
 
-type PropLook = Pick<ScenePropSpec, 'kind' | 'icon' | 'shape' | 'tone'>;
+type PropLook = Pick<ScenePropSpec, 'kind' | 'icon' | 'glyph' | 'shape' | 'tone'>;
 
 /** The object for some words, or null when nothing fits: a named kind, otherwise a custom object with an emoji. */
 function matchFor(text: string, tone: Tone): PropLook | null {
   const kind = kindFor(text);
   if (kind) return { kind };
   const hit = ICON_WORDS.find(([re]) => re.test(text));
-  return hit ? { kind: 'custom', icon: hit[1], shape: hit[2], tone } : null;
+  if (hit) return { kind: 'custom', icon: hit[1], shape: hit[2], glyph: hit[3], tone };
+  // Any word that is the name of a Lucide icon (microscope, wheat, magnet...) becomes that icon.
+  const name = text.toLowerCase().split(/[^a-z-]+/).find((w) => w.length > 2 && hasGlyph(w));
+  return name ? { kind: 'custom', glyph: name, icon: '💡', shape: 'block', tone } : null;
 }
 
 /** Like matchFor, trying each text in turn (most telling first), and never failing: unknown things become a generic custom object. */
@@ -96,7 +100,7 @@ function propFor(tone: Tone, ...texts: string[]): PropLook {
     const m = matchFor(t, tone);
     if (m) return m;
   }
-  return { kind: 'custom', icon: '💡', shape: 'block', tone };
+  return { kind: 'custom', icon: '💡', glyph: 'sparkles', shape: 'block', tone };
 }
 
 const idFor =(text: string) => text.toLowerCase().replace(/[^a-z0-9ऀ-ॿ]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'thing';

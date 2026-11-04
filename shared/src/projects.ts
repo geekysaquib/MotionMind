@@ -80,7 +80,7 @@ export type WorldTheme = 'city' | 'nature' | 'lab' | 'plain' | 'night' | 'sunset
 
 /** A beat's 3D scene: which objects are on screen, what moves between them, and the effect. */
 export interface ReelScene {
-  props: { id: string; kind: ScenePropKind; label?: string; icon?: string; shape?: ScenePropShape; tone?: 'red' | 'teal' | 'purple' | 'blue' | 'amber' }[];
+  props: { id: string; kind: ScenePropKind; label?: string; icon?: string; glyph?: string; shape?: ScenePropShape; tone?: 'red' | 'teal' | 'purple' | 'blue' | 'amber' }[];
   links?: { from: string; to: string; label?: string }[];
   effect?: 'rings' | 'pulse' | 'none';
   focus?: string;

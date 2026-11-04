@@ -19,7 +19,7 @@ const propKind = z.enum(['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 
 const scene = z
   .object({
     props: z
-      .array(z.object({ id: z.string().describe('short id; reuse the same id in later scenes for the same object'), kind: propKind.describe("one of the named kinds, or 'custom' for anything else"), label: z.string().optional().describe('1 to 3 words shown above it'), icon: z.string().max(8).optional().describe("ONE emoji that shows what it is; required for 'custom'"), shape: z.enum(['block', 'tall', 'wide', 'flat', 'round']).optional().describe("custom only: body shape"), tone: tone.optional().describe("custom only: body colour") }))
+      .array(z.object({ id: z.string().describe('short id; reuse the same id in later scenes for the same object'), kind: propKind.describe("one of the named kinds, or 'custom' for anything else"), label: z.string().optional().describe('1 to 3 words shown above it'), glyph: z.string().max(40).optional().describe("custom only: a Lucide icon name like 'microscope' or 'wheat', drawn as a raised 3D tile. Preferred over an emoji."), icon: z.string().max(8).optional().describe("ONE emoji that shows what it is; required for 'custom'"), shape: z.enum(['block', 'tall', 'wide', 'flat', 'round']).optional().describe("custom only: body shape"), tone: tone.optional().describe("custom only: body colour") }))
       .describe('1 to 4 objects this scene shows'),
     links: z.array(z.object({ from: z.string(), to: z.string(), label: z.string().optional() })).optional().describe('signals or money moving between two of the props'),
     effect: z.enum(['rings', 'pulse', 'none']).optional().describe('rings = signal waves from the focus; pulse = it glows'),

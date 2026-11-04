@@ -2,6 +2,7 @@ import React from 'react';
 import { spring } from 'remotion';
 import { Camera, Vec3, cameraTransform, clamp01, easeInOutCubic, lerp, project, pts, shade, toScreen } from './iso';
 import { EXTRA_TOP, extraItems, type ExtraKind } from './props3d';
+import { GLYPH_TOP, glyphItems, hasGlyph } from './glyph';
 import { C, Pill, box, rand, shadow, tree, windowsOnHouse, type Item } from './World';
 import type { IsoScene, PropKind, PropShape, ScenePropSpec, TimedBeat, Tone, WorldTheme } from './script';
 
@@ -35,7 +36,7 @@ export function layoutProps(timed: TimedBeat[]): Map<string, PlacedProp> {
     for (const sp of specs) {
       const have = placed.get(sp.id);
       // A later scene can add the icon, shape or colour the first one left out.
-      if (have) have.spec = { ...have.spec, icon: have.spec.icon ?? sp.icon, shape: have.spec.shape ?? sp.shape, tone: have.spec.tone ?? sp.tone };
+      if (have) have.spec = { ...have.spec, icon: have.spec.icon ?? sp.icon, glyph: have.spec.glyph ?? sp.glyph, shape: have.spec.shape ?? sp.shape, tone: have.spec.tone ?? sp.tone };
     }
     const known = specs.map((sp) => cells.get(sp.id)).filter((c): c is [number, number] => Boolean(c));
     const anchor: [number, number] = known.length
@@ -83,7 +84,7 @@ function sceneCameraKey(scene: IsoScene | undefined, placed: Map<string, PlacedP
   let minY = Infinity;
   let maxY = -Infinity;
   for (const p of ps) {
-    const top = propTop(p) + (p.spec.icon ? 3.0 : 1.9); // room for the icon and the label above it
+    const top = propTop(p) + (p.spec.icon && !hasGlyph(p.spec.glyph) ? 3.0 : 1.9); // room for the icon and the label above it
     for (const [dx, dy, z] of [[-1.5, -1.5, 0], [1.5, 1.5, 0], [-1.5, 1.5, 0], [1.5, -1.5, 0], [0, 0, top]] as const) {
       const [px, py] = project({ x: p.pos.x + dx, y: p.pos.y + dy, z });
       minX = Math.min(minX, px);
@@ -155,12 +156,14 @@ const SHAPE_TOP: Record<PropShape, number> = { block: 2.2, tall: 4.2, wide: 1.5,
 
 /** Height of a prop: where its icon, label and links attach. */
 export function propTop(p: PlacedProp): number {
+  if (p.kind === 'custom' && hasGlyph(p.spec.glyph)) return GLYPH_TOP;
   if (p.kind === 'custom') return SHAPE_TOP[p.spec.shape ?? 'block'] ?? SHAPE_TOP.block;
   return PROP_TOP[p.kind as keyof typeof PROP_TOP] ?? EXTRA_TOP[p.kind as ExtraKind] ?? SHAPE_TOP.block;
 }
 
 /** Any object the named kinds can't draw: a body in the object's colour and shape; its emoji floats above it. */
-function customItems(p: PlacedProp, accent: string): Item[] {
+function customItems(p: PlacedProp, accent: string, frame = 0): Item[] {
+  if (hasGlyph(p.spec.glyph)) return glyphItems({ id: p.id, pos: p.pos, glyph: p.spec.glyph, tone: p.spec.tone ? (TONE[p.spec.tone] ?? accent) : accent }, frame);
   const { x, y } = p.pos;
   const k = p.id;
   const col = hexShade(p.spec.tone ? (TONE[p.spec.tone] ?? accent) : accent, 0.1);
@@ -319,7 +322,7 @@ function propItems(p: PlacedProp, accent: string, frame: number): Item[] {
       break;
     }
     default:
-      return extraItems(p.kind, p, accent, frame) ?? customItems(p, accent);
+      return extraItems(p.kind, p, accent, frame) ?? customItems(p, accent, frame);
   }
   return out;
 }
@@ -492,7 +495,7 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
         const pp = placed.get(sp.id);
         if (!pp) return null;
         const pop = spring({ frame: local - 10 - i * 6, fps, config: { damping: 14 } });
-        const icon = pp.spec.icon;
+        const icon = hasGlyph(pp.spec.glyph) ? undefined : pp.spec.icon;
         const at = toScreen({ ...pp.pos, z: propTop(pp) + (icon ? 1.2 : 0.3) }, cam);
         const cx = Math.max(150, Math.min(930, at[0]));
         const bob = Math.sin((frame + i * 9) / 14) * 6;

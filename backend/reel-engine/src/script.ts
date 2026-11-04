@@ -65,6 +65,8 @@ export interface ScenePropSpec {
   label?: string;
   /** One emoji floated above the object. For 'custom' objects it is what makes them recognisable. */
   icon?: string;
+  /** 'custom' only: the name of a Lucide icon (e.g. 'microscope', 'wheat'), drawn as a raised 3D tile. Beats `icon` and `shape`. */
+  glyph?: string;
   /** 'custom' only: the body shape. */
   shape?: PropShape;
   /** Colour of a 'custom' body. Defaults to the scene's tone. */
