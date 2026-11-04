@@ -18,9 +18,16 @@ export function brandFor(profile: { channelName: string | null; handle: string |
   return { name, initials, handle: profile.handle ? `@${profile.handle}` : FALLBACK_BRAND.handle, tagline: '' };
 }
 
-/** A project's reel script as the engine renders it: the 'cards' world, branded for the channel. */
+/** The 3D world Claude picked; older scripts without scenes fall back to flat cards. */
+export function worldFor(script: ReelScript): ReelSpec['world'] {
+  if (script.world === 'train') return 'train';
+  if (script.world === 'iso' || script.beats.some((b) => b.scene?.props.length)) return 'iso';
+  return 'cards';
+}
+
+/** A project's reel script as the engine renders it, branded for the channel. */
 export function specFromScript(script: ReelScript, brand: Brand = FALLBACK_BRAND, audio?: { voice: ReelVoice; urls: string[] }): ReelSpec {
-  const spec: ReelSpec = { title: script.title, world: 'cards', steps: script.steps, brand, beats: script.beats };
+  const spec: ReelSpec = { title: script.title, world: worldFor(script), steps: script.steps, brand, beats: script.beats };
   // Voiceover only when it matches the script line for line; otherwise timing would drift.
   if (audio && audio.voice.beats.length === script.beats.length && audio.urls.every(Boolean)) {
     spec.voice = audio.voice.beats;

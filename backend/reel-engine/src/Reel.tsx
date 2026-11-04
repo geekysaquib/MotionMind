@@ -1,15 +1,28 @@
 import React, { useMemo } from 'react';
 import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
-import { hasVoice, reelTiming, type Brand, type CameraKey, type ReelSpec, type TimedBeat, type WorldEvent } from './script';
+import { hasVoice, reelTiming, type Brand, type CameraKey, type ReelSpec, type TimedBeat, type TrainShot, type WorldEvent } from './script';
 import { World, phonePos, type WorldProps } from './World';
 import { Backdrop } from './Backdrop';
 import { CardsScene } from './CardsScene';
+import { IsoWorld, isoCamera, layoutProps } from './IsoWorld';
 import { Header, InfoCard, Captions, EndCard } from './Ui';
 import { Camera, clamp01, easeInOutCubic, lerp } from './iso';
 
 const FX: Exclude<WorldEvent, 'none'>[] = ['rings', 'towerIds', 'pins', 'gpsLog', 'stationGlow', 'errorBand'];
 const RAMP = 12;
 const STILL: CameraKey = { follow: true, x: 0, y: 0, z: 1, zoom: 40 };
+
+/** Named train-world shots (taken from the sample reel) for scripts that don't give raw coordinates. */
+const TRAIN_SHOT_KEYS: Record<TrainShot, CameraKey> = {
+  phone: { follow: true, x: 0, y: 0, z: 1, zoom: 56 },
+  tower: { follow: true, x: -1, y: -1.5, z: 2, zoom: 32 },
+  map: { x: 30, y: 0, z: 0, zoom: 17 },
+  crowd: { x: 34, y: 0, z: 1, zoom: 24 },
+  station: { x: 45, y: 1, z: 1, zoom: 30 },
+  accuracy: { x: 28, y: 0, z: 0, zoom: 20 },
+  wide: { x: 30, y: 0, z: 0, zoom: 14 },
+};
+const keyOf = (b: TimedBeat): CameraKey => b.camera ?? (b.shot ? TRAIN_SHOT_KEYS[b.shot] : STILL);
 
 function resolveKey(k: CameraKey, frame: number, fps: number) {
   const x = k.follow ? phonePos(frame / fps).x + k.x : k.x;
@@ -20,8 +33,8 @@ function cameraAt(timed: TimedBeat[], storyFrames: number, frame: number, fps: n
   const f = Math.min(frame, storyFrames - 1);
   const i = Math.max(0, timed.findIndex((b) => f >= b.start && f < b.start + b.frames));
   const beat = timed[i]!;
-  const cur = resolveKey(beat.camera ?? STILL, f, fps);
-  const prev = i > 0 ? resolveKey(timed[i - 1]!.camera ?? STILL, f, fps) : cur;
+  const cur = resolveKey(keyOf(beat), f, fps);
+  const prev = i > 0 ? resolveKey(keyOf(timed[i - 1]!), f, fps) : cur;
   const t = easeInOutCubic(clamp01((f - beat.start) / 36));
   const drift = 1 + 0.035 * clamp01((f - beat.start) / beat.frames);
   const endPull = frame >= storyFrames ? 1 - 0.08 * clamp01((frame - storyFrames) / 60) : 1;
@@ -70,6 +83,7 @@ export const Reel: React.FC<ReelSpec> = (spec) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { timed, storyFrames } = useMemo(() => reelTiming(spec), [spec]);
+  const placed = useMemo(() => layoutProps(timed), [timed]);
   const inStory = frame < storyFrames;
   const beat = timed.find((b) => frame >= b.start && frame < b.start + b.frames) ?? timed[timed.length - 1]!;
   const chapterStart = timed.find((b) => b.chapter === beat.chapter)?.start ?? 0;
@@ -79,6 +93,8 @@ export const Reel: React.FC<ReelSpec> = (spec) => {
     <AbsoluteFill style={{ background: '#F6F2E9', overflow: 'hidden' }}>
       {spec.world === 'train' ? (
         <World frame={frame} fps={fps} cam={cameraAt(timed, storyFrames, frame, fps)} fx={fxAt(timed, frame)} pinProgress={pinProgressAt(timed, frame, fps)} />
+      ) : spec.world === 'iso' ? (
+        <IsoWorld frame={frame} fps={fps} cam={isoCamera(timed, placed, storyFrames, frame)} beat={beat} placed={placed} />
       ) : (
         <Backdrop frame={frame} fps={fps} tone={beat.card.tone} chapter={beat.chapter} progress={progress} />
       )}

@@ -314,3 +314,26 @@ describe('storyboard edits', () => {
     expect((await put(SCRIPT, { authorization: 'Bearer dev:u2' })).statusCode).toBe(404);
   });
 });
+
+describe('3D scenes in the script format', () => {
+  it('accepts an iso script with scenes, and a train script with shots and effects', async () => {
+    const { parsePastedScript } = await import('./reelPrompt');
+    const iso = { ...SCRIPT, world: 'iso', beats: SCRIPT.beats.map((b, i) => ({ ...b, scene: { props: [{ id: 'you', kind: 'phone', label: 'You' }, { id: `b${i}`, kind: 'bank' }], links: [{ from: 'you', to: `b${i}`, label: 'Request' }], effect: 'rings', focus: 'you' } })) };
+    expect(parsePastedScript(JSON.stringify(iso)).beats[0]!.scene!.props[1]!.kind).toBe('bank');
+    const train = { ...SCRIPT, world: 'train', beats: SCRIPT.beats.map((b) => ({ ...b, shot: 'tower', events: ['rings', 'towerIds'] })) };
+    expect(parsePastedScript(JSON.stringify(train)).beats[0]!.shot).toBe('tower');
+  });
+
+  it('rejects objects the 3D kit cannot draw', async () => {
+    const { parsePastedScript } = await import('./reelPrompt');
+    const bad = { ...SCRIPT, beats: [{ ...SCRIPT.beats[0], scene: { props: [{ id: 'x', kind: 'dragon' }] } }] };
+    expect(() => parsePastedScript(JSON.stringify(bad))).toThrow(/missing something/);
+  });
+
+  it('tells Claude about both worlds in the prompt', async () => {
+    const { manualReelPrompt } = await import('./reelPrompt');
+    const prompt = manualReelPrompt({ topic: 'UPI', durationSec: 30, language: 'en', niche: null, channelName: null });
+    expect(prompt).toContain('"train" only for topics about trains');
+    expect(prompt).toContain('satellite');
+  });
+});

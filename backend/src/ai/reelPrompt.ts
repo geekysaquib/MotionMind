@@ -25,7 +25,12 @@ export const REEL_SYSTEM = `You write scripts for short vertical explainer reels
 The style: a curious hook in the first beat, then a clear step-by-step explanation of how something really works, then a short payoff.
 Each beat is one or two short spoken sentences plus an on-screen card that makes the point visual (chips, a flow of 2-4 arrows, a key/value fact, or a note).
 Be accurate. If a number or claim is uncertain, phrase it carefully or leave it out rather than invent it.
-Narration is spoken aloud: no emoji, no hashtags, no markdown. Card headlines are punchy and under 9 words.`;
+Narration is spoken aloud: no emoji, no hashtags, no markdown. Card headlines are punchy and under 9 words.
+
+The reel is animated in a 3D isometric world, in a pastel style, with the camera gliding between objects. Set "world":
+- "train" only for topics about trains, railways or train tracking. Then give every beat a "shot" (phone = the rider's phone close up on the moving train, tower = the nearest mobile tower, map = towers along the line from above, crowd = many phones logging data, station = the next station, accuracy = the track around the train, wide = the whole line) and "events" (rings = signal waves from tower to phone, towerIds = ID tags over towers, pins = map pins on the track, gpsLog = a phone recording GPS + tower ID, stationGlow = highlight the station, errorBand = an uncertainty band along the track, none).
+- "iso" for everything else. Then give every beat a "scene": 1 to 4 props from phone, laptop, tower, server, cloud, bank, shop, building, house, factory, person, document, money, chip, car, satellite, each with a short id and a 1 to 3 word label; "links" for whatever moves between them (a request, money, data, a signal), with a short label; an "effect" (rings for broadcasting or signals, pulse to highlight, none); and a "focus" prop.
+Reuse the same prop id across beats for the same object (for example "you" for the viewer's phone), so the camera travels around one world instead of jumping between unrelated scenes. Introduce one or two new objects per beat, and pick props that make the explanation visible.`;
 
 /** The user turn: what this particular reel is about. */
 export function reelRequest(brief: ReelBrief): string {

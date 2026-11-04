@@ -47,6 +47,28 @@ export type WorldEvent =
   | 'errorBand'
   | 'none';
 
+/** Objects the 3D isometric scene kit can draw ('iso' world). */
+export const PROP_KINDS = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite'] as const;
+export type PropKind = (typeof PROP_KINDS)[number];
+
+/**
+ * One scene in the 3D isometric world. Props with the same id are the same object in every scene,
+ * so the camera travels around one persistent world; a prop appears the first time a scene uses it.
+ */
+export interface IsoScene {
+  props: { id: string; kind: PropKind; label?: string }[];
+  /** Animated signal lines between props, drawn as arcs with a travelling packet. */
+  links?: { from: string; to: string; label?: string }[];
+  /** rings = signal waves from the focus prop; pulse = it glows; none. */
+  effect?: 'rings' | 'pulse' | 'none';
+  /** The prop the camera and effect centre on. Defaults to the first prop. */
+  focus?: string;
+}
+
+/** Train world only: a named camera shot instead of raw coordinates. */
+export const TRAIN_SHOTS = ['phone', 'tower', 'map', 'crowd', 'station', 'accuracy', 'wide'] as const;
+export type TrainShot = (typeof TRAIN_SHOTS)[number];
+
 export interface Beat {
   id: string;
   narration: string;
@@ -58,6 +80,10 @@ export interface Beat {
   camera?: CameraKey;
   /** Train world only: effects shown in the scene. */
   events?: WorldEvent[];
+  /** Train world only: a named shot, turned into a camera key when `camera` is not given. */
+  shot?: TrainShot;
+  /** Iso world only: what this scene shows. */
+  scene?: IsoScene;
 }
 
 export interface Brand {
@@ -77,8 +103,8 @@ export interface VoiceBeat {
 // A type alias (not an interface) so Remotion accepts it as composition props.
 export type ReelSpec = {
   title: string;
-  /** 'train' = the isometric railway world; 'cards' = a clean animated backdrop for any topic. */
-  world: 'train' | 'cards';
+  /** 'train' = the isometric railway world; 'iso' = the 3D isometric scene kit for any topic; 'cards' = flat animated graphics. */
+  world: 'train' | 'iso' | 'cards';
   /** Names of the progress steps shown in the header (chapters 1..n). */
   steps: string[];
   brand: Brand;

@@ -58,7 +58,7 @@ export function nearestTower(sec: number) {
 }
 
 // Deterministic pseudo-random so every render is identical.
-function rand(seed: number): number {
+export function rand(seed: number): number {
   const s = Math.sin(seed * 127.1) * 43758.5453;
   return s - Math.floor(s);
 }
@@ -84,12 +84,12 @@ const TREES = Array.from({ length: 40 }, (_, i) => ({
 })).filter((t) => !TOWERS.some((tw) => Math.abs(tw.x - t.x) < 1.2 && t.y < 0));
 
 // ---------- primitives ----------
-interface Item {
+export interface Item {
   depth: number;
   el: React.ReactNode;
 }
 
-function box(
+export function box(
   key: string,
   x: number,
   y: number,
@@ -133,7 +133,7 @@ function box(
   };
 }
 
-function shadow(key: string, x: number, y: number, w: number, d: number): Item {
+export function shadow(key: string, x: number, y: number, w: number, d: number): Item {
   const p = [
     { x: x + 0.15, y: y + 0.15, z: 0.01 },
     { x: x + w + 0.5, y: y + 0.15, z: 0.01 },
@@ -143,7 +143,7 @@ function shadow(key: string, x: number, y: number, w: number, d: number): Item {
   return { depth: -1000, el: <polygon key={key} points={pts(p)} fill="rgba(60,70,60,0.10)" /> };
 }
 
-function windowsOnHouse(x: number, y: number, w: number, d: number, h: number) {
+export function windowsOnHouse(x: number, y: number, w: number, d: number, h: number) {
   const out: React.ReactNode[] = [];
   const rows = Math.max(1, Math.floor((h - 0.4) / 0.7));
   const cols = Math.max(1, Math.floor(w / 0.55));
@@ -163,7 +163,7 @@ function windowsOnHouse(x: number, y: number, w: number, d: number, h: number) {
   return <g>{out}</g>;
 }
 
-function tree(key: string, x: number, y: number, s: number): Item {
+export function tree(key: string, x: number, y: number, s: number): Item {
   const base = [
     { x: x - 0.45 * s, y, z: 0.2 },
     { x, y: y + 0.45 * s, z: 0.2 },

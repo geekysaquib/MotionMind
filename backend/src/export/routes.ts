@@ -14,7 +14,8 @@ export async function reelSpecFor(deps: AppDeps, userId: string, project: Projec
   const initials = name.split(/\s+/).map((w) => w[0] ?? '').join('').slice(0, 2).toUpperCase() || 'MM';
   const spec: Record<string, unknown> = {
     title: script.title,
-    world: 'cards',
+    // Same rule as the web app's worldFor().
+    world: script.world === 'train' ? 'train' : script.world === 'iso' || script.beats.some((b) => b.scene?.props.length) ? 'iso' : 'cards',
     steps: script.steps,
     brand: { name, initials, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', tagline: '' },
     beats: script.beats,

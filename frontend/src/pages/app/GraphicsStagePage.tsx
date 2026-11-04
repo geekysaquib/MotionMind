@@ -36,7 +36,7 @@ export const GraphicsStagePage = observer(function GraphicsStagePage() {
       <Card>
         <h2 className="font-semibold">Scene graphics</h2>
         <p className="mt-1 text-sm text-ink-400">
-          Each scene's animation comes from its card: steps become a connected diagram, short tags pop in, a number becomes a big stat, and other scenes show their key word. To change a scene's look, edit its card or colour in the{' '}
+          Every scene plays in a 3D isometric world: the original railway world for train topics, or a town of phones, towers, banks, servers and more for everything else. Claude picks each scene's objects, the signals moving between them and the camera. Older scripts without scenes use flat animated cards. To change a scene, edit it in the{' '}
           <Link to={`/app/projects/${project.id}/storyboard`} className="text-accent hover:underline">
             Storyboard
           </Link>

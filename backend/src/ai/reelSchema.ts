@@ -1,7 +1,8 @@
 import { z } from 'zod/v4';
 
-// The reel format Claude writes, matching the engine's Beat/ReelSpec (backend/reel-engine/src/script.ts)
-// for the 'cards' world. Kept to plain strings, enums and arrays so it works as a structured-output schema.
+// The reel format Claude writes, matching the engine's Beat/ReelSpec (backend/reel-engine/src/script.ts).
+// Kept to plain strings, enums and arrays so it works as a structured-output schema. World, scene and
+// train fields are optional so scripts written before the 3D worlds still load.
 
 const tone = z.enum(['red', 'teal', 'purple', 'blue', 'amber']);
 
@@ -12,7 +13,25 @@ const row = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('note'), text: z.string() }),
 ]);
 
+// Same lists as PROP_KINDS / TRAIN_SHOTS / WorldEvent in the engine.
+const propKind = z.enum(['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite']);
+
+const scene = z
+  .object({
+    props: z
+      .array(z.object({ id: z.string().describe('short id; reuse the same id in later scenes for the same object'), kind: propKind, label: z.string().optional().describe('1 to 3 words shown above it') }))
+      .describe('1 to 4 objects this scene shows'),
+    links: z.array(z.object({ from: z.string(), to: z.string(), label: z.string().optional() })).optional().describe('signals or money moving between two of the props'),
+    effect: z.enum(['rings', 'pulse', 'none']).optional().describe('rings = signal waves from the focus; pulse = it glows'),
+    focus: z.string().optional().describe('id of the prop the camera and effect centre on'),
+  })
+  .describe('The 3D isometric scene for this beat (iso world)');
+
+const trainShot = z.enum(['phone', 'tower', 'map', 'crowd', 'station', 'accuracy', 'wide']);
+const trainEvent = z.enum(['rings', 'towerIds', 'pins', 'gpsLog', 'stationGlow', 'errorBand', 'none']);
+
 export const reelScriptSchema = z.object({
+  world: z.enum(['iso', 'train']).optional().describe("'train' only for railway / train-tracking topics; 'iso' for everything else"),
   title: z.string().describe('Short reel title, 2 to 6 words'),
   steps: z.array(z.string()).describe('3 or 4 one-word step names for the progress header'),
   beats: z
@@ -28,6 +47,9 @@ export const reelScriptSchema = z.object({
           tone,
           rows: z.array(row).describe('0 to 2 visual rows that make the point concrete'),
         }),
+        scene: scene.optional(),
+        shot: trainShot.optional().describe('train world: phone (rider close-up), tower, map (towers along the line), crowd, station, accuracy, wide'),
+        events: z.array(trainEvent).optional().describe('train world effects for this beat'),
       }),
     )
     .describe('7 to 11 beats: a hook, the explanation in steps, and a short payoff'),

@@ -60,6 +60,17 @@ export type ReelRow =
   | { kind: 'kv'; k: string; v: string; tone?: ReelTone }
   | { kind: 'note'; text: string };
 
+/** Objects the 3D isometric world can draw (same list as the reel engine's PROP_KINDS). */
+export type ScenePropKind = 'phone' | 'laptop' | 'tower' | 'server' | 'cloud' | 'bank' | 'shop' | 'building' | 'house' | 'factory' | 'person' | 'document' | 'money' | 'chip' | 'car' | 'satellite';
+
+/** A beat's 3D scene: which objects are on screen, what moves between them, and the effect. */
+export interface ReelScene {
+  props: { id: string; kind: ScenePropKind; label?: string }[];
+  links?: { from: string; to: string; label?: string }[];
+  effect?: 'rings' | 'pulse' | 'none';
+  focus?: string;
+}
+
 export interface ReelBeat {
   id: string;
   narration: string;
@@ -68,11 +79,18 @@ export interface ReelBeat {
   /** 0 = hook, then 1..steps.length */
   chapter: number;
   card: { eyebrow: string; headline: string; tone: ReelTone; rows: ReelRow[] };
+  /** 3D isometric world: what this beat shows. */
+  scene?: ReelScene;
+  /** Train world: a named camera shot and effects. */
+  shot?: 'phone' | 'tower' | 'map' | 'crowd' | 'station' | 'accuracy' | 'wide';
+  events?: ('rings' | 'towerIds' | 'pins' | 'gpsLog' | 'stationGlow' | 'errorBand' | 'none')[];
 }
 
 /** A reel script: what the voice says and what each on-screen card shows. The reel engine renders it. */
 export interface ReelScript {
   title: string;
+  /** Which 3D world renders it. Missing on older scripts, which render as flat cards. */
+  world?: 'iso' | 'train';
   steps: string[];
   beats: ReelBeat[];
   /** Which Claude model wrote it, and when. */
