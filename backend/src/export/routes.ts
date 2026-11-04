@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import type { Project } from '@motionmind/shared';
+import { reelWorld, type Project } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { voicePath } from '../voice/audioStore';
 
@@ -15,7 +15,7 @@ export async function reelSpecFor(deps: AppDeps, userId: string, project: Projec
   const spec: Record<string, unknown> = {
     title: script.title,
     // Same rule as the web app's worldFor().
-    world: script.world === 'train' ? 'train' : script.world === 'iso' || script.beats.some((b) => b.scene?.props.length) ? 'iso' : 'cards',
+    world: reelWorld(script),
     steps: script.steps,
     brand: { name, initials, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', tagline: '' },
     beats: script.beats,

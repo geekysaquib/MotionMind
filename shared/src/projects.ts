@@ -87,6 +87,16 @@ export interface ReelBeat {
 }
 
 /** A reel script: what the voice says and what each on-screen card shows. The reel engine renders it. */
+/**
+ * Which 3D world renders a script. Claude picks it; older scripts without a choice get the train world
+ * when they are about trains, and the isometric scene kit otherwise. Every reel is 3D.
+ */
+export function reelWorld(script: Pick<ReelScript, 'world' | 'title' | 'steps'> & { beats: Pick<ReelBeat, 'narration'>[] }): 'iso' | 'train' {
+  if (script.world) return script.world;
+  const text = [script.title, ...script.steps, ...script.beats.slice(0, 3).map((b) => b.narration)].join(' ');
+  return /\b(train|trains|railway|railways|rail|irctc|metro)\b/i.test(text) ? 'train' : 'iso';
+}
+
 export interface ReelScript {
   title: string;
   /** Which 3D world renders it. Missing on older scripts, which render as flat cards. */

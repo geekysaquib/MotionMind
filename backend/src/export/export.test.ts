@@ -54,7 +54,7 @@ describe('MP4 export', () => {
     expect(res.json()).toMatchObject({ withVoice: true, job: { status: 'rendering' } });
     const props = renderer.started[0]!.props as { brand: { name: string; initials: string; handle: string }; audioUrls: string[]; world: string };
     expect(props.brand).toMatchObject({ name: 'Decodify X', initials: 'DX', handle: '@decodify_x' });
-    expect(props.world).toBe('cards');
+    expect(props.world).toBe('iso');
     expect(props.audioUrls[0]).toMatch(/^data:audio\/mpeg/);
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/export`, headers: H })).json()).toMatchObject({ available: true, job: { progress: 0.4 } });
   });

@@ -1,4 +1,4 @@
-import { BRAND, type ReelScript, type ReelVoice } from '@motionmind/shared';
+import { BRAND, reelWorld, type ReelScript, type ReelVoice } from '@motionmind/shared';
 // Types only: the engine itself loads lazily with the preview player.
 import type { Brand, ReelSpec } from '@motionmind/reel-engine';
 
@@ -18,11 +18,9 @@ export function brandFor(profile: { channelName: string | null; handle: string |
   return { name, initials, handle: profile.handle ? `@${profile.handle}` : FALLBACK_BRAND.handle, tagline: '' };
 }
 
-/** The 3D world Claude picked; older scripts without scenes fall back to flat cards. */
+/** Every reel is 3D: the world Claude picked, or the train world for train topics and the scene kit otherwise. */
 export function worldFor(script: ReelScript): ReelSpec['world'] {
-  if (script.world === 'train') return 'train';
-  if (script.world === 'iso' || script.beats.some((b) => b.scene?.props.length)) return 'iso';
-  return 'cards';
+  return reelWorld(script);
 }
 
 /** A project's reel script as the engine renders it, branded for the channel. */

@@ -5,6 +5,7 @@ import { World, phonePos, type WorldProps } from './World';
 import { Backdrop } from './Backdrop';
 import { CardsScene } from './CardsScene';
 import { IsoWorld, isoCamera, layoutProps } from './IsoWorld';
+import { withScenes } from './autoScene';
 import { Header, InfoCard, Captions, EndCard } from './Ui';
 import { Camera, clamp01, easeInOutCubic, lerp } from './iso';
 
@@ -79,7 +80,9 @@ function pinProgressAt(timed: TimedBeat[], frame: number, fps: number): number {
 }
 
 /** One reel, driven entirely by its spec. Used by the CLI renderer and by the in-app preview player. */
-export const Reel: React.FC<ReelSpec> = (spec) => {
+export const Reel: React.FC<ReelSpec> = (input) => {
+  // Every beat gets a 3D scene (or train shot), even when the script didn't describe one.
+  const spec = useMemo(() => withScenes(input), [input]);
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { timed, storyFrames } = useMemo(() => reelTiming(spec), [spec]);
