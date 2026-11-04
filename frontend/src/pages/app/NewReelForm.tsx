@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
+import { Clock, Gauge, Sparkles } from 'lucide-react';
 import type { QualityTier } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
-import { Button, Select } from '../../components/ui';
+import { Button } from '../../components/ui';
 import { errorText } from '../../lib/format';
 
 const IDEAS = [
@@ -15,6 +15,9 @@ const IDEAS = [
   'What happens when you tap your card to pay?',
 ];
 
+const pill = 'h-8 rounded-lg border border-line/[0.12] bg-ink-900 pl-8 pr-2 text-xs font-medium text-ink-300 outline-none transition hover:bg-ink-800 focus:border-mint-500/60';
+
+/** The "what should the reel explain?" box: a topic, how long, how polished, and one button. */
 export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: boolean; initialTopic?: string }) {
   const { projects, toasts } = useStores();
   const nav = useNavigate();
@@ -40,20 +43,47 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4">
-      <label htmlFor="new-topic" className="label">
-        What should the reel explain?
-      </label>
-      <textarea
-        id="new-topic"
-        autoFocus={autoFocus}
-        rows={2}
-        maxLength={500}
-        value={topic}
-        onChange={(e) => setTopic(e.target.value)}
-        placeholder="How does the Where is my Train app work without GPS and internet?"
-        className="field resize-none text-base"
-      />
+    <form onSubmit={submit} className="space-y-3">
+      <div className="rounded-2xl border border-line/[0.14] bg-ink-900 shadow-soft transition focus-within:border-mint-500/60 focus-within:shadow-[0_0_0_4px_rgba(124,58,237,0.10)]">
+        <label htmlFor="new-topic" className="sr-only">
+          What should the reel explain?
+        </label>
+        <textarea
+          id="new-topic"
+          autoFocus={autoFocus}
+          rows={3}
+          maxLength={500}
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          placeholder="What should the reel explain? Try “How does a Soundbox know the money arrived?”"
+          className="block w-full resize-none rounded-t-2xl bg-transparent px-5 pt-4 text-base text-ink-100 outline-none placeholder:text-ink-400/70"
+        />
+        <div className="flex flex-wrap items-center gap-2 px-3 pb-3 pt-1">
+          <div className="relative">
+            <Clock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
+            <select aria-label="Duration" className={pill} value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
+              {[15, 30, 45, 60, 90].map((d) => (
+                <option key={d} value={d}>
+                  {d} seconds
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="relative">
+            <Gauge className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
+            <select aria-label="Quality" className={pill} value={tier} onChange={(e) => setTier(e.target.value as QualityTier)}>
+              <option value="draft">Draft (cheapest)</option>
+              <option value="standard">Standard</option>
+              <option value="premium">Premium</option>
+              <option value="cinematic">Cinematic</option>
+            </select>
+          </div>
+          <span className="ml-auto hidden text-xs text-ink-400 sm:inline">{topic.length}/500</span>
+          <Button type="submit" loading={busy} disabled={!topic.trim()} icon={<Sparkles className="h-4 w-4" />}>
+            Create reel
+          </Button>
+        </div>
+      </div>
       <div className="flex flex-wrap items-center gap-2" aria-label="Topic ideas">
         <span className="text-xs text-ink-400">Try:</span>
         {IDEAS.map((idea) => (
@@ -61,29 +91,11 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
             key={idea}
             type="button"
             onClick={() => setTopic(idea)}
-            className="rounded-full border border-line/10 bg-line/[0.03] px-3 py-1 text-xs text-ink-300 transition hover:-translate-y-0.5 hover:border-mint-400/50 hover:bg-mint-400/10 hover:text-ink-100"
+            className="rounded-full border border-line/10 bg-ink-900 px-3 py-1 text-xs text-ink-300 transition hover:-translate-y-0.5 hover:border-mint-400/50 hover:bg-mint-400/10 hover:text-ink-100"
           >
             {idea}
           </button>
         ))}
-      </div>
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-        <Select label="Duration" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
-          {[15, 30, 45, 60, 90].map((d) => (
-            <option key={d} value={d}>
-              {d} seconds
-            </option>
-          ))}
-        </Select>
-        <Select label="Quality" value={tier} onChange={(e) => setTier(e.target.value as QualityTier)}>
-          <option value="draft">Draft (cheapest)</option>
-          <option value="standard">Standard</option>
-          <option value="premium">Premium</option>
-          <option value="cinematic">Cinematic</option>
-        </Select>
-        <Button type="submit" size="lg" loading={busy} disabled={!topic.trim()} icon={<Sparkles className="h-4 w-4" />}>
-          Create project
-        </Button>
       </div>
     </form>
   );
