@@ -29,5 +29,8 @@ export async function createAppFromEnv(env: Env, opts: { logger: boolean }): Pro
     deps = { data: new SupabaseDataRepository(db), audio: new SupabaseAudioStore(db) };
   }
 
-  return buildApp({ ...deps, sessions, mailer, authSecret: env.AUTH_SECRET, anthropicApiKey: env.ANTHROPIC_API_KEY, elevenLabsApiKey: env.ELEVENLABS_API_KEY, defaultVoiceId: env.ELEVENLABS_VOICE_ID, webOrigin: env.WEB_ORIGIN, mode: env.API_DATA_MODE, logger: opts.logger });
+  // Rendering needs Chrome and minutes of CPU: only on a local server, not in the Netlify function.
+  const renderer = process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME ? undefined : new (await import('./export/renderer')).RemotionRenderer();
+
+  return buildApp({ ...deps, renderer, sessions, mailer, authSecret: env.AUTH_SECRET, anthropicApiKey: env.ANTHROPIC_API_KEY, elevenLabsApiKey: env.ELEVENLABS_API_KEY, defaultVoiceId: env.ELEVENLABS_VOICE_ID, webOrigin: env.WEB_ORIGIN, mode: env.API_DATA_MODE, logger: opts.logger });
 }

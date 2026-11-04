@@ -26,6 +26,16 @@ export interface ElevenLabsCheck {
   voices?: { id: string; name: string }[];
 }
 
+export interface RenderJob {
+  id: string;
+  status: 'bundling' | 'rendering' | 'done' | 'failed';
+  progress: number;
+  file?: string;
+  error?: string;
+  startedAt: string;
+  finishedAt?: string;
+}
+
 export interface ClaudeService {
   /** The app's connectors (Claude, ElevenLabs), all on server keys. */
   connectors(): Promise<Connector[]>;
@@ -46,6 +56,9 @@ export interface ClaudeService {
   voices(): Promise<{ voices: { id: string; name: string }[]; defaultVoiceId: string | null }>;
   voiceFor(projectId: string): Promise<{ voice: ReelVoice | null; urls: string[]; stale: boolean }>;
   generateVoice(projectId: string, voiceId?: string, voiceName?: string): Promise<{ project: Project; urls: string[] }>;
+  /** Export: render the MP4 (only on a local server). */
+  startExport(projectId: string): Promise<{ job: RenderJob; withVoice: boolean }>;
+  exportStatus(projectId: string): Promise<{ available: boolean; job: RenderJob | null }>;
   /** Storyboard: save the user's edits to the script. */
   saveScript(projectId: string, script: ReelScript): Promise<Project>;
 }
@@ -71,6 +84,8 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     voices: () => call('/voices'),
     voiceFor: (projectId) => call(`/projects/${projectId}/voice`),
     generateVoice: (projectId, voiceId, voiceName) => call(`/projects/${projectId}/voice`, 'POST', { voiceId, voiceName }),
+    startExport: (projectId) => call(`/projects/${projectId}/export`, 'POST'),
+    exportStatus: (projectId) => call(`/projects/${projectId}/export`),
     saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,
     approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,
   };

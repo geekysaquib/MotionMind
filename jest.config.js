@@ -26,10 +26,14 @@ const base = {
   setupFiles: ['<rootDir>/test/quiet-app-logs.ts'],
 };
 
+// The first page test that loads the reel player imports all of Remotion, which can take a while on Windows.
+const TEST_TIMEOUT_MS = 20_000;
+
 /** @type {import('jest').Config} */
 export default {
+  testTimeout: TEST_TIMEOUT_MS,
   projects: [
-    { ...base, displayName: 'frontend', testEnvironment: '<rootDir>/test/jsdom-environment.cjs', roots: ['<rootDir>/frontend/src'] },
+    { ...base, testTimeout: TEST_TIMEOUT_MS, displayName: 'frontend', testEnvironment: '<rootDir>/test/jsdom-environment.cjs', roots: ['<rootDir>/frontend/src'] },
     { ...base, displayName: 'backend', testEnvironment: 'node', roots: ['<rootDir>/backend/src'] },
     { ...base, displayName: 'shared', testEnvironment: 'node', roots: ['<rootDir>/shared/src'] },
   ],

@@ -6,6 +6,8 @@ import { registerClaudeRoutes } from './ai/routes';
 import { registerConnectorRoutes } from './connectors/routes';
 import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
 import { registerVoiceRoutes } from './voice/routes';
+import type { Renderer } from './export/renderer';
+import { registerExportRoutes, registerRenderDownload } from './export/routes';
 import type { Mailer } from './auth/mailer';
 import { registerLoginRoutes } from './auth/routes';
 import type { SessionTokens } from './auth/session';
@@ -36,6 +38,8 @@ export interface AppDeps {
   defaultVoiceId?: string;
   /** Where voiceover MP3s are stored. Defaults to memory (tests, demo). */
   audio: AudioStore;
+  /** MP4 export (Remotion). Only on a local server, never on Netlify. */
+  renderer?: Renderer;
   /** Builds the Claude client. Tests pass a fake. */
   claude?: (apiKey: string) => ClaudeClient;
 }
@@ -57,6 +61,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
   app.decorateRequest('userId', '');
 
   app.get('/health', async () => ({ ok: true, mode: deps.mode }));
+  registerRenderDownload(app, deps);
 
   // Public
   app.register(async (auth) => registerLoginRoutes(auth, deps), { prefix: '/api/auth' });
@@ -76,6 +81,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
       registerClaudeRoutes(api, deps);
       registerConnectorRoutes(api, deps);
       registerVoiceRoutes(api, deps);
+      registerExportRoutes(api, deps);
     },
     { prefix: '/api' },
   );
