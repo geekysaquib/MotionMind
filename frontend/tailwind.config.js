@@ -10,16 +10,16 @@ export default {
         line: 'rgb(var(--line) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
         danger: 'rgb(var(--danger) / <alpha-value>)',
-        mint: { 300: '#5EEAD4', 400: '#2DD4BF', 500: '#14B8A6', 600: '#0D9488', 700: '#0F766E' },
+        // The primary brand colour. The name is historical (it used to be teal); it is purple now.
+        mint: { 300: '#C4B5FD', 400: '#A78BFA', 500: '#8B5CF6', 600: '#7C3AED', 700: '#6D28D9' },
         coral: { 300: '#F7A08A', 500: '#EF6A5B' },
         violet: { 400: '#A78BFA', 500: '#8B5CF6', 600: '#7C3AED' },
-        cream: '#F6F2E9',
       },
       fontFamily: {
         display: ['"Google Sans Variable"', '"Google Sans"', 'system-ui', 'sans-serif'],
         sans: ['"Google Sans Variable"', '"Google Sans"', 'system-ui', 'sans-serif'],
       },
-      boxShadow: { glow: '0 8px 24px -10px rgba(13,148,136,.55)', soft: '0 1px 2px rgba(31,36,48,.04), 0 8px 24px -12px rgba(31,36,48,.12)' },
+      boxShadow: { glow: '0 6px 18px -8px rgba(124,58,237,.55)', soft: '0 1px 2px rgba(15,20,36,.05), 0 2px 8px -4px rgba(15,20,36,.06)' },
       keyframes: {
         'fade-up': { from: { opacity: 0, transform: 'translateY(6px)' }, to: { opacity: 1, transform: 'none' } },
         'rise': { from: { opacity: 0, transform: 'translateY(22px) scale(.98)' }, to: { opacity: 1, transform: 'none' } },

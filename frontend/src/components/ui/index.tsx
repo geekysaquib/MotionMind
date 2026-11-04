@@ -2,11 +2,12 @@ import { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type R
 import { Loader2 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'dark' | 'secondary' | 'ghost' | 'danger';
 
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-mint-600 text-white hover:bg-mint-700 shadow-glow',
-  secondary: 'bg-line/[0.06] text-ink-100 hover:bg-line/10 border border-line/10',
+  dark: 'bg-ink-100 text-ink-950 hover:opacity-90',
+  secondary: 'bg-ink-900 text-ink-100 hover:bg-ink-800 border border-line/[0.14] shadow-sm',
   ghost: 'text-ink-300 hover:text-ink-100 hover:bg-line/5',
   danger: 'bg-coral-500/10 text-danger border border-coral-500/30 hover:bg-coral-500/20',
 };
@@ -28,7 +29,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition active:scale-[.98] disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition active:scale-[.98] disabled:pointer-events-none disabled:opacity-50',
         VARIANTS[variant],
         sizes[size],
         className,
@@ -81,7 +82,7 @@ export function Select({ label, children, id, ...rest }: SelectHTMLAttributes<HT
 export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'mint' | 'coral' | 'violet' | 'amber'; children: ReactNode }) {
   const tones = {
     neutral: 'bg-line/5 text-ink-300 border-line/10',
-    mint: 'bg-mint-400/10 text-accent border-mint-400/30',
+    mint: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
     coral: 'bg-coral-500/10 text-danger border-coral-500/30',
     violet: 'bg-violet-500/10 text-violet-600 border-violet-500/30',
     amber: 'bg-amber-400/10 text-amber-700 border-amber-400/30',
@@ -105,10 +106,10 @@ export function Alert({ tone = 'error', children }: { tone?: 'error' | 'info' | 
   const tones = {
     error: 'border-coral-500/30 bg-coral-500/10 text-danger',
     info: 'border-line/10 bg-line/5 text-ink-300',
-    success: 'border-mint-400/30 bg-mint-400/10 text-accent',
+    success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700',
   };
   return (
-    <div role={tone === 'error' ? 'alert' : 'status'} className={cn('rounded-xl border px-4 py-3 text-sm', tones[tone])}>
+    <div role={tone === 'error' ? 'alert' : 'status'} className={cn('rounded-lg border px-4 py-3 text-sm', tones[tone])}>
       {children}
     </div>
   );

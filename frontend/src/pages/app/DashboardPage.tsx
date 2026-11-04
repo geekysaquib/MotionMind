@@ -39,10 +39,10 @@ export const DashboardPage = observer(function DashboardPage() {
   }, []);
 
   const stats = [
-    { label: 'Total projects', value: s.total, icon: Layers, tone: 'from-mint-400/25' },
-    { label: 'Completed reels', value: s.completed, icon: Film, tone: 'from-violet-500/25' },
-    { label: 'In progress', value: s.inProgress, icon: Clapperboard, tone: 'from-coral-500/25' },
-    { label: 'Drafts', value: s.drafts, icon: FileClock, tone: 'from-amber-400/25' },
+    { label: 'Total projects', value: s.total, icon: Layers, tone: 'bg-violet-500/10 text-violet-600' },
+    { label: 'Completed reels', value: s.completed, icon: Film, tone: 'bg-emerald-500/10 text-emerald-600' },
+    { label: 'In progress', value: s.inProgress, icon: Clapperboard, tone: 'bg-sky-500/10 text-sky-600' },
+    { label: 'Drafts', value: s.drafts, icon: FileClock, tone: 'bg-amber-500/10 text-amber-600' },
   ];
 
   const setup = [
@@ -56,20 +56,19 @@ export const DashboardPage = observer(function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-6 md:p-10">
-      <Reveal className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink-100 to-[#2b3550] p-7 text-ink-950 md:p-9">
-        <div className="orb -right-10 -top-16 h-64 w-64 bg-mint-400/60" aria-hidden />
-        <div className="orb -bottom-20 left-1/3 h-56 w-56 bg-violet-500/50" style={{ animationDelay: '-6s' }} aria-hidden />
+      <Reveal className="card relative overflow-hidden p-7 md:p-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(520px_220px_at_100%_0%,rgba(124,58,237,0.10),transparent),radial-gradient(420px_200px_at_0%_100%,rgba(14,165,233,0.08),transparent)]" aria-hidden />
         <div className="relative flex flex-wrap items-center justify-between gap-6">
           <div>
-            <p className="text-sm font-medium opacity-70">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-            <h1 className="mt-1 animate-fade-up font-display text-3xl font-bold tracking-tight md:text-4xl">
+            <p className="text-sm font-medium text-ink-400">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+            <h1 className="mt-1 animate-fade-up font-display text-3xl font-bold tracking-tight">
               {greeting()}, {name}
             </h1>
-            <p className="mt-2 max-w-md text-sm opacity-75">
+            <p className="mt-2 max-w-md text-sm text-ink-400">
               {s.total === 0 ? 'Start your first reel: type a question below and the studio takes it from there.' : `You have ${s.inProgress + s.drafts} reel${s.inProgress + s.drafts === 1 ? '' : 's'} on the go and ${s.completed} finished.`}
             </p>
           </div>
-          <Link to="/app?new=1" className="group inline-flex items-center gap-2 rounded-xl bg-mint-400 px-5 py-3 text-sm font-semibold text-ink-100 shadow-glow transition hover:-translate-y-0.5 hover:bg-mint-300">
+          <Link to="/app?new=1" className="group inline-flex items-center gap-2 rounded-lg bg-ink-100 px-4 py-2.5 text-sm font-semibold text-ink-950 transition hover:opacity-90">
             <Plus className="h-4 w-4 transition group-hover:rotate-90" /> New reel
           </Link>
         </div>
@@ -98,10 +97,11 @@ export const DashboardPage = observer(function DashboardPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map(({ label, value, icon: Icon, tone }, i) => (
           <Reveal key={label} delay={i * 70} className="card card-hover relative overflow-hidden p-5">
-            <div className={cn('absolute inset-0 bg-gradient-to-br to-transparent opacity-70', tone)} />
             <div className="relative">
-              <Icon className="h-5 w-5 text-ink-300" />
-              <div className="mt-4 font-display text-4xl font-bold">{projects.loaded ? <CountUp to={value} /> : <span className="skeleton inline-block h-9 w-10 align-middle" />}</div>
+              <span className={cn('flex h-8 w-8 items-center justify-center rounded-lg', tone)}>
+                <Icon className="h-4 w-4" />
+              </span>
+              <div className="mt-4 font-display text-3xl font-bold">{projects.loaded ? <CountUp to={value} /> : <span className="skeleton inline-block h-9 w-10 align-middle" />}</div>
               <div className="mt-1 text-sm text-ink-400">{label}</div>
             </div>
           </Reveal>

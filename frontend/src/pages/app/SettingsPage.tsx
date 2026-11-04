@@ -13,9 +13,9 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6 md:p-10">
       <PageHeader title="Settings" subtitle="Your profile, how you work with AI, and your account." />
-      <nav className="flex gap-1 border-b border-line/[0.06]" aria-label="Settings">
+      <nav className="inline-flex gap-1 rounded-lg bg-ink-700/70 p-1" aria-label="Settings">
         {TABS.map((t) => (
-          <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => cn('border-b-2 px-3 py-2.5 text-sm font-medium', isActive ? 'border-mint-400 text-ink-100' : 'border-transparent text-ink-400 hover:text-ink-100')}>
+          <NavLink key={t.to} to={t.to} end={t.end} className={({ isActive }) => cn('rounded-md px-3 py-1.5 text-sm font-medium transition', isActive ? 'bg-ink-900 text-ink-100 shadow-sm' : 'text-ink-400 hover:text-ink-100')}>
             {t.label}
           </NavLink>
         ))}

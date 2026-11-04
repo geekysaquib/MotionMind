@@ -63,7 +63,7 @@ function PhoneMock() {
       <div className="orb -left-10 -top-6 h-52 w-52 bg-mint-400/60" />
       <div className="orb -bottom-8 -right-8 h-56 w-56 bg-violet-500/50" style={{ animationDelay: '-6s' }} />
       <div className="relative animate-float rounded-[2.6rem] border border-line/10 bg-ink-100 p-2.5 shadow-2xl">
-        <div className="overflow-hidden rounded-[2.1rem] bg-cream">
+        <div className="overflow-hidden rounded-[2.1rem] bg-ink-900">
           <video
             className="block aspect-[9/16] w-full object-cover"
             src="/reel-preview.mp4"

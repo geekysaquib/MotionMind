@@ -16,7 +16,7 @@ import { nextStage, progressOf } from '../../lib/progress';
 function hues(id: string): [number, number] {
   let h = 0;
   for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return [h % 360, (h * 7 + 140) % 360];
+  return [250 + (h % 70), 190 + ((h * 7) % 120)]; // violet to sky to pink, so covers fit the palette
 }
 
 const FILTERS: { id: 'all' | ProjectStatus; label: string }[] = [
@@ -43,9 +43,9 @@ export const LibraryPage = observer(function LibraryPage() {
     <div className="mx-auto max-w-6xl space-y-6 p-6 md:p-10">
       <PageHeader title="Project library" subtitle="Every reel you've started, saved automatically." />
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex rounded-xl border border-line/10 bg-ink-900 p-1 text-sm">
+        <div className="flex rounded-lg bg-ink-700/70 p-1 text-sm">
           {FILTERS.map((f) => (
-            <button key={f.id} onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} className={cn('rounded-lg px-3 py-1.5 font-medium', filter === f.id ? 'bg-line/10 text-ink-100' : 'text-ink-400 hover:text-ink-100')}>
+            <button key={f.id} onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} className={cn('rounded-md px-3 py-1.5 font-medium transition', filter === f.id ? 'bg-ink-900 text-ink-100 shadow-sm' : 'text-ink-400 hover:text-ink-100')}>
               {f.label}
             </button>
           ))}

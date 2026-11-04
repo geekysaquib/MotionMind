@@ -15,7 +15,9 @@ interface Props {
   playheadSec?: number;
 }
 
-const H = 96;
+const H = 104;
+/** Each scene is a clip in its own colour, like tracks in a video editor. */
+const CLIP = ['#E8734A', '#0D9488', '#7C3AED', '#0EA5E9'];
 
 /** The recording as a waveform, with one draggable break per scene. Arrow keys nudge a focused break by 0.05 s. */
 export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelect, playheadSec }: Props) {
@@ -52,12 +54,20 @@ export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelec
   return (
     <div ref={box} className="relative select-none touch-none" style={{ height: H }} onPointerMove={move} onPointerUp={() => setDrag(null)} onPointerCancel={() => setDrag(null)}>
       <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${w} 100`} preserveAspectRatio="none" aria-hidden>
-        {bounds.map((b, i) => (
-          <rect key={i} x={b.start * PEAKS_PER_SEC} width={Math.max(0, (b.end - b.start) * PEAKS_PER_SEC)} y={0} height={100} className={i === selected ? 'fill-accent/20' : i % 2 ? 'fill-ink-100/5' : 'fill-transparent'} />
-        ))}
+        {bounds.map((b, i) => {
+          const x = b.start * PEAKS_PER_SEC;
+          const w = Math.max(0, (b.end - b.start) * PEAKS_PER_SEC);
+          const c = CLIP[i % CLIP.length]!;
+          return (
+            <g key={i}>
+              <rect x={x} width={w} y={0} height={100} fill={c} fillOpacity={i === selected ? 0.2 : 0.09} />
+              <rect x={x} width={w} y={0} height={5} fill={c} fillOpacity={i === selected ? 1 : 0.75} />
+            </g>
+          );
+        })}
         {bars.map((p, i) => {
           const h = Math.max(2, p);
-          return <rect key={i} x={i + 0.15} width={0.7} y={50 - h / 2} height={h} className="fill-accent/70" />;
+          return <rect key={i} x={i + 0.15} width={0.7} y={50 - h / 2} height={h} className="fill-ink-300/60" />;
         })}
       </svg>
       {bounds.map((b, i) => (
@@ -65,7 +75,7 @@ export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelec
           key={i}
           type="button"
           onClick={() => onSelect?.(i)}
-          className={cn('absolute top-0 h-5 truncate px-1 text-left text-[10px] font-medium', i === selected ? 'text-accent' : 'text-ink-400')}
+          className={cn('absolute top-1.5 h-5 truncate px-1.5 text-left text-[10px] font-semibold', i === selected ? 'text-ink-100' : 'text-ink-300')}
           style={{ left: pct(b.start), width: pct(b.end - b.start) }}
           aria-label={`Scene ${i + 1}, ${(b.end - b.start).toFixed(1)} seconds`}
         >
