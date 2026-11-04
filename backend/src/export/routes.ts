@@ -24,11 +24,13 @@ export async function reelSpecFor(deps: AppDeps, userId: string, project: Projec
   };
   // The Reel editor: uploaded voice, music, pace and caption style.
   const editor = project.editor;
-  const paths = [editor?.upload?.track.path, editor?.music?.track.path].filter((p): p is string => Boolean(p));
+  const sfxPaths = (editor?.sfx ?? []).map((c) => c.track.path);
+  const paths = [editor?.upload?.track.path, editor?.music?.track.path, ...sfxPaths].filter((p): p is string => Boolean(p));
   const urls = paths.length ? await deps.audio.urls(paths) : [];
   const parts = editorSpecParts(editor, script.beats.length, {
     voice: editor?.upload ? urls[paths.indexOf(editor.upload.track.path)] || undefined : undefined,
     music: editor?.music ? urls[paths.indexOf(editor.music.track.path)] || undefined : undefined,
+    sfx: Object.fromEntries(sfxPaths.flatMap((p) => (urls[paths.indexOf(p)] ? [[p, urls[paths.indexOf(p)]!]] : []))),
   });
   Object.assign(spec, parts);
 

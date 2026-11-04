@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { MAX_AUDIO_SEC, MIN_SCENE_SEC, PACE_MAX, PACE_MIN, STAGES, type Project, type ReelEditor } from '@motionmind/shared';
+import { MAX_AUDIO_SEC, MAX_SFX, MAX_SFX_SEC, MIN_SCENE_SEC, PACE_MAX, PACE_MIN, STAGES, type Project, type ReelEditor } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 import { cleanFileName, sniffAudio } from './audioFormat';
 
 export const MAX_AUDIO_BYTES = 40 * 1024 * 1024;
 
-const kindSchema = z.enum(['voice', 'music']);
+const kindSchema = z.enum(['voice', 'music', 'sfx']);
 
 const trackSchema = z.object({
   path: z.string().min(1).max(300),
@@ -27,6 +27,16 @@ export const editorSchema = z
     pace,
     scenePace: z.array(pace).max(80),
     music: z.object({ track: trackSchema, volume: z.number().min(0).max(1) }).nullable(),
+    sfx: z
+      .array(
+        z.object({
+          track: trackSchema.refine((t) => t.durationSec <= MAX_SFX_SEC, `A sound effect can be at most ${MAX_SFX_SEC} seconds.`),
+          at: z.number().min(0).max(MAX_AUDIO_SEC + 60),
+          volume: z.number().min(0).max(1),
+        }),
+      )
+      .max(MAX_SFX, `A reel can have at most ${MAX_SFX} sound effects.`)
+      .optional(),
     captions: z.object({ size: z.enum(['small', 'medium', 'large']), position: z.enum(['bottom', 'middle']), look: z.enum(['box', 'plain']) }),
     // The page sends back what it loaded, which includes the last save time. The server stamps its own, so this is ignored.
     updatedAt: z.string().max(40).optional(),
@@ -54,17 +64,19 @@ export function registerEditorRoutes(api: FastifyInstance, deps: AppDeps) {
   async function urlsFor(editor: ReelEditor | null) {
     const voicePath = editor?.upload?.track.path;
     const musicPath = editor?.music?.track.path;
-    const paths = [voicePath, musicPath].filter((p): p is string => Boolean(p));
+    const sfxPaths = (editor?.sfx ?? []).map((c) => c.track.path);
+    const paths = [voicePath, musicPath, ...sfxPaths].filter((p): p is string => Boolean(p));
     const urls = await deps.audio.urls(paths);
     return {
       voice: voicePath ? urls[paths.indexOf(voicePath)] || undefined : undefined,
       music: musicPath ? urls[paths.indexOf(musicPath)] || undefined : undefined,
+      sfx: Object.fromEntries(sfxPaths.flatMap((p) => (urls[paths.indexOf(p)] ? [[p, urls[paths.indexOf(p)]!]] : []))),
     };
   }
 
   api.post('/projects/:id/audio/:kind', { bodyLimit: MAX_AUDIO_BYTES }, async (req, reply) => {
     const kind = kindSchema.safeParse((req.params as { kind: string }).kind);
-    if (!kind.success) return reply.code(404).send({ error: 'unknown_kind', message: 'Upload voice or music.' });
+    if (!kind.success) return reply.code(404).send({ error: 'unknown_kind', message: 'Upload voice, music or sfx.' });
     const project = await ownedProject(req, reply);
     if (!project) return reply;
     const body = req.body;
@@ -93,7 +105,7 @@ export function registerEditorRoutes(api: FastifyInstance, deps: AppDeps) {
 
     // Files must be this project's own: nobody can point the editor at someone else's audio.
     const prefix = `${req.userId}/${project.id}/`;
-    for (const t of [editor.upload?.track, editor.music?.track]) {
+    for (const t of [editor.upload?.track, editor.music?.track, ...(editor.sfx ?? []).map((c) => c.track)]) {
       if (t && !t.path.startsWith(prefix)) return reply.code(400).send({ error: 'invalid_editor', message: "That audio file doesn't belong to this project." });
     }
     if (editor.upload) {
@@ -121,8 +133,8 @@ export function registerEditorRoutes(api: FastifyInstance, deps: AppDeps) {
     }
 
     const saved: ReelEditor = { ...editor, updatedAt: new Date().toISOString() };
-    const before = [project.editor?.upload?.track.path, project.editor?.music?.track.path];
-    const after = new Set([saved.upload?.track.path, saved.music?.track.path]);
+    const before = [project.editor?.upload?.track.path, project.editor?.music?.track.path, ...(project.editor?.sfx ?? []).map((c) => c.track.path)];
+    const after = new Set([saved.upload?.track.path, saved.music?.track.path, ...(saved.sfx ?? []).map((c) => c.track.path)]);
     const updated = await deps.data.updateProject(req.userId, project.id, {
       editor: saved,
       stage: saved.upload && stageBefore(project.stage, 'voice') ? 'voice' : project.stage,

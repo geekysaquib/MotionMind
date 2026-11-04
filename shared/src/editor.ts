@@ -19,6 +19,18 @@ export const PACE_MAX = 1.5;
 /** A scene can't be shorter than this in the uploaded recording. */
 export const MIN_SCENE_SEC = 0.3;
 export const MAX_AUDIO_SEC = 300;
+/** Sound effects: how many a reel can have, how long each can be, and how loud they start. */
+export const MAX_SFX = 12;
+export const MAX_SFX_SEC = 30;
+export const DEFAULT_SFX_VOLUME = 0.8;
+
+/** A short sound (a whoosh, a pop, a ding) placed at a moment of the reel. */
+export interface SfxClip {
+  track: AudioTrack;
+  /** Seconds from the start of the reel. */
+  at: number;
+  volume: number;
+}
 
 export type CaptionSize = 'small' | 'medium' | 'large';
 export type CaptionPosition = 'bottom' | 'middle';
@@ -46,6 +58,8 @@ export interface ReelEditor {
   /** Extra speed for single scenes, multiplied with `pace`. Missing entries mean 1. */
   scenePace: number[];
   music: { track: AudioTrack; volume: number } | null;
+  /** Sound effects placed on the reel's timeline. Missing means none. */
+  sfx?: SfxClip[];
   captions: CaptionStyle;
   updatedAt?: string;
 }
@@ -56,6 +70,7 @@ export const DEFAULT_EDITOR: ReelEditor = {
   pace: 1,
   scenePace: [],
   music: null,
+  sfx: [],
   captions: DEFAULT_CAPTIONS,
 };
 
@@ -75,6 +90,7 @@ export function normalizeEditor(raw: Partial<ReelEditor> | null | undefined, has
     ...raw,
     pace: clampPace(raw.pace ?? 1),
     scenePace: (raw.scenePace ?? []).map(clampPace),
+    sfx: (raw.sfx ?? []).slice(0, MAX_SFX),
     captions: { ...DEFAULT_CAPTIONS, ...raw.captions },
   };
 }
@@ -90,10 +106,11 @@ export interface EditorSpecParts {
   scenePace?: number[];
   voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number };
   music?: { url: string; durationSec: number; volume: number };
+  sfx?: { url: string; durationSec: number; at: number; volume: number }[];
   captions?: CaptionStyle;
 }
 
-export function editorSpecParts(editor: ReelEditor | null | undefined, beatCount: number, urls: { voice?: string; music?: string }): EditorSpecParts {
+export function editorSpecParts(editor: ReelEditor | null | undefined, beatCount: number, urls: { voice?: string; music?: string; sfx?: Record<string, string> }): EditorSpecParts {
   if (!editor) return {};
   const out: EditorSpecParts = {
     pace: clampPace(editor.pace),
@@ -112,6 +129,11 @@ export function editorSpecParts(editor: ReelEditor | null | undefined, beatCount
   if (editor.music && urls.music) {
     out.music = { url: urls.music, durationSec: editor.music.track.durationSec, volume: Math.min(1, Math.max(0, editor.music.volume)) };
   }
+  const clips = (editor.sfx ?? []).flatMap((c) => {
+    const url = urls.sfx?.[c.track.path];
+    return url ? [{ url, durationSec: c.track.durationSec, at: Math.max(0, c.at), volume: Math.min(1, Math.max(0, c.volume)) }] : [];
+  });
+  if (clips.length) out.sfx = clips;
   return out;
 }
 

@@ -28,7 +28,7 @@ export function specFromScript(
   script: ReelScript,
   brand: Brand = FALLBACK_BRAND,
   audio?: { voice: ReelVoice; urls: string[] },
-  editor?: { editor: ReelEditor | null; urls: { voice?: string; music?: string } },
+  editor?: { editor: ReelEditor | null; urls: { voice?: string; music?: string; sfx?: Record<string, string> } },
 ): ReelSpec {
   const spec: ReelSpec = { title: script.title, world: worldFor(script), theme: script.theme, layout: script.layout, steps: script.steps, brand, beats: script.beats };
   // The Reel editor: pace, captions, music, and an uploaded recording when its cuts match the scenes.

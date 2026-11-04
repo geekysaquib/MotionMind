@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
-import { Clapperboard, Music2, Type, Upload, SlidersHorizontal } from 'lucide-react';
+import { Clapperboard, Music2, Type, Upload, SlidersHorizontal, Volume2 } from 'lucide-react';
 import {
   autoCuts,
   clampPace,
@@ -10,6 +10,7 @@ import {
   detectTrim,
   normalizeEditor,
   trimWindow,
+  MAX_SFX,
   PACE_MAX,
   PACE_MIN,
   PEAKS_PER_SEC,
@@ -25,7 +26,7 @@ import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
 import { Timeline } from '../../components/Timeline';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
-import { attachMusic, attachVoice, AudioFileError } from '../../lib/editorActions';
+import { attachMusic, attachSfx, attachVoice, AudioFileError } from '../../lib/editorActions';
 import type { EditorUrls } from '../../services/claudeHttp';
 import { brandFor, specFromScript } from '../../components/reelSpec';
 
@@ -63,11 +64,12 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
   const [script, setScript] = useState<ReelScript | null>(project.script);
   const [urls, setUrls] = useState<EditorUrls | null>(null);
   const [scene, setScene] = useState(0);
-  const [busy, setBusy] = useState<'save' | 'voice' | 'music' | null>(null);
+  const [busy, setBusy] = useState<'save' | 'voice' | 'music' | 'sfx' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elevenAudio, setElevenAudio] = useState<{ voice: Project['voice']; urls: string[]; stale: boolean } | null>(null);
   const voiceFile = useRef<HTMLInputElement>(null);
   const musicFile = useRef<HTMLInputElement>(null);
+  const sfxFile = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api
@@ -115,6 +117,29 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
   const win = upload ? trimWindow(upload) : { start: 0, end: 0 };
   const bounds = upload ? sceneBounds(upload.cuts, upload.closingAt ?? win.end, win.start) : [];
   const total = bounds.reduce((n, b, i) => n + (b.end - b.start) / (clampPace(draft.pace) * scenePace(i)), 0);
+
+  /** Seconds from the start of the reel at which each scene begins (needs an uploaded recording to know). */
+  const sceneStarts = bounds.map((_, i) => bounds.slice(0, i).reduce((n, b, k) => n + (b.end - b.start) / (clampPace(draft.pace) * scenePace(k)), 0));
+  const sfx = draft.sfx ?? [];
+  const setSfx = (i: number, p: Partial<NonNullable<ReelEditor['sfx']>[number]>) => patch({ sfx: sfx.map((c, j) => (j === i ? { ...c, ...p } : c)) });
+
+  async function addSfx(file: File | undefined) {
+    if (!file) return;
+    setBusy('sfx');
+    setError(null);
+    try {
+      const r = await attachSfx(api, project, file, draft, 0);
+      projects.upsert(r.project);
+      setDraft(r.editor);
+      setUrls(r.urls);
+      toasts.push('success', 'Sound effect added at the start. Set when it plays below.');
+    } catch (e) {
+      setError(e instanceof AudioFileError ? e.message : errorText(e));
+    } finally {
+      setBusy(null);
+      if (sfxFile.current) sfxFile.current.value = '';
+    }
+  }
 
   async function pick(kind: 'voice' | 'music', file: File | undefined) {
     if (!file) return;
@@ -307,6 +332,69 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
               <input type="range" className="mt-1 block w-full" min={PACE_MIN} max={PACE_MAX} step={0.05} value={scenePace(sceneIdx)} onChange={(e) => setScenePace(sceneIdx, Number(e.target.value))} aria-label="Scene pace" />
             </label>
             {!upload && <p className="text-xs text-ink-400">Without an uploaded recording the pace changes how long each scene stays on screen{aiMode.paste ? '.' : ' and how fast the ElevenLabs voice plays.'}</p>}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="flex items-center gap-2 font-semibold">
+            <Volume2 className="h-4 w-4 text-accent" /> Sound effects
+          </h2>
+          <p className="mt-1 text-sm text-ink-400">Short sounds (a whoosh, a pop, a ding) that play once at the moment you choose. Up to {MAX_SFX}, each at most 30 seconds.</p>
+          <ul className="mt-3 space-y-3">
+            {sfx.map((c, i) => (
+              <li key={c.track.path} className="rounded-lg border border-line/10 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-sm font-medium">
+                    {i + 1}. {c.track.fileName} <span className="font-normal text-ink-400">· {c.track.durationSec.toFixed(1)}s</span>
+                  </span>
+                  <Button variant="ghost" aria-label={`Remove sound effect ${i + 1}`} onClick={() => patch({ sfx: sfx.filter((_, j) => j !== i) })}>
+                    Remove
+                  </Button>
+                </div>
+                <div className="mt-2 flex flex-wrap items-end gap-3 text-xs text-ink-400">
+                  <label>
+                    Plays at (seconds)
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      aria-label={`Sound effect ${i + 1} start`}
+                      className="mt-1 block w-24 rounded-lg border border-line/15 bg-transparent px-2 py-1.5 text-sm text-ink-100"
+                      value={Number(c.at.toFixed(2))}
+                      onChange={(e) => setSfx(i, { at: Math.max(0, Number(e.target.value) || 0) })}
+                    />
+                  </label>
+                  {sceneStarts.length > 0 && (
+                    <label>
+                      Or at the start of
+                      <select
+                        aria-label={`Sound effect ${i + 1} scene`}
+                        className="mt-1 block rounded-lg border border-line/15 bg-transparent px-2 py-1.5 text-sm text-ink-100"
+                        value=""
+                        onChange={(e) => e.target.value !== '' && setSfx(i, { at: Math.round(sceneStarts[Number(e.target.value)]! * 100) / 100 })}
+                      >
+                        <option value="">scene…</option>
+                        {sceneStarts.map((_, k) => (
+                          <option key={k} value={k}>
+                            Scene {k + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <label className="min-w-[140px] flex-1">
+                    Volume: <span className="font-semibold text-ink-100">{Math.round(c.volume * 100)}%</span>
+                    <input type="range" className="mt-1 block w-full" min={0} max={1} step={0.01} value={c.volume} onChange={(e) => setSfx(i, { volume: Number(e.target.value) })} aria-label={`Sound effect ${i + 1} volume`} />
+                  </label>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3">
+            <Button variant="ghost" loading={busy === 'sfx'} disabled={sfx.length >= MAX_SFX} onClick={() => sfxFile.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" /> Add a sound effect
+            </Button>
+            <input ref={sfxFile} type="file" accept="audio/*" className="hidden" aria-label="Sound effect file" onChange={(e) => void addSfx(e.target.files?.[0])} />
           </div>
         </Card>
 

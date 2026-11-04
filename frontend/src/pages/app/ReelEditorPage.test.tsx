@@ -163,6 +163,28 @@ describe('ReelEditorPage', () => {
     expect(screen.getByRole('slider', { name: 'Start of the part that plays' }).getAttribute('aria-valuenow')).toBe('0');
   });
 
+  it('adds a sound effect, sets when it plays and how loud, and removes it', async () => {
+    const { calls } = await setup('editor', EDITOR);
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText('Sound effect file'), { target: { files: [audioFile('whoosh.mp3')] } });
+    });
+    expect(calls.uploads).toEqual(['sfx:whoosh.mp3']);
+    expect(calls.saved[0]!.sfx).toHaveLength(1);
+    expect(calls.saved[0]!.sfx![0]).toMatchObject({ at: 0 });
+    // Set the time by hand, then by scene (the recording is 10 s with breaks at 3 and 7).
+    fireEvent.change(screen.getByLabelText('Sound effect 1 start'), { target: { value: '2.5' } });
+    expect((screen.getByLabelText('Sound effect 1 start') as HTMLInputElement).value).toBe('2.5');
+    fireEvent.change(screen.getByLabelText('Sound effect 1 scene'), { target: { value: '2' } });
+    expect((screen.getByLabelText('Sound effect 1 start') as HTMLInputElement).value).toBe('7');
+    fireEvent.change(screen.getByLabelText('Sound effect 1 volume'), { target: { value: '0.3' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    });
+    expect(calls.saved.at(-1)!.sfx![0]).toMatchObject({ at: 7, volume: 0.3 });
+    fireEvent.click(screen.getByRole('button', { name: 'Remove sound effect 1' }));
+    expect(screen.queryByLabelText('Sound effect 1 start')).toBeNull();
+  });
+
   it('offers to refit the scene breaks when the scene count changed', async () => {
     await setup('editor', { ...EDITOR, upload: { ...EDITOR.upload!, cuts: [5] } });
     expect(screen.getByRole('button', { name: 'Refit scene breaks' })).toBeTruthy();

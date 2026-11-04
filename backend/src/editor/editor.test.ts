@@ -137,6 +137,31 @@ describe('reel editor routes', () => {
     expect((await put(null, null)).statusCode).toBe(200);
   });
 
+  it('stores sound effects, plays them back, removes the files it no longer uses, and keeps them within limits', async () => {
+    const { app, id } = await setup();
+    const voice = (await upload(app, id, 'voice', mp3())).json().track;
+    const fx = (await upload(app, id, 'sfx', mp3())).json().track;
+    expect(fx.path).toMatch(/\/sfx-/);
+    const put = (sfx: unknown) => app.inject({ method: 'PUT', url: `/api/projects/${id}/editor`, headers: H, payload: { editor: { ...editorFor(voice), sfx } } });
+    const clip = (p: string, over: Record<string, unknown> = {}) => ({ track: { path: p, fileName: 'whoosh.mp3', mime: 'audio/mpeg', durationSec: 2 }, at: 1.5, volume: 0.7, ...over });
+
+    const ok = await put([clip(fx.path)]);
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().project.editor.sfx[0]).toMatchObject({ at: 1.5, volume: 0.7 });
+    expect(ok.json().urls.sfx[fx.path]).toBeTruthy();
+    expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/editor`, headers: H })).json().urls.sfx[fx.path]).toBeTruthy();
+
+    expect((await put([clip(fx.path, { track: { path: fx.path, fileName: 'x.mp3', mime: 'audio/mpeg', durationSec: 45 } })])).statusCode).toBe(400); // too long
+    expect((await put([clip(fx.path, { volume: 2 })])).statusCode).toBe(400);
+    expect((await put(Array.from({ length: 13 }, () => clip(fx.path)))).statusCode).toBe(400); // too many
+    expect((await put([clip('someone-else/p/sfx-1.mp3')])).statusCode).toBe(400); // not this project's file
+
+    // Dropping the clip deletes its file.
+    expect((await put([])).statusCode).toBe(200);
+    const gone = await app.inject({ method: 'GET', url: `/api/projects/${id}/editor`, headers: H });
+    expect(gone.json().urls.sfx).toEqual({});
+  });
+
   it('refuses audio from another project, cuts out of order, and a cut count that does not match the scenes', async () => {
     const { app, id } = await setup();
     const track = (await upload(app, id, 'voice', mp3())).json().track;

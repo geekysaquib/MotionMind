@@ -152,3 +152,24 @@ describe('trimming the recording', () => {
     expect(editorSpecParts(withTrim(null, 15, 13), 3, { voice: 'u' }).voiceTrack!.closingAt).toBe(13);
   });
 });
+
+describe('sound effects', () => {
+  const clip = (name: string, at: number, volume = 0.8) => ({ track: { ...track, path: `u/p/${name}.mp3`, durationSec: 2 }, at, volume });
+  const withSfx = (sfx: NonNullable<ReelEditor['sfx']>): ReelEditor => ({ ...upload, sfx });
+
+  it('is empty by default, and a reel can have at most twelve', () => {
+    expect(normalizeEditor(null).sfx).toEqual([]);
+    const many = Array.from({ length: 15 }, (_, i) => clip(`s${i}`, i));
+    expect(normalizeEditor({ sfx: many }).sfx).toHaveLength(12);
+  });
+
+  it('reaches the engine with its url, start time and volume, and skips clips without a url', () => {
+    const e = withSfx([clip('a', 1.5, 0.5), clip('b', 4), clip('c', -2, 3)]);
+    const parts = editorSpecParts(e, 3, { voice: 'u', sfx: { 'u/p/a.mp3': 'ua', 'u/p/c.mp3': 'uc' } });
+    expect(parts.sfx).toEqual([
+      { url: 'ua', durationSec: 2, at: 1.5, volume: 0.5 },
+      { url: 'uc', durationSec: 2, at: 0, volume: 1 },
+    ]);
+    expect(editorSpecParts(upload, 3, { voice: 'u' }).sfx).toBeUndefined();
+  });
+});

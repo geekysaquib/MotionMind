@@ -30,6 +30,8 @@ export interface ElevenLabsCheck {
 export interface EditorUrls {
   voice?: string;
   music?: string;
+  /** Playable URL of each sound effect, by its storage path. */
+  sfx?: Record<string, string>;
 }
 
 export interface RenderJob {
@@ -63,7 +65,7 @@ export interface ClaudeService {
   voiceFor(projectId: string): Promise<{ voice: ReelVoice | null; urls: string[]; stale: boolean }>;
   generateVoice(projectId: string, voiceId?: string, voiceName?: string): Promise<{ project: Project; urls: string[] }>;
   /** Reel editor: upload voice/music, then save the editor state. */
-  uploadAudio(projectId: string, kind: 'voice' | 'music', file: Blob, fileName: string): Promise<{ track: Pick<AudioTrack, 'path' | 'fileName' | 'mime'>; url: string }>;
+  uploadAudio(projectId: string, kind: 'voice' | 'music' | 'sfx', file: Blob, fileName: string): Promise<{ track: Pick<AudioTrack, 'path' | 'fileName' | 'mime'>; url: string }>;
   editorFor(projectId: string): Promise<{ editor: ReelEditor | null; urls: EditorUrls }>;
   saveEditor(projectId: string, editor: ReelEditor): Promise<{ project: Project; urls: EditorUrls }>;
   /** Export: render the MP4 (only on a local server). */

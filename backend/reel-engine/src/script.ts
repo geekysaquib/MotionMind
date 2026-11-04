@@ -151,6 +151,8 @@ export type ReelSpec = {
   scenePace?: number[];
   /** Background music, looped under the whole reel. */
   music?: { url: string; durationSec: number; volume: number };
+  /** Sound effects: each plays once, starting `at` seconds into the reel. */
+  sfx?: { url: string; durationSec: number; at: number; volume: number }[];
   captions?: CaptionStyle;
 };
 

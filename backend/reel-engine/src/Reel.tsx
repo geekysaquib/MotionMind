@@ -118,6 +118,15 @@ export const Reel: React.FC<ReelSpec> = (input) => {
           </Sequence>
         ) : null,
       )}
+      {spec.sfx?.map((c, i) => {
+        const from = Math.round(c.at * fps);
+        if (from >= totalFrames) return null;
+        return (
+          <Sequence key={`sfx${i}`} from={from} durationInFrames={Math.max(1, Math.min(Math.ceil(c.durationSec * fps), totalFrames - from))}>
+            <Audio src={c.url} volume={c.volume} />
+          </Sequence>
+        );
+      })}
       {spec.music && <Music url={spec.music.url} durationSec={spec.music.durationSec} volume={spec.music.volume} totalFrames={totalFrames} />}
       {closing && spec.voiceTrack && (
         <Sequence from={storyFrames} durationInFrames={Math.max(1, endFrames)}>
