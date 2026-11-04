@@ -54,7 +54,22 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
             <label htmlFor="topic" className="label">
               Topic
             </label>
-            <textarea id="topic" rows={3} maxLength={500} className="field resize-none" value={topic} onChange={(e) => setTopic(e.target.value)} />
+            <textarea
+              id="topic"
+              ref={(el) => {
+                // Grow with the text, so the whole topic is always visible.
+                if (el) {
+                  el.style.height = 'auto';
+                  el.style.height = `${Math.max(280, el.scrollHeight + 2)}px`;
+                }
+              }}
+              rows={10}
+              maxLength={500}
+              className="field min-h-[280px] resize-y"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+            />
+            <div className="mt-1 text-right text-xs text-ink-400">{topic.length}/500</div>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <Select label="Duration" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
