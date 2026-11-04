@@ -63,8 +63,8 @@ describe('ExportStagePage', () => {
   it('shows the finished video with a download link', async () => {
     await setup(true, [{ id: 'j', status: 'done', progress: 1, file: '11111111-1111-1111-1111-111111111111.mp4', startedAt: 'now' }]);
     const link = screen.getByRole('link', { name: /Download MP4/ });
-    expect(link.getAttribute('href')).toBe('/api/renders/11111111-1111-1111-1111-111111111111.mp4');
-    expect(link.getAttribute('download')).toBe('UPI reel-instagram.mp4');
+    expect(link.getAttribute('href')).toBe('/api/renders/11111111-1111-1111-1111-111111111111.mp4?name=UPI-reel-instagram.mp4');
+    expect(link.getAttribute('download')).toBe('UPI-reel-instagram.mp4');
   });
 
   it('offers one export per platform and can start both', async () => {

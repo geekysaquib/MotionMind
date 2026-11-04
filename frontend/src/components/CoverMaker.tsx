@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Download, Image as ImageIcon, Save } from 'lucide-react';
-import { COVER_SIZES, COVER_STYLES, MAX_HEADLINE, MAX_KICKER, normalizeCover, type CoverSettings, type CoverSize, type CoverStyle, type Project, type ReelTone } from '@motionmind/shared';
+import { COVER_SIZES, COVER_STYLES, MAX_HEADLINE, MAX_KICKER, exportFileName, normalizeCover, type CoverSettings, type CoverSize, type CoverStyle, type Project, type ReelTone } from '@motionmind/shared';
 import { useStores } from '../stores/RootStore';
 import { config } from '../config';
 import { Alert, Button, Card, Spinner } from './ui';
@@ -83,8 +83,9 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
     try {
       const r = await api.renderCover(project.id, cover, format);
       const a = document.createElement('a');
-      a.href = `${config.apiUrl}${r.url}`;
-      a.download = `${project.title.slice(0, 40) || 'cover'}-cover.${format === 'jpeg' ? 'jpg' : 'png'}`;
+      const fileName = exportFileName(`${project.title} cover`, null, format === 'jpeg' ? 'jpg' : 'png');
+      a.href = `${config.apiUrl}${r.url}?name=${encodeURIComponent(fileName)}`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       a.remove();

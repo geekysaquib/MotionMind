@@ -93,7 +93,11 @@ export function registerRenderDownload(app: FastifyInstance, deps: AppDeps) {
     const info = await stat(full).catch(() => null);
     if (!info) return reply.code(404).send({ error: 'not_found', message: 'That file is not available.' });
     const kind = file.endsWith('.png') ? { type: 'image/png', name: 'motion-mind-cover.png' } : file.endsWith('.jpg') ? { type: 'image/jpeg', name: 'motion-mind-cover.jpg' } : { type: 'video/mp4', name: 'motion-mind-reel.mp4' };
-    reply.header('Content-Type', kind.type).header('Content-Length', info.size).header('Content-Disposition', `inline; filename="${kind.name}"`);
+    // A link with ?name= saves under that name (the web app sends the reel's title and platform); otherwise the file shows inline.
+    const asked = (req.query as { name?: string }).name;
+    const safe = typeof asked === 'string' ? asked.replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^[-.]+/, '').slice(0, 120) : '';
+    const disposition = safe && /\.(mp4|png|jpg)$/.test(safe) ? `attachment; filename="${safe.replace(/[^ -~]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(safe)}` : `inline; filename="${kind.name}"`;
+    reply.header('Content-Type', kind.type).header('Content-Length', info.size).header('Content-Disposition', disposition);
     return reply.send(createReadStream(full));
   });
 }

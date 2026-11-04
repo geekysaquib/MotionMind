@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
 import { Download, Film, Clapperboard } from 'lucide-react';
-import { PLATFORMS, normalizePlatforms, type Platform, type Project } from '@motionmind/shared';
+import { PLATFORMS, exportFileName, normalizePlatforms, type Platform, type Project } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
 import { PlatformIcon } from '../../components/BrandIcons';
@@ -67,7 +67,7 @@ function PlatformCard({ platform, project, job, withVoice, available, onStart }:
           {videoUrl ? (
             <div className="space-y-3">
               <video src={videoUrl} controls className="aspect-[9/16] w-full rounded-2xl border border-line/10 bg-black" />
-              <a href={videoUrl} download={`${project.title.slice(0, 40) || 'reel'}-${platform === 'youtube' ? 'shorts' : 'instagram'}.mp4`} className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-ink-950">
+              <a href={`${videoUrl}?name=${encodeURIComponent(exportFileName(project.title, platform, 'mp4'))}`} download={exportFileName(project.title, platform, 'mp4')} className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-ink-950">
                 <Download className="h-4 w-4" /> Download MP4
               </a>
             </div>

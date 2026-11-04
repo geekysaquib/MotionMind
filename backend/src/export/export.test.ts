@@ -1,4 +1,7 @@
 import { randomBytes } from 'node:crypto';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from '@jest/globals';
 import { buildApp } from '../app';
 import { ConsoleMailer } from '../auth/mailer';
@@ -28,7 +31,7 @@ class FakeRenderer implements Renderer {
   latest() {
     return this.job;
   }
-  filePath() {
+  filePath(): string | null {
     return null;
   }
   async still() {
@@ -111,6 +114,24 @@ describe('MP4 export', () => {
     expect(res.statusCode).toBe(501);
     expect(res.json().message).toMatch(/runs on your PC/);
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/export`, headers: H })).json()).toEqual({ available: false, job: null });
+  });
+
+  it('saves a download under the name the link asks for (reel title and platform), and shows it inline otherwise', async () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'mm-render-'));
+    const file = path.join(dir, 'f.mp4');
+    writeFileSync(file, 'video');
+    const renderer = new FakeRenderer();
+    renderer.filePath = () => file;
+    const { app } = await setup(renderer);
+    const url = '/api/renders/11111111-1111-1111-1111-111111111111.mp4';
+    const named = await app.inject({ method: 'GET', url: `${url}?name=${encodeURIComponent('IRCTC-Tatkal-shorts.mp4')}` });
+    expect(named.headers['content-disposition']).toContain('attachment; filename="IRCTC-Tatkal-shorts.mp4"');
+    const odd = await app.inject({ method: 'GET', url: `${url}?name=${encodeURIComponent('../../x"y.mp4')}` });
+    expect(odd.headers['content-disposition']).toContain('filename="x-y.mp4"');
+    const plain = await app.inject({ method: 'GET', url });
+    expect(plain.headers['content-disposition']).toBe('inline; filename="motion-mind-reel.mp4"');
+    const wrongType = await app.inject({ method: 'GET', url: `${url}?name=evil.exe` });
+    expect(wrongType.headers['content-disposition']).toContain('inline');
   });
 
   it('only serves known render files', async () => {

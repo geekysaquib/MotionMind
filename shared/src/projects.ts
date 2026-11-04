@@ -174,3 +174,20 @@ export const STAGE_LABELS: Record<Stage, string> = {
   voice: 'Voice',
   final: 'Final video',
 };
+
+/** The word used for a platform in file names. */
+export const PLATFORM_FILE_WORD: Record<Platform, string> = { instagram: 'instagram', youtube: 'shorts' };
+
+/**
+ * A safe file name for something exported from a project: the reel's title and the platform, like
+ * "How-UPI-Soundbox-works-instagram.mp4". Letters (any language) and digits stay; everything else becomes a dash.
+ */
+export function exportFileName(title: string, platform: Platform | null, ext: string): string {
+  const slug = title
+    .normalize('NFC')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+    .replace(/-+$/g, '');
+  return [slug || 'reel', platform ? PLATFORM_FILE_WORD[platform] : ''].filter(Boolean).join('-') + `.${ext}`;
+}
