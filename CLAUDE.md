@@ -2,7 +2,7 @@
 
 Motion Mind is an AI studio that turns a topic into a researched, animated Instagram explainer reel (1080x1920). The flow per project: topic, research, script, storyboard, graphics, voice, final. **Phase 1 is built:** email-code accounts, handles, onboarding, dashboard, project library, a route for every stage, Claude and ElevenLabs connectors on server keys. Every stage is built except the Reel editor (still a placeholder; never add fake buttons): Research, Script, Storyboard, Graphics, Voice and Export, each using the server's keys, plus a claude.ai copy-paste route for Research and Script for people with only a Claude subscription.
 
-Owner: Saquib. Read this file first, then the README for setup steps.
+Owner: Saquib. Read this file first, then `HANDOFF.md` (what's done, what's next) and the README for setup steps.
 
 ## Decisions that are already made (don't undo without asking)
 
@@ -24,6 +24,7 @@ MotionMind/
 │   │   ├── services/         talking to the outside world
 │   │   │   ├── http.ts       apiRequest(): the one fetch wrapper, throws ServiceError
 │   │   │   ├── api.ts        real mode: auth, profiles, projects via the API
+│   │   │   ├── claudeHttp.ts Claude, research, script, storyboard, connectors, voice and export calls
 │   │   │   ├── memory.ts     demo mode: data in localStorage, code is always 123456
 │   │   │   └── types.ts      service interfaces + ServiceError
 │   │   ├── stores/           MobX: RootStore owns Auth/Profile/Project/Toast stores
@@ -44,11 +45,13 @@ MotionMind/
 │   │   ├── account/          routes: /profile, /handles/:h/available, /projects CRUD
 │   │   ├── ai/               Claude (claude-opus-5-5, server's ANTHROPIC_API_KEY): /claude/status, /claude/ask, /projects/:id/script
 │   │   ├── connectors/       GET /connectors (Claude, ElevenLabs: ready or not), POST /connectors/elevenlabs/test
+│   │   ├── voice/            ElevenLabs voiceover per beat; AudioStore (Supabase Storage bucket `voice` or memory)
+│   │   ├── export/           MP4 render with Remotion (local server only) + /api/renders download
 │   │   ├── logs/             POST /api/client-logs: browser warnings/errors into the server log
 │   │   ├── data/             DataRepository: users, login codes, profiles, projects (Memory + Supabase)
 │   │   └── app.test.ts       API tests via app.inject() (each folder also has its own *.test.ts)
 │   ├── netlify/functions/api.ts   Netlify entry: wraps the same app with app.inject()
-│   └── reel-engine/          Remotion engine. Reel takes a ReelSpec as props ('train' or 'cards' world).
+│   └── reel-engine/          Remotion engine. Reel takes a ReelSpec as props: 'train' or 'iso' 3D world ('cards' is legacy).
 │                             src/public.ts = what the web app imports as @motionmind/reel-engine (live preview);
 │                             render.mjs / tts.mjs = CLI MP4 render and ElevenLabs voice for the sample reel
 ├── shared/src/               used by both sides: brand, handle rules, project types/STAGES
@@ -79,7 +82,7 @@ Every route only ever reads or writes rows for `req.userId`. Repositories take `
 - Graphics: three worlds. `train` = the original 3D railway world (`World.tsx`); beats pick a named `shot` (phone, tower, map, crowd, station, accuracy, wide → camera keys in `Reel.tsx`) and `events`. `iso` = the 3D isometric scene kit (`IsoWorld.tsx`) for any topic: each beat's `scene` lists props from 16 kinds (`PROP_KINDS`), links (arcs with a travelling packet) and an effect; a prop id keeps one spot in the world across beats (`layoutProps`) and the camera glides to each scene's props (`isoCamera`). Every reel is 3D (Saquib's rule): `reelWorld()` in shared picks the world Claude chose, else `train` for train topics and `iso` otherwise; web (`worldFor`) and export (`reelSpecFor`) both use it. Beats Claude didn't describe get a scene or train shot filled in by `autoScene.ts` (`withScenes`, applied inside `Reel`), guessed from the card's words. `cards` (`CardsScene.tsx`) is no longer chosen for scripts. The original reel's look is the bar: Saquib compared against it.
 - Voice: `POST /projects/:id/voice {voiceId}` speaks each beat with ElevenLabs (`connectors/elevenlabs.ts`, with-timestamps) on `ELEVENLABS_API_KEY`, stores MP3s via `AudioStore` (Supabase Storage private bucket `voice`, or memory/data URLs), saves `projects.voice` (`ReelVoice`: per-beat duration + word timings + the narrations it was made from). `GET .../voice` returns signed URLs and `stale` if the narration changed. `specFromScript(script, brand, {voice, urls})` attaches audio only when it matches the script.
 - Export: `POST /projects/:id/export` renders the 1080x1920 MP4 with Remotion (`export/renderer.ts`: bundle the engine once, `selectComposition` + `renderMedia`), as a background job polled by `GET .../export`. Files go to `renders/` (git-ignored) and are served at `/api/renders/<uuid>.mp4`. Only on a local server: on Netlify (`NETLIFY`/`AWS_LAMBDA_FUNCTION_NAME` set) there's no renderer and the route answers 501. Remotion packages are imported by name at runtime so the function bundle never includes them. The first export downloads Remotion's headless Chrome.
-- A project's script is `projects.script` (jsonb) with the `ReelScript` shape in `shared/src/projects.ts`. `frontend/src/components/reelSpec.ts` turns it into the engine's `ReelSpec` (cards world, branded with the user's channel).
+- A project's script is `projects.script` (jsonb) with the `ReelScript` shape in `shared/src/projects.ts`. `frontend/src/components/reelSpec.ts` turns it into the engine's `ReelSpec` (3D world from `reelWorld()`, branded with the user's channel).
 - The web app embeds the engine through `@remotion/player` (`components/ReelPreview.tsx`, lazy-loaded). Keep the engine browser-safe: no Node imports in `backend/reel-engine/src`.
 - Settings → Connectors has exactly two connectors, Claude and ElevenLabs, both on server keys (`ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`). Each shows Ready/Not available and a test; Claude also has an "Ask Claude" box. No key fields for users. Project → Script has "Write with Claude" and the live preview.
 - Netlify Functions time out at about 10 to 26 seconds, and a long script can take longer. If that bites, move script writing to a Netlify Background Function or stream it.
