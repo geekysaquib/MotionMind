@@ -1,4 +1,4 @@
-import type { Project, ReelScript, ReelVoice } from '@motionmind/shared';
+import type { AudioTrack, Project, ReelEditor, ReelScript, ReelVoice } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
 
@@ -24,6 +24,12 @@ export interface ElevenLabsCheck {
   ok: boolean;
   detail: string;
   voices?: { id: string; name: string }[];
+}
+
+/** Playable URLs for the editor's uploaded voice and music. */
+export interface EditorUrls {
+  voice?: string;
+  music?: string;
 }
 
 export interface RenderJob {
@@ -56,6 +62,10 @@ export interface ClaudeService {
   voices(): Promise<{ voices: { id: string; name: string }[]; defaultVoiceId: string | null }>;
   voiceFor(projectId: string): Promise<{ voice: ReelVoice | null; urls: string[]; stale: boolean }>;
   generateVoice(projectId: string, voiceId?: string, voiceName?: string): Promise<{ project: Project; urls: string[] }>;
+  /** Reel editor: upload voice/music, then save the editor state. */
+  uploadAudio(projectId: string, kind: 'voice' | 'music', file: Blob, fileName: string): Promise<{ track: Pick<AudioTrack, 'path' | 'fileName' | 'mime'>; url: string }>;
+  editorFor(projectId: string): Promise<{ editor: ReelEditor | null; urls: EditorUrls }>;
+  saveEditor(projectId: string, editor: ReelEditor): Promise<{ project: Project; urls: EditorUrls }>;
   /** Export: render the MP4 (only on a local server). */
   startExport(projectId: string): Promise<{ job: RenderJob; withVoice: boolean }>;
   exportStatus(projectId: string): Promise<{ available: boolean; job: RenderJob | null }>;
@@ -84,6 +94,18 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     voices: () => call('/voices'),
     voiceFor: (projectId) => call(`/projects/${projectId}/voice`),
     generateVoice: (projectId, voiceId, voiceName) => call(`/projects/${projectId}/voice`, 'POST', { voiceId, voiceName }),
+    uploadAudio: (projectId, kind, file, fileName) => {
+      const token = getToken();
+      if (!token) throw new ServiceError('You are signed out.', 'unauthorized');
+      return apiRequest(baseUrl, `/projects/${projectId}/audio/${kind}`, {
+        method: 'POST',
+        token,
+        fetchImpl,
+        raw: { data: file, contentType: 'application/octet-stream', headers: { 'X-File-Name': encodeURIComponent(fileName) } },
+      });
+    },
+    editorFor: (projectId) => call(`/projects/${projectId}/editor`),
+    saveEditor: (projectId, editor) => call(`/projects/${projectId}/editor`, 'PUT', { editor }),
     startExport: (projectId) => call(`/projects/${projectId}/export`, 'POST'),
     exportStatus: (projectId) => call(`/projects/${projectId}/export`),
     saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,

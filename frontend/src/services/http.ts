@@ -12,12 +12,13 @@ const QUIET_PATHS = new Set(['/client-logs']);
 export async function apiRequest<T>(
   baseUrl: string,
   path: string,
-  opts: { method?: string; body?: unknown; token?: string | null; fetchImpl?: typeof fetch } = {},
+  opts: { method?: string; body?: unknown; token?: string | null; fetchImpl?: typeof fetch; raw?: { data: Blob; contentType: string; headers?: Record<string, string> } } = {},
 ): Promise<T> {
   const method = opts.method ?? 'GET';
   const quiet = QUIET_PATHS.has(path);
   const headers: Record<string, string> = {};
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (opts.raw) Object.assign(headers, opts.raw.headers, { 'Content-Type': opts.raw.contentType });
   if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
   const started = Date.now();
   let res: Response;
@@ -25,7 +26,7 @@ export async function apiRequest<T>(
     res = await (opts.fetchImpl ?? fetch)(`${baseUrl}/api${path}`, {
       method,
       headers,
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body: opts.raw ? opts.raw.data : opts.body === undefined ? undefined : JSON.stringify(opts.body),
     });
   } catch (err) {
     if (!quiet) log.error('api', `${method} ${path} could not reach the server`, { err, ms: Date.now() - started });

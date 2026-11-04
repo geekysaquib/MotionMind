@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Profile, Project, QualityTier, ReelScript, ReelVoice, ResearchReport } from '@motionmind/shared';
+import type { Profile, Project, QualityTier, ReelEditor, ReelScript, ReelVoice, ResearchReport } from '@motionmind/shared';
 import { RESERVED_HANDLES, normalizeHandle } from '@motionmind/shared';
 
 export interface User {
@@ -24,7 +24,7 @@ export interface NewProject {
   qualityTier: QualityTier;
 }
 
-export type ProjectPatch = Partial<NewProject & Pick<Project, 'status' | 'stage'>> & { script?: ReelScript | null; research?: ResearchReport | null; voice?: ReelVoice | null };
+export type ProjectPatch = Partial<NewProject & Pick<Project, 'status' | 'stage'>> & { script?: ReelScript | null; research?: ResearchReport | null; voice?: ReelVoice | null; editor?: ReelEditor | null };
 
 export class HandleTakenError extends Error {}
 
@@ -110,7 +110,7 @@ export class MemoryDataRepository implements DataRepository {
   }
   async createProject(ownerId: string, input: NewProject) {
     const now = new Date().toISOString();
-    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, stage: 'topic', status: 'draft', script: null, research: null, voice: null, createdAt: now, updatedAt: now };
+    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, stage: 'topic', status: 'draft', script: null, research: null, voice: null, editor: null, createdAt: now, updatedAt: now };
     this.projects.push(p);
     return { ...p };
   }
@@ -151,6 +151,7 @@ const projectFromRow = (r: Row): Project => ({
   script: (r.script as ReelScript | null) ?? null,
   research: (r.research as ResearchReport | null) ?? null,
   voice: (r.voice as ReelVoice | null) ?? null,
+  editor: (r.editor as ReelEditor | null) ?? null,
   createdAt: r.created_at as string,
   updatedAt: r.updated_at as string,
 });
@@ -177,6 +178,7 @@ function projectRow(patch: ProjectPatch): Row {
   if (patch.script !== undefined) row.script = patch.script;
   if (patch.research !== undefined) row.research = patch.research;
   if (patch.voice !== undefined) row.voice = patch.voice;
+  if (patch.editor !== undefined) row.editor = patch.editor;
   return row;
 }
 

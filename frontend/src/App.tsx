@@ -8,7 +8,6 @@ import { DiscoverPage } from './pages/app/DiscoverPage';
 import { LibraryPage } from './pages/app/LibraryPage';
 import { ProjectLayout } from './pages/app/ProjectLayout';
 import { ProjectOverviewPage } from './pages/app/ProjectOverviewPage';
-import { StagePage } from './pages/app/StagePage';
 import { SettingsPage } from './pages/app/SettingsPage';
 import { ProfileSettings } from './pages/app/ProfileSettings';
 import { AccountSettings } from './pages/app/AccountSettings';
@@ -18,6 +17,7 @@ import { ScriptStagePage } from './pages/app/ScriptStagePage';
 import { ResearchStagePage } from './pages/app/ResearchStagePage';
 import { StoryboardStagePage } from './pages/app/StoryboardStagePage';
 import { VoiceStagePage } from './pages/app/VoiceStagePage';
+import { ReelEditorPage } from './pages/app/ReelEditorPage';
 import { ExportStagePage } from './pages/app/ExportStagePage';
 import { GraphicsStagePage } from './pages/app/GraphicsStagePage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -25,8 +25,6 @@ import { LandingPage } from './pages/LandingPage';
 import { Toasts } from './components/Toasts';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { log } from './lib/logger';
-
-const stage = (s: Parameters<typeof StagePage>[0]['stage']) => ({ path: s, element: <StagePage stage={s} /> });
 
 export const routes = [
   { path: '/', element: <LandingPage /> },
@@ -57,7 +55,7 @@ export const routes = [
           { path: 'storyboard', element: <StoryboardStagePage /> },
           { path: 'graphics', element: <GraphicsStagePage /> },
           { path: 'voice', element: <VoiceStagePage /> },
-          stage('editor'),
+          { path: 'editor', element: <ReelEditorPage /> },
           { path: 'export', element: <ExportStagePage /> },
         ],
       },

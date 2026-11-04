@@ -112,7 +112,7 @@ export function memoryServices(storage: Storage = window.localStorage, apiUrl = 
     async create(input) {
       if (!db.session) throw new ServiceError('You are signed out.', 'unauthorized');
       const now = new Date().toISOString();
-      const p: Project = { id: uid(), ownerId: db.session.userId, title: input.title, topic: input.topic, stage: 'topic', status: 'draft', qualityTier: input.qualityTier, durationSec: input.durationSec, script: null, research: null, voice: null, createdAt: now, updatedAt: now };
+      const p: Project = { id: uid(), ownerId: db.session.userId, title: input.title, topic: input.topic, stage: 'topic', status: 'draft', qualityTier: input.qualityTier, durationSec: input.durationSec, script: null, research: null, voice: null, editor: null, createdAt: now, updatedAt: now };
       db.projects.push(p);
       save();
       return { ...p };

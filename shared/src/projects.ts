@@ -1,3 +1,5 @@
+import type { ReelEditor } from './editor';
+
 export const STAGES = ['topic', 'research', 'script', 'storyboard', 'graphics', 'voice', 'final'] as const;
 export type Stage = (typeof STAGES)[number];
 export type ProjectStatus = 'draft' | 'in_progress' | 'completed' | 'archived';
@@ -18,6 +20,8 @@ export interface Project {
   research: ResearchReport | null;
   /** ElevenLabs voiceover timings; the audio files themselves live in storage. */
   voice: ReelVoice | null;
+  /** The Reel editor's state: uploaded voiceover and cuts, pace, music, caption style. */
+  editor: ReelEditor | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -86,7 +90,6 @@ export interface ReelBeat {
   events?: ('rings' | 'towerIds' | 'pins' | 'gpsLog' | 'stationGlow' | 'errorBand' | 'none')[];
 }
 
-/** A reel script: what the voice says and what each on-screen card shows. The reel engine renders it. */
 /**
  * Which 3D world renders a script. Claude picks it; older scripts without a choice get the train world
  * when they are about trains, and the isometric scene kit otherwise. Every reel is 3D.
@@ -97,6 +100,7 @@ export function reelWorld(script: Pick<ReelScript, 'world' | 'title' | 'steps'> 
   return /\b(train|trains|railway|railways|rail|irctc|metro)\b/i.test(text) ? 'train' : 'iso';
 }
 
+/** A reel script: what the voice says and what each on-screen card shows. The reel engine renders it. */
 export interface ReelScript {
   title: string;
   /** Which 3D world renders it. Missing on older scripts, which render as flat cards. */

@@ -113,7 +113,38 @@ export type ReelSpec = {
   voice?: VoiceBeat[];
   /** Where each beat's voiceover MP3 is (the web app passes signed URLs). */
   audioUrls?: string[];
+  /**
+   * The user's own voiceover: one recording for the whole reel. `cuts[i]` is where scene i + 1 starts in it
+   * (seconds), so there is one cut fewer than beats. It replaces `voice` and `audioUrls`.
+   */
+  voiceTrack?: { url: string; durationSec: number; cuts: number[] };
+  /** Speed of the voice for the whole reel (1 = as recorded). */
+  pace?: number;
+  /** Extra speed per scene, multiplied with `pace`. */
+  scenePace?: number[];
+  /** Background music, looped under the whole reel. */
+  music?: { url: string; durationSec: number; volume: number };
+  captions?: CaptionStyle;
 };
+
+/** Same shape as CaptionStyle in the shared package (the engine doesn't import it). */
+export type CaptionStyle = { size: 'small' | 'medium' | 'large'; position: 'bottom' | 'middle'; look: 'box' | 'plain' };
+
+export const DEFAULT_CAPTION_STYLE: CaptionStyle = { size: 'medium', position: 'bottom', look: 'box' };
+
+/** Voice speed limits the audio player and the video renderer both handle well. */
+export const RATE_MIN = 0.5;
+export const RATE_MAX = 2;
+
+/** Playback speed of every scene: the reel's pace times the scene's own speed. */
+export function sceneRates(spec: Pick<ReelSpec, 'beats' | 'pace' | 'scenePace'>): number[] {
+  const pace = Number.isFinite(spec.pace) && spec.pace! > 0 ? spec.pace! : 1;
+  return spec.beats.map((_, i) => {
+    const own = spec.scenePace?.[i];
+    const r = pace * (Number.isFinite(own) && own! > 0 ? own! : 1);
+    return Math.min(RATE_MAX, Math.max(RATE_MIN, r));
+  });
+}
 
 export const END_CARD_FRAMES = 3 * FPS;
 
@@ -289,49 +320,98 @@ export interface TimedBeat extends Beat {
   start: number;
   frames: number;
   words: { text: string; start: number; end: number }[];
+  /** The voice for this scene: where it starts on the reel, how long it plays, and which part of the recording. */
+  audio?: {
+    /** Frame of the reel where it starts playing. */
+    from: number;
+    frames: number;
+    /** Where in the audio file (seconds) this scene's voice starts. */
+    srcStartSec: number;
+    /** Playback speed (1 = as recorded). */
+    rate: number;
+    /** 'beat' = this scene has its own file; 'track' = one recording for the whole reel. */
+    source: 'beat' | 'track';
+  };
 }
 
 export function hasVoice(spec: Pick<ReelSpec, 'beats' | 'voice'>): boolean {
   return (spec.voice?.length ?? 0) === spec.beats.length && spec.beats.length > 0;
 }
 
-export function timeBeats(beats: Beat[], voiceBeats: VoiceBeat[] = []): TimedBeat[] {
-  const useVoice = voiceBeats.length === beats.length;
+export interface TimingOptions {
+  /** Playback speed per scene (1 = as recorded). Missing entries mean 1. */
+  rates?: number[];
+  /** One recording for the whole reel, cut into scenes. */
+  track?: { durationSec: number; cuts: number[] };
+}
+
+const MIN_SCENE_FRAMES = Math.round(0.3 * FPS);
+
+/** Spreads words over a stretch of frames in proportion to how long each takes to say. */
+function spreadWords(words: string[], from: number, to: number): TimedBeat['words'] {
+  const weights = words.map((w) => Math.max(2, w.length) + (/[.?!]$/.test(w) ? 5 : /[,;:]$/.test(w) ? 2 : 0));
+  const total = weights.reduce((a, b) => a + b, 0) || 1;
+  const span = Math.max(0, to - from);
+  let acc = 0;
+  return words.map((text, k) => {
+    const start = from + Math.round((acc / total) * span);
+    acc += weights[k]!;
+    return { text, start, end: from + Math.round((acc / total) * span) };
+  });
+}
+
+export function timeBeats(beats: Beat[], voiceBeats: VoiceBeat[] = [], opts: TimingOptions = {}): TimedBeat[] {
+  const track = opts.track && opts.track.durationSec > 0 && opts.track.cuts.length === beats.length - 1 ? opts.track : null;
+  const useVoice = !track && voiceBeats.length === beats.length;
+  const edges = track ? [0, ...track.cuts, track.durationSec] : [];
   let cursor = 0;
-  const lead = Math.round(0.2 * FPS);
   return beats.map((beat, idx) => {
-    const words = beat.narration.split(/\s+/);
+    const rate = Math.min(RATE_MAX, Math.max(RATE_MIN, opts.rates?.[idx] ?? 1));
+    const lead = Math.round((0.2 * FPS) / rate);
+    const words = beat.narration.split(/\s+/).filter(Boolean);
     const v = useVoice ? voiceBeats[idx] : undefined;
     let frames: number;
     let timedWords: TimedBeat['words'];
-    if (v && v.words.length) {
+    let audio: TimedBeat['audio'];
+    if (track) {
+      // The user's own recording: this scene plays the part of the file between its two breaks.
+      const srcStart = edges[idx]!;
+      const srcEnd = edges[idx + 1]!;
+      frames = Math.max(MIN_SCENE_FRAMES, Math.round(((srcEnd - srcStart) / rate) * FPS));
+      const edge = Math.min(6, Math.round(frames * 0.05));
+      timedWords = spreadWords(words, cursor + edge, cursor + frames - Math.min(8, Math.round(frames * 0.1)));
+      audio = { from: cursor, frames, srcStartSec: srcStart, rate, source: 'track' };
+    } else if (v && v.words.length) {
       // Real TTS timings. Caption words (Hinglish) are mapped onto spoken words (Devanagari) by position.
-      frames = Math.round(v.durationSec * FPS) + lead + Math.round(0.25 * FPS);
+      frames = Math.round((v.durationSec / rate) * FPS) + lead + Math.round((0.25 * FPS) / rate);
       const m = v.words.length;
       timedWords = words.map((text, j) => {
         const a = v.words[Math.min(m - 1, Math.floor((j * m) / words.length))]!;
         const b = v.words[Math.min(m - 1, Math.floor(((j + 1) * m) / words.length) - 1)] ?? a;
-        return { text, start: cursor + lead + Math.round(a.start * FPS), end: cursor + lead + Math.round(Math.max(a.end, b.end) * FPS) };
+        return { text, start: cursor + lead + Math.round((a.start / rate) * FPS), end: cursor + lead + Math.round((Math.max(a.end, b.end) / rate) * FPS) };
       });
+      audio = { from: cursor + lead, frames: frames - lead, srcStartSec: 0, rate, source: 'beat' };
     } else {
-      const speechFrames = Math.round((words.length / WORDS_PER_SEC) * FPS);
-      frames = speechFrames + Math.round(BEAT_PAD_SEC * FPS);
+      const speechFrames = Math.round((words.length / WORDS_PER_SEC / rate) * FPS);
+      frames = speechFrames + Math.round((BEAT_PAD_SEC * FPS) / rate);
       const perWord = speechFrames / words.length;
       timedWords = words.map((text, i) => ({
         text,
         start: cursor + lead + Math.round(i * perWord),
         end: cursor + lead + Math.round((i + 1) * perWord),
       }));
+      if (v) audio = { from: cursor + lead, frames: Math.max(1, frames - lead), srcStartSec: 0, rate, source: 'beat' };
     }
-    const timed: TimedBeat = { ...beat, start: cursor, frames, words: timedWords };
+    const timed: TimedBeat = { ...beat, start: cursor, frames, words: timedWords, ...(audio ? { audio } : {}) };
     cursor += frames;
     return timed;
   });
 }
 
 /** Frame layout of a reel: the timed beats, then a 3-second end card. */
-export function reelTiming(spec: Pick<ReelSpec, 'beats' | 'voice'>) {
-  const timed = timeBeats(spec.beats, hasVoice(spec) ? spec.voice : []);
+export function reelTiming(spec: Pick<ReelSpec, 'beats' | 'voice' | 'pace' | 'scenePace' | 'voiceTrack'>) {
+  const track = spec.voiceTrack ? { durationSec: spec.voiceTrack.durationSec, cuts: spec.voiceTrack.cuts } : undefined;
+  const timed = timeBeats(spec.beats, hasVoice(spec) && !track ? spec.voice : [], { rates: sceneRates(spec), track });
   const storyFrames = timed.reduce((n, b) => n + b.frames, 0);
   return { timed, storyFrames, totalFrames: storyFrames + END_CARD_FRAMES };
 }

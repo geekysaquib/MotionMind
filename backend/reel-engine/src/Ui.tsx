@@ -1,7 +1,7 @@
 import React from 'react';
 import { spring, interpolate } from 'remotion';
 import { C } from './World';
-import type { Brand, Card as CardT, CardRow, Tone, TimedBeat } from './script';
+import type { Brand, CaptionStyle, Card as CardT, CardRow, Tone, TimedBeat } from './script';
 
 const TONE: Record<Tone, string> = { red: C.red, teal: C.teal, purple: C.purple, blue: C.blue, amber: C.amber };
 const SAFE_X = 60;
@@ -278,7 +278,13 @@ export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start
 };
 
 /** Phrase-level karaoke captions: spoken words white, upcoming grey, keywords teal. */
-export const Captions: React.FC<{ beat: TimedBeat; frame: number }> = ({ beat, frame }) => {
+const CAPTION_SIZE: Record<CaptionStyle['size'], number> = { small: 50, medium: 62, large: 76 };
+const CAPTION_TOP: Record<CaptionStyle['position'], number> = { bottom: 1545, middle: 1210 };
+
+export const Captions: React.FC<{ beat: TimedBeat; frame: number; style?: CaptionStyle }> = ({ beat, frame, style }) => {
+  const size = CAPTION_SIZE[style?.size ?? 'medium'];
+  const top = CAPTION_TOP[style?.position ?? 'bottom'];
+  const plain = style?.look === 'plain';
   const groups: (typeof beat.words)[] = [];
   let cur: typeof beat.words = [];
   for (const w of beat.words) {
@@ -294,16 +300,18 @@ export const Captions: React.FC<{ beat: TimedBeat; frame: number }> = ({ beat, f
   if (!active?.length || frame < beat.words[0]!.start - 2) return null;
   const pop = interpolate(frame - active[0]!.start, [0, 5], [0.92, 1], { extrapolateRight: 'clamp', extrapolateLeft: 'clamp' });
   return (
-    <div style={{ position: 'absolute', left: 0, right: 0, top: 1545, display: 'flex', justifyContent: 'center' }}>
+    <div style={{ position: 'absolute', left: 0, right: 0, top, display: 'flex', justifyContent: 'center' }}>
       <div
         style={{
-          background: 'rgba(31,36,48,0.92)',
-          padding: '16px 30px',
+          background: plain ? 'transparent' : 'rgba(31,36,48,0.92)',
+          padding: plain ? '8px 20px' : '16px 30px',
           borderRadius: 22,
           fontFamily: 'Space Grotesk',
           fontWeight: 700,
-          fontSize: 62,
+          fontSize: size,
           letterSpacing: -0.5,
+          // Plain captions have no box, so a dark outline keeps them readable on any background.
+          textShadow: plain ? '0 0 6px rgba(31,36,48,0.9), 0 3px 10px rgba(31,36,48,0.8), 2px 2px 0 rgba(31,36,48,0.9), -2px -2px 0 rgba(31,36,48,0.9)' : undefined,
           transform: `scale(${pop})`,
           maxWidth: 900,
           textAlign: 'center',

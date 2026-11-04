@@ -6,6 +6,7 @@ import { registerClaudeRoutes } from './ai/routes';
 import { registerConnectorRoutes } from './connectors/routes';
 import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
 import { registerVoiceRoutes } from './voice/routes';
+import { registerEditorRoutes } from './editor/routes';
 import type { Renderer } from './export/renderer';
 import { registerExportRoutes, registerRenderDownload } from './export/routes';
 import type { Mailer } from './auth/mailer';
@@ -81,6 +82,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
       registerClaudeRoutes(api, deps);
       registerConnectorRoutes(api, deps);
       registerVoiceRoutes(api, deps);
+      registerEditorRoutes(api, deps);
       registerExportRoutes(api, deps);
     },
     { prefix: '/api' },
@@ -88,6 +90,9 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
 
   app.setErrorHandler((err: Error & { statusCode?: number; code?: string }, req, reply) => {
     // Fastify's own client errors (bad JSON, body too large, ...) keep their 4xx status.
+    if (err.code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
+      return reply.code(413).send({ error: 'too_large', message: 'That file is too large. Keep audio under 40 MB.' });
+    }
     if (err.statusCode && err.statusCode < 500) {
       return reply.code(err.statusCode).send({ error: err.code?.toLowerCase() ?? 'bad_request', message: err.message });
     }

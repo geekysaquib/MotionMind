@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
-import { hasVoice, reelTiming, type Brand, type CameraKey, type ReelSpec, type TimedBeat, type TrainShot, type WorldEvent } from './script';
+import { AbsoluteFill, Audio, Loop, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
+import { DEFAULT_CAPTION_STYLE, reelTiming, type Brand, type CameraKey, type ReelSpec, type TimedBeat, type TrainShot, type WorldEvent } from './script';
 import { World, phonePos, type WorldProps } from './World';
 import { Backdrop } from './Backdrop';
 import { CardsScene } from './CardsScene';
@@ -85,7 +85,7 @@ export const Reel: React.FC<ReelSpec> = (input) => {
   const spec = useMemo(() => withScenes(input), [input]);
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const { timed, storyFrames } = useMemo(() => reelTiming(spec), [spec]);
+  const { timed, storyFrames, totalFrames } = useMemo(() => reelTiming(spec), [spec]);
   const placed = useMemo(() => layoutProps(timed), [timed]);
   const inStory = frame < storyFrames;
   const beat = timed.find((b) => frame >= b.start && frame < b.start + b.frames) ?? timed[timed.length - 1]!;
@@ -104,17 +104,47 @@ export const Reel: React.FC<ReelSpec> = (input) => {
       <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} steps={spec.steps} brand={spec.brand} />
       {inStory && spec.world === 'cards' && <CardsScene key={`scene-${beat.id}`} beat={beat} frame={frame} fps={fps} />}
       {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards'} />}
-      {inStory && <Captions beat={beat} frame={frame} />}
-      {hasVoice(spec) &&
-        timed.map((b, i) => (
-          <Sequence key={`vo${b.id}`} from={b.start + Math.round(0.2 * fps)}>
-            <Audio src={spec.audioUrls?.[i] || staticFile(`voice/beat_${i}.mp3`)} />
+      {inStory && <Captions beat={beat} frame={frame} style={spec.captions ?? DEFAULT_CAPTION_STYLE} />}
+      {/* The voice: one clip per scene, each playing its part of the recording at the scene's speed. */}
+      {timed.map((b, i) =>
+        b.audio ? (
+          <Sequence key={`vo${b.id}`} from={b.audio.from} durationInFrames={Math.max(1, b.audio.frames)}>
+            <Audio
+              src={b.audio.source === 'track' ? spec.voiceTrack!.url : spec.audioUrls?.[i] || staticFile(`voice/beat_${i}.mp3`)}
+              trimBefore={Math.round(b.audio.srcStartSec * fps)}
+              playbackRate={b.audio.rate}
+              preservePitch
+            />
           </Sequence>
-        ))}
+        ) : null,
+      )}
+      {spec.music && <Music url={spec.music.url} durationSec={spec.music.durationSec} volume={spec.music.volume} totalFrames={totalFrames} />}
       <Sequence from={storyFrames}>
         <EndCardWrapper brand={spec.brand} />
       </Sequence>
     </AbsoluteFill>
+  );
+};
+
+/** Background music under the whole reel: fades in and out, and loops if the track is shorter than the reel. */
+const Music: React.FC<{ url: string; durationSec: number; volume: number; totalFrames: number }> = ({ url, durationSec, volume, totalFrames }) => {
+  const { fps } = useVideoConfig();
+  const musicFrames = Math.max(1, Math.round(durationSec * fps));
+  const fade = (f: number) =>
+    volume *
+    interpolate(f, [0, fps], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) *
+    interpolate(f, [totalFrames - Math.round(1.5 * fps), totalFrames], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  return (
+    <Sequence from={0} durationInFrames={totalFrames}>
+      {musicFrames < totalFrames ? (
+        // Looping restarts the frame count, so a looped track keeps a steady volume.
+        <Loop durationInFrames={musicFrames}>
+          <Audio src={url} volume={volume} />
+        </Loop>
+      ) : (
+        <Audio src={url} volume={fade} />
+      )}
+    </Sequence>
   );
 };
 

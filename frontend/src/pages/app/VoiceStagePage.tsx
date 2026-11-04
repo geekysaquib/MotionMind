@@ -1,13 +1,15 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
-import { AudioLines } from 'lucide-react';
+import { AudioLines, Upload } from 'lucide-react';
 import type { Project, ReelVoice } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
 import { errorText, timeAgo } from '../../lib/format';
 import { log } from '../../lib/logger';
 import { brandFor, specFromScript } from '../../components/reelSpec';
+import { attachVoice, AudioFileError } from '../../lib/editorActions';
+import type { EditorUrls } from '../../services/claudeHttp';
 
 const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 
@@ -22,6 +24,9 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
   const [audio, setAudio] = useState<{ voice: ReelVoice | null; urls: string[]; stale: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editorUrls, setEditorUrls] = useState<EditorUrls>({});
+  const [uploading, setUploading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api
@@ -32,6 +37,10 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
       })
       .catch((e) => setVoicesError(errorText(e)));
     api
+      .editorFor(project.id)
+      .then((r) => setEditorUrls(r.urls))
+      .catch(() => undefined);
+    api
       .voiceFor(project.id)
       .then(setAudio)
       .catch((e) => setError(errorText(e)));
@@ -40,9 +49,26 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
 
   const script = project.script;
   const spec = useMemo(
-    () => (script ? specFromScript(script, brandFor(profile.profile), audio?.voice && !audio.stale ? { voice: audio.voice, urls: audio.urls } : undefined) : null),
-    [script, profile.profile, audio],
+    () => (script ? specFromScript(script, brandFor(profile.profile), audio?.voice && !audio.stale ? { voice: audio.voice, urls: audio.urls } : undefined, { editor: project.editor, urls: editorUrls }) : null),
+    [script, profile.profile, audio, project.editor, editorUrls],
   );
+
+  async function upload(file: File | undefined) {
+    if (!file || !script) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const r = await attachVoice(api, project, file, project.editor);
+      projects.upsert(r.project);
+      setEditorUrls(r.urls);
+      log.info('voice', 'Own voiceover uploaded', { projectId: project.id });
+    } catch (e) {
+      setError(e instanceof AudioFileError ? e.message : errorText(e));
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  }
 
   async function generate() {
     setBusy(true);
@@ -79,10 +105,36 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <div className="space-y-6">
         <Card>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 font-semibold">
+              <Upload className="h-4 w-4 text-accent" /> Your own voiceover
+            </h2>
+            {project.editor?.upload && project.editor.voiceSource === 'upload' && <Badge tone="mint">In use</Badge>}
+          </div>
+          <p className="mt-1 text-sm text-ink-400">
+            Upload one recording of the whole reel (MP3, WAV or M4A, up to 5 minutes). We guess where each scene starts; you fine-tune the breaks and the pace in the Reel editor.
+          </p>
+          {project.editor?.upload ? (
+            <p className="mt-3 text-sm text-ink-400">
+              {project.editor.upload.track.fileName} · {project.editor.upload.track.durationSec.toFixed(1)}s ·{' '}
+              <Link to={`/app/projects/${project.id}/editor`} className="text-accent hover:underline">
+                Open the Reel editor
+              </Link>
+            </p>
+          ) : null}
+          <div className="mt-4">
+            <Button variant={project.editor?.upload ? 'secondary' : 'primary'} loading={uploading} onClick={() => fileInput.current?.click()}>
+              {project.editor?.upload ? 'Replace the recording' : 'Upload your voiceover'}
+            </Button>
+            <input ref={fileInput} type="file" accept="audio/*" className="hidden" aria-label="Voiceover file" onChange={(e) => void upload(e.target.files?.[0])} />
+          </div>
+        </Card>
+
+        <Card>
           <h2 className="flex items-center gap-2 font-semibold">
             <AudioLines className="h-4 w-4 text-accent" /> Voiceover
           </h2>
-          <p className="mt-1 text-sm text-ink-400">ElevenLabs reads every scene of your script. Captions follow the voice word by word.</p>
+          <p className="mt-1 text-sm text-ink-400">Or let ElevenLabs read every scene of your script. Captions follow the voice word by word.</p>
           {voicesError ? (
             <div className="mt-4">
               <Alert tone="info">{voicesError}</Alert>
@@ -125,7 +177,7 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
       </div>
 
       <div className="lg:sticky lg:top-6 lg:self-start">
-        <h3 className="mb-3 text-sm font-semibold text-ink-400">Preview {spec?.audioUrls ? 'with voice' : '(no voice yet)'}</h3>
+        <h3 className="mb-3 text-sm font-semibold text-ink-400">Preview {spec?.audioUrls || spec?.voiceTrack ? 'with voice' : '(no voice yet)'}</h3>
         {spec && (
           <Suspense fallback={<Spinner label="Loading the reel engine" />}>
             <ReelPreview spec={spec} />

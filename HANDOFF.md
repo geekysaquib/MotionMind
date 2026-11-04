@@ -56,9 +56,9 @@ Checks: `npm run typecheck`, `npm test` (Jest, 140 tests), `npm run build`.
 | Script | **Write with Claude** (Opus 5.5, structured output), or **write it in claude.ai** and paste. Live preview. | same |
 | Storyboard | Edit each scene's narration, headline, label, step, colour; reorder/add/delete; live preview of the draft. | — |
 | Graphics | Still of every scene. | — |
-| Voice | Pick an ElevenLabs voice, record every scene; captions follow word timings; warns if narration changed since. | `ELEVENLABS_API_KEY` |
+| Voice | **Upload your own voiceover** (one file for the whole reel; browser reads length + loudness, `autoCuts` guesses scene starts), or pick an ElevenLabs voice and record every scene. Captions follow word timings; warns if narration changed since. | `ELEVENLABS_API_KEY` for ElevenLabs only |
 | Export | Renders the MP4 with Remotion **on your PC**, with progress, playback, download. First export downloads Remotion's Chrome. | local `npm run dev` |
-| Reel editor | **Placeholder** (not built). | — |
+| Reel editor | Waveform timeline with draggable scene breaks, voice pace (whole reel + per scene, 0.7-1.5x, pitch kept), edit narration/label/headline per scene, background music (loops, volume), caption size/position/look, live preview, Save. Export uses all of it. | migration `20261104000200_project_editor.sql` applied |
 
 ### Reel engine (`backend/reel-engine/src`)
 - `Reel.tsx` takes a `ReelSpec` as props; used by the in-app preview (`@remotion/player`) and the MP4 export.
@@ -70,7 +70,7 @@ Checks: `npm run typecheck`, `npm test` (Jest, 140 tests), `npm run build`.
 - World rule: `reelWorld()` in `shared/src/projects.ts`: Claude's choice, else train for train topics, else iso.
 
 ### Database (motion-mind)
-Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `research`, `voice` jsonb). Private storage bucket **`voice`** for MP3s. Migrations in `supabase/migrations/` (all applied).
+Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `research`, `voice`, `editor` jsonb). Private storage bucket **`voice`** for MP3s and uploaded voice/music. Migrations in `supabase/migrations/`. **`20261104000200_project_editor.sql` (adds `projects.editor`, lifts the bucket's mime/size limit) is NOT applied to the live database yet: it needs Saquib's OK.** Until it is applied, saving the Reel editor fails in `supabase` mode (memory mode works).
 
 ## `.env` status (root `D:\MotionMind\.env`)
 
@@ -88,7 +88,7 @@ On Netlify, set the same API variables in the dashboard (the web app needs none)
 
 1. **Netlify time limit (~10–26 s):** research, Claude script writing and voice recording can take longer. Move them to Netlify Background Functions or stream them before deploying.
 2. **Export on Netlify:** can't render there. Options: Remotion Lambda or a small render server (Saquib's call).
-3. **Reel editor** stage not built (music, timeline, caption styles).
+3. Reel editor: no SFX tracks yet; scene breaks are per-recording (re-uploading re-guesses them). Real render verified with test tones: slices, per-scene pace and music all come out right.
 4. **Storyboard** edits words/colours but not the 3D scene objects yet (Claude or `autoScene` sets them).
 5. **3D kit polish:** more object types, better auto-guessing of objects, scene-specific camera angles.
 6. Branch not pushed / no PR yet.
@@ -100,7 +100,7 @@ On Netlify, set the same API variables in the dashboard (the web app needs none)
 2. Let the Storyboard edit each scene's 3D objects (pick object type, label, links).
 3. Background functions for Claude/voice so it works on Netlify.
 4. Decide on cloud rendering (Remotion Lambda vs render server).
-5. Reel editor: background music, caption styles.
+5. Reel editor: SFX tracks, trim of the recording's start/end.
 6. Push the branch and open a PR.
 
 ## Commit history (newest first)

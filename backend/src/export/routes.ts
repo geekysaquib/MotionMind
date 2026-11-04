@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { reelWorld, type Project } from '@motionmind/shared';
+import { editorSpecParts, reelWorld, type Project } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { voicePath } from '../voice/audioStore';
 
@@ -20,13 +20,24 @@ export async function reelSpecFor(deps: AppDeps, userId: string, project: Projec
     brand: { name, initials, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', tagline: '' },
     beats: script.beats,
   };
+  // The Reel editor: uploaded voice, music, pace and caption style.
+  const editor = project.editor;
+  const paths = [editor?.upload?.track.path, editor?.music?.track.path].filter((p): p is string => Boolean(p));
+  const urls = paths.length ? await deps.audio.urls(paths) : [];
+  const parts = editorSpecParts(editor, script.beats.length, {
+    voice: editor?.upload ? urls[paths.indexOf(editor.upload.track.path)] || undefined : undefined,
+    music: editor?.music ? urls[paths.indexOf(editor.music.track.path)] || undefined : undefined,
+  });
+  Object.assign(spec, parts);
+
+  // ElevenLabs voice is used only when no uploaded recording drives the reel.
   const voice = project.voice;
   const matches = voice && JSON.stringify(voice.narrations) === JSON.stringify(script.beats.map((b) => b.narration));
-  if (voice && matches) {
+  if (!parts.voiceTrack && voice && matches && editor?.voiceSource !== 'upload') {
     spec.voice = voice.beats;
     spec.audioUrls = await deps.audio.urls(voice.beats.map((_, i) => voicePath(userId, project.id, i)));
   }
-  return { spec, withVoice: Boolean(spec.audioUrls) };
+  return { spec, withVoice: Boolean(spec.audioUrls || parts.voiceTrack) };
 }
 
 /** Signed-in: start and follow an MP4 export. Public: download a finished file by its unguessable name. */

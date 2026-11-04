@@ -37,6 +37,7 @@ async function setup(initial: { voice: ReelVoice | null; urls: string[]; stale: 
     ({
       voices: async () => ({ voices: [{ id: 'v1', name: 'Aarav' }, { id: 'v2', name: 'Diya' }], defaultVoiceId: 'v1' }),
       voiceFor: async () => initial,
+      editorFor: async () => ({ editor: null, urls: {} }),
       generateVoice: async (_id: string, voiceId?: string) => {
         generated.push(voiceId ?? '');
         return { project: { ...created, script: SCRIPT, voice: { ...VOICE, voiceId: voiceId! } } as Project, urls: ['u0', 'u1'] };
