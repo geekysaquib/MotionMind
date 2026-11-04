@@ -16,26 +16,26 @@ export const EXTRA_TOP: Record<ExtraKind, number> = {
   hospital: 3.4, school: 3.6, cart: 2.0, camera: 1.6, bulb: 3.6, globe: 3.3, envelope: 0.9, clock: 3.4, rocket: 5.2, syringe: 3.6, chart: 3.0, atm: 3.2,
 };
 
-function hex(h: string, amount: number): string {
+export function hex(h: string, amount: number): string {
   const m = shade(h, amount).match(/\d+/g) ?? ['0', '0', '0'];
   return `#${m.map((v) => Number(v).toString(16).padStart(2, '0')).join('')}`;
 }
 
 const OUT = { stroke: C.outline, strokeWidth: 1, vectorEffect: 'non-scaling-stroke' as const, strokeLinejoin: 'round' as const };
 
-function poly(key: string, points: Vec3[], fill: string, depth: number, opacity = 1): Item {
+export function poly(key: string, points: Vec3[], fill: string, depth: number, opacity = 1): Item {
   return { depth, el: <polygon key={key} points={pts(points)} fill={fill} opacity={opacity} {...OUT} /> };
 }
 
 /** A rectangle drawn on the face that points at the camera (y = plane), from x0..x1 and z0..z1. */
-const face = (x0: number, x1: number, z0: number, z1: number, y: number): Vec3[] => [
+export const face = (x0: number, x1: number, z0: number, z1: number, y: number): Vec3[] => [
   { x: x0, y, z: z0 }, { x: x1, y, z: z0 }, { x: x1, y, z: z1 }, { x: x0, y, z: z1 },
 ];
 
-const sx = (p: Vec3): [number, number] => [(p.x - p.y) * Math.cos(Math.PI / 6), (p.x + p.y) * 0.5 - p.z];
+export const sx = (p: Vec3): [number, number] => [(p.x - p.y) * Math.cos(Math.PI / 6), (p.x + p.y) * 0.5 - p.z];
 
 /** A shaded ball: the body, a darker rim and a highlight, so it reads as round. */
-function ball(key: string, p: Vec3, r: number, fill: string, depth: number): Item {
+export function ball(key: string, p: Vec3, r: number, fill: string, depth: number): Item {
   const [cx, cy] = sx(p);
   return {
     depth,

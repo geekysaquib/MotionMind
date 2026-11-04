@@ -57,6 +57,12 @@ describe('3D model library', () => {
       expect(items && items.length).toBeGreaterThan(1);
       expect(EXTRA_TOP[kind]).toBeGreaterThan(0);
     }
+    const { MORE_KINDS, MORE_TOP, moreItems } = await import('../../../backend/reel-engine/src/props3d-more');
+    for (const kind of MORE_KINDS) {
+      const items = moreItems(kind, { id: kind, pos: { x: 0, y: 0, z: 0 } }, '#8B5CF6', 12);
+      expect(items && items.length).toBeGreaterThan(1);
+      expect(MORE_TOP[kind]).toBeGreaterThan(0);
+    }
     expect(extraItems('nope', { id: 'n', pos: { x: 0, y: 0, z: 0 } }, '#000', 0)).toBeNull();
   });
 });

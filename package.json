@@ -17,6 +17,7 @@
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "reel:tts": "cd backend/reel-engine && node --env-file-if-exists=../../.env tts.mjs",
     "reel:render": "cd backend/reel-engine && node render.mjs",
+    "assets:usage": "node --env-file=.env scripts/asset-usage.mjs",
     "reel:stills": "tsx --tsconfig backend/tsconfig.json backend/reel-engine/stills.ts"
   },
   "dependencies": {

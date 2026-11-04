@@ -38,14 +38,19 @@ describe('autoScene for objects the 3D kit has no model for', () => {
     expect(s.props[0]).toMatchObject({ kind: 'syringe' });
   });
 
+  it('picks the hand-built virus, brain and flame models', () => {
+    const k = (word: string) => autoScene(beat({ narration: `${word} ke baare mein.`, keywords: [word], card: { eyebrow: 'X', headline: `*${word}* ka kaam`, tone: 'teal' } }), undefined).props[0]!.kind;
+    expect([k('Virus'), k('Brain'), k('Fire'), k('Windmill'), k('Microscope')]).toEqual(['virus', 'brain', 'flame', 'windmill', 'microscope']);
+  });
+
   it('turns a word that names a Lucide icon into that icon tile', () => {
     const s = autoScene(beat({ narration: 'Microscope se dekho.', keywords: ['microscope'], card: { eyebrow: 'Step', headline: '*Microscope* se', tone: 'blue' } }), undefined);
     expect(s.props[0]).toMatchObject({ kind: 'custom', glyph: 'microscope' });
   });
 
   it('draws a custom object with a fitting emoji when no model fits', () => {
-    const s = autoScene(beat({ narration: 'Virus aapke sharir mein jaata hai.', keywords: ['virus'], card: { headline: '*Virus* aata hai', tone: 'purple' } }), undefined);
-    expect(s.props[0]).toMatchObject({ kind: 'custom', icon: '🦠', glyph: 'bug', shape: 'round', tone: 'purple' });
+    const s = autoScene(beat({ narration: 'Antibody aapke sharir mein jaata hai.', keywords: ['antibody'], card: { headline: '*Antibody* aati hai', tone: 'purple' } }), undefined);
+    expect(s.props[0]).toMatchObject({ kind: 'custom', icon: '🧬', glyph: 'dna', shape: 'flat', tone: 'purple' });
   });
 
   it('still falls back to a custom object (with a generic icon) for unknown words', () => {

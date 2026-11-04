@@ -48,7 +48,7 @@ export type WorldEvent =
   | 'none';
 
 /** Objects the 3D isometric scene kit can draw ('iso' world). */
-export const PROP_KINDS = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'qr', 'speaker', 'lock', 'database', 'router', 'battery', 'heart', 'gear', 'truck', 'plane', 'train', 'tree', 'hospital', 'school', 'cart', 'camera', 'bulb', 'globe', 'envelope', 'clock', 'rocket', 'syringe', 'chart', 'atm', 'custom'] as const;
+export const PROP_KINDS = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'qr', 'speaker', 'lock', 'database', 'router', 'battery', 'heart', 'gear', 'truck', 'plane', 'train', 'tree', 'hospital', 'school', 'cart', 'camera', 'bulb', 'globe', 'envelope', 'clock', 'rocket', 'syringe', 'chart', 'atm', 'brain', 'virus', 'dna', 'flask', 'microscope', 'sun', 'flame', 'solar', 'windmill', 'bus', 'ship', 'shield', 'book', 'bell', 'custom'] as const;
 export type PropKind = (typeof PROP_KINDS)[number];
 
 /** Body of a 'custom' object (anything the 16 named kinds can't draw): a block, a tall tower, a wide slab, a flat pad or a ball. */

@@ -14,7 +14,7 @@ const KIND_LABELS: Record<ScenePropKind, string> = {
   phone: 'Phone', laptop: 'Laptop', tower: 'Mobile tower', server: 'Server', cloud: 'Cloud', bank: 'Bank', shop: 'Shop', building: 'Building', house: 'House',
   factory: 'Factory', person: 'Person', document: 'Document', money: 'Money', chip: 'Chip', car: 'Car', satellite: 'Satellite', custom: 'Anything else (icon)',
   qr: 'QR code', speaker: 'Speaker', lock: 'Lock', database: 'Database', router: 'Wi-Fi router', battery: 'Battery', heart: 'Heart', gear: 'Gear', truck: 'Truck', plane: 'Plane', train: 'Train', tree: 'Tree',
-  hospital: 'Hospital', school: 'School', cart: 'Shopping cart', camera: 'Camera', bulb: 'Light bulb', globe: 'Globe', envelope: 'Mail', clock: 'Clock', rocket: 'Rocket', syringe: 'Syringe', chart: 'Bar chart', atm: 'ATM',
+  hospital: 'Hospital', school: 'School', cart: 'Shopping cart', camera: 'Camera', bulb: 'Light bulb', globe: 'Globe', envelope: 'Mail', clock: 'Clock', rocket: 'Rocket', brain: 'Brain', virus: 'Virus', dna: 'DNA', flask: 'Flask', microscope: 'Microscope', sun: 'Sun', flame: 'Fire', solar: 'Solar panel', windmill: 'Wind turbine', bus: 'Bus', ship: 'Ship', shield: 'Shield', book: 'Books', bell: 'Bell', syringe: 'Syringe', chart: 'Bar chart', atm: 'ATM',
 };
 
 interface Props {

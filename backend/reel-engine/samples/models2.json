@@ -1,0 +1,220 @@
+{
+ "title": "More",
+ "world": "iso",
+ "theme": "city",
+ "steps": [
+  "A",
+  "B",
+  "C",
+  "D"
+ ],
+ "brand": {
+  "name": "Decodifyx",
+  "initials": "D",
+  "handle": "@decodify_x",
+  "tagline": ""
+ },
+ "voice": [],
+ "beats": [
+  {
+   "id": "b1",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 1",
+    "headline": "Scene *1*",
+    "tone": "blue",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "brain",
+      "kind": "brain",
+      "label": "brain"
+     },
+     {
+      "id": "virus",
+      "kind": "virus",
+      "label": "virus"
+     },
+     {
+      "id": "dna",
+      "kind": "dna",
+      "label": "dna"
+     }
+    ],
+    "links": [
+     {
+      "from": "brain",
+      "to": "virus",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "brain"
+   }
+  },
+  {
+   "id": "b2",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 2",
+    "headline": "Scene *2*",
+    "tone": "purple",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "flask",
+      "kind": "flask",
+      "label": "flask"
+     },
+     {
+      "id": "microscope",
+      "kind": "microscope",
+      "label": "microscope"
+     },
+     {
+      "id": "sun",
+      "kind": "sun",
+      "label": "sun"
+     }
+    ],
+    "links": [
+     {
+      "from": "flask",
+      "to": "microscope",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "flask"
+   }
+  },
+  {
+   "id": "b3",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 3",
+    "headline": "Scene *3*",
+    "tone": "amber",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "flame",
+      "kind": "flame",
+      "label": "flame"
+     },
+     {
+      "id": "solar",
+      "kind": "solar",
+      "label": "solar"
+     },
+     {
+      "id": "windmill",
+      "kind": "windmill",
+      "label": "windmill"
+     }
+    ],
+    "links": [
+     {
+      "from": "flame",
+      "to": "solar",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "flame"
+   }
+  },
+  {
+   "id": "b4",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 4",
+    "headline": "Scene *4*",
+    "tone": "red",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "bus",
+      "kind": "bus",
+      "label": "bus"
+     },
+     {
+      "id": "ship",
+      "kind": "ship",
+      "label": "ship"
+     },
+     {
+      "id": "shield",
+      "kind": "shield",
+      "label": "shield"
+     }
+    ],
+    "links": [
+     {
+      "from": "bus",
+      "to": "ship",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "bus"
+   }
+  },
+  {
+   "id": "b5",
+   "chapter": 1,
+   "keywords": [],
+   "narration": "Ek do teen char paanch chhe saat aath nau das gyarah barah.",
+   "card": {
+    "eyebrow": "Models 5",
+    "headline": "Scene *5*",
+    "tone": "teal",
+    "rows": []
+   },
+   "scene": {
+    "props": [
+     {
+      "id": "book",
+      "kind": "book",
+      "label": "book"
+     },
+     {
+      "id": "bell",
+      "kind": "bell",
+      "label": "bell"
+     },
+     {
+      "id": "syringe",
+      "kind": "syringe",
+      "label": "syringe"
+     }
+    ],
+    "links": [
+     {
+      "from": "book",
+      "to": "bell",
+      "label": "flow"
+     }
+    ],
+    "effect": "pulse",
+    "focus": "book"
+   }
+  }
+ ]
+}

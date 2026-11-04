@@ -2,6 +2,7 @@ import React from 'react';
 import { spring } from 'remotion';
 import { Camera, Vec3, cameraTransform, clamp01, easeInOutCubic, lerp, project, pts, shade, toScreen } from './iso';
 import { EXTRA_TOP, extraItems, type ExtraKind } from './props3d';
+import { MORE_TOP, moreItems, type MoreKind } from './props3d-more';
 import { GLYPH_TOP, glyphItems, hasGlyph } from './glyph';
 import { C, Pill, box, rand, shadow, tree, windowsOnHouse, type Item } from './World';
 import type { IsoScene, PropKind, PropShape, ScenePropSpec, TimedBeat, Tone, WorldTheme } from './script';
@@ -158,7 +159,7 @@ const SHAPE_TOP: Record<PropShape, number> = { block: 2.2, tall: 4.2, wide: 1.5,
 export function propTop(p: PlacedProp): number {
   if (p.kind === 'custom' && hasGlyph(p.spec.glyph)) return GLYPH_TOP;
   if (p.kind === 'custom') return SHAPE_TOP[p.spec.shape ?? 'block'] ?? SHAPE_TOP.block;
-  return PROP_TOP[p.kind as keyof typeof PROP_TOP] ?? EXTRA_TOP[p.kind as ExtraKind] ?? SHAPE_TOP.block;
+  return PROP_TOP[p.kind as keyof typeof PROP_TOP] ?? EXTRA_TOP[p.kind as ExtraKind] ?? MORE_TOP[p.kind as MoreKind] ?? SHAPE_TOP.block;
 }
 
 /** Any object the named kinds can't draw: a body in the object's colour and shape; its emoji floats above it. */
@@ -322,7 +323,7 @@ function propItems(p: PlacedProp, accent: string, frame: number): Item[] {
       break;
     }
     default:
-      return extraItems(p.kind, p, accent, frame) ?? customItems(p, accent, frame);
+      return extraItems(p.kind, p, accent, frame) ?? moreItems(p.kind, p, accent, frame) ?? customItems(p, accent, frame);
   }
   return out;
 }
