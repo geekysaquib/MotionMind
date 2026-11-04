@@ -7,6 +7,8 @@ for (const level of ['debug', 'info', 'warn', 'error'] as const) {
   const original = console[level].bind(console);
   console[level] = (...args: unknown[]) => {
     if (typeof args[0] === 'string' && APP_PREFIXES.some((p) => (args[0] as string).startsWith(p))) return;
+    // Remotion's own dev warnings when its player renders in jsdom (no AudioContext, internal refs).
+    if (args.some((x) => typeof x === 'string' && (x.includes('AbsoluteFillWithTiming') || x.includes('AudioContext is not supported')))) return;
     original(...args);
   };
 }

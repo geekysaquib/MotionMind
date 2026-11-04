@@ -91,6 +91,11 @@ export class ProjectStore {
     return this.root.services.claude(() => this.root.auth.session?.accessToken ?? null);
   }
 
+  /** Puts a project returned by the API first in the list, replacing the old copy. */
+  upsert(p: Project) {
+    return this.replace(p);
+  }
+
   private replace(p: Project) {
     runInAction(() => {
       this.items = [p, ...this.items.filter((x) => x.id !== p.id)];

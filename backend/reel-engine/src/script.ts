@@ -83,8 +83,10 @@ export type ReelSpec = {
   steps: string[];
   brand: Brand;
   beats: Beat[];
-  /** Per-beat TTS timings; audio files are expected at voice/beat_<i>.mp3. */
+  /** Per-beat TTS timings; audio files are expected at voice/beat_<i>.mp3 unless audioUrls is given. */
   voice?: VoiceBeat[];
+  /** Where each beat's voiceover MP3 is (the web app passes signed URLs). */
+  audioUrls?: string[];
 };
 
 export const END_CARD_FRAMES = 3 * FPS;

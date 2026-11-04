@@ -1,4 +1,4 @@
-import { BRAND, type ReelScript } from '@motionmind/shared';
+import { BRAND, type ReelScript, type ReelVoice } from '@motionmind/shared';
 // Types only: the engine itself loads lazily with the preview player.
 import type { Brand, ReelSpec } from '@motionmind/reel-engine';
 
@@ -19,6 +19,12 @@ export function brandFor(profile: { channelName: string | null; handle: string |
 }
 
 /** A project's reel script as the engine renders it: the 'cards' world, branded for the channel. */
-export function specFromScript(script: ReelScript, brand: Brand = FALLBACK_BRAND): ReelSpec {
-  return { title: script.title, world: 'cards', steps: script.steps, brand, beats: script.beats };
+export function specFromScript(script: ReelScript, brand: Brand = FALLBACK_BRAND, audio?: { voice: ReelVoice; urls: string[] }): ReelSpec {
+  const spec: ReelSpec = { title: script.title, world: 'cards', steps: script.steps, brand, beats: script.beats };
+  // Voiceover only when it matches the script line for line; otherwise timing would drift.
+  if (audio && audio.voice.beats.length === script.beats.length && audio.urls.every(Boolean)) {
+    spec.voice = audio.voice.beats;
+    spec.audioUrls = audio.urls;
+  }
+  return spec;
 }

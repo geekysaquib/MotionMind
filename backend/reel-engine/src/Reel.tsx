@@ -89,7 +89,7 @@ export const Reel: React.FC<ReelSpec> = (spec) => {
       {hasVoice(spec) &&
         timed.map((b, i) => (
           <Sequence key={`vo${b.id}`} from={b.start + Math.round(0.2 * fps)}>
-            <Audio src={staticFile(`voice/beat_${i}.mp3`)} />
+            <Audio src={spec.audioUrls?.[i] || staticFile(`voice/beat_${i}.mp3`)} />
           </Sequence>
         ))}
       <Sequence from={storyFrames}>

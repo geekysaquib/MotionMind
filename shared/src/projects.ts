@@ -16,8 +16,20 @@ export interface Project {
   script: ReelScript | null;
   /** Fact-checked research for the topic, or null before the Research stage. */
   research: ResearchReport | null;
+  /** ElevenLabs voiceover timings; the audio files themselves live in storage. */
+  voice: ReelVoice | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Per-beat voiceover: how long each line is and when each word is spoken (seconds). */
+export interface ReelVoice {
+  voiceId: string;
+  voiceName?: string;
+  beats: { durationSec: number; words: { start: number; end: number }[] }[];
+  /** Narration the audio was made from, to tell when the script changed since. */
+  narrations: string[];
+  createdAt: string;
 }
 
 export type FactStatus = 'verified' | 'single_source' | 'estimate' | 'conflicting';

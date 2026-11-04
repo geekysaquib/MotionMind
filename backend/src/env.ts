@@ -15,6 +15,7 @@ const schema = z
     ANTHROPIC_API_KEY: z.string().min(20).optional(),
     // Voiceover for every user. Also read by the reel engine's tts.mjs.
     ELEVENLABS_API_KEY: z.string().min(10).optional(),
+    ELEVENLABS_VOICE_ID: z.string().optional(),
     // Login-code email. Leave SMTP_HOST empty in the root .env during development to print codes in the terminal instead.
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().positive().default(465),

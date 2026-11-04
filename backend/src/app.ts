@@ -4,6 +4,8 @@ import { registerAccountRoutes } from './account/routes';
 import type { ClaudeClient } from './ai/claude';
 import { registerClaudeRoutes } from './ai/routes';
 import { registerConnectorRoutes } from './connectors/routes';
+import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
+import { registerVoiceRoutes } from './voice/routes';
 import type { Mailer } from './auth/mailer';
 import { registerLoginRoutes } from './auth/routes';
 import type { SessionTokens } from './auth/session';
@@ -30,6 +32,10 @@ export interface AppDeps {
   anthropicApiKey?: string;
   /** The server's ElevenLabs key (ELEVENLABS_API_KEY), for voiceover. */
   elevenLabsApiKey?: string;
+  /** ELEVENLABS_VOICE_ID: the voice used when the user doesn't pick one. */
+  defaultVoiceId?: string;
+  /** Where voiceover MP3s are stored. Defaults to memory (tests, demo). */
+  audio: AudioStore;
   /** Builds the Claude client. Tests pass a fake. */
   claude?: (apiKey: string) => ClaudeClient;
 }
@@ -40,7 +46,8 @@ declare module 'fastify' {
   }
 }
 
-export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
+export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioStore }): Promise<FastifyInstance> {
+  const deps: AppDeps = { ...input, audio: input.audio ?? new MemoryAudioStore() };
   const app = Fastify({
     logger: deps.logger ? { redact: ['req.headers.authorization', 'body.apiKey', 'body.code'] } : false,
   });
@@ -68,6 +75,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       registerAccountRoutes(api, deps);
       registerClaudeRoutes(api, deps);
       registerConnectorRoutes(api, deps);
+      registerVoiceRoutes(api, deps);
     },
     { prefix: '/api' },
   );

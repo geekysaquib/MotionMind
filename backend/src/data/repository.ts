@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Profile, Project, QualityTier, ReelScript, ResearchReport } from '@motionmind/shared';
+import type { Profile, Project, QualityTier, ReelScript, ReelVoice, ResearchReport } from '@motionmind/shared';
 import { RESERVED_HANDLES, normalizeHandle } from '@motionmind/shared';
 
 export interface User {
@@ -24,7 +24,7 @@ export interface NewProject {
   qualityTier: QualityTier;
 }
 
-export type ProjectPatch = Partial<NewProject & Pick<Project, 'status' | 'stage'>> & { script?: ReelScript | null; research?: ResearchReport | null };
+export type ProjectPatch = Partial<NewProject & Pick<Project, 'status' | 'stage'>> & { script?: ReelScript | null; research?: ResearchReport | null; voice?: ReelVoice | null };
 
 export class HandleTakenError extends Error {}
 
@@ -110,7 +110,7 @@ export class MemoryDataRepository implements DataRepository {
   }
   async createProject(ownerId: string, input: NewProject) {
     const now = new Date().toISOString();
-    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, stage: 'topic', status: 'draft', script: null, research: null, createdAt: now, updatedAt: now };
+    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, stage: 'topic', status: 'draft', script: null, research: null, voice: null, createdAt: now, updatedAt: now };
     this.projects.push(p);
     return { ...p };
   }
@@ -150,6 +150,7 @@ const projectFromRow = (r: Row): Project => ({
   durationSec: r.duration_sec as number,
   script: (r.script as ReelScript | null) ?? null,
   research: (r.research as ResearchReport | null) ?? null,
+  voice: (r.voice as ReelVoice | null) ?? null,
   createdAt: r.created_at as string,
   updatedAt: r.updated_at as string,
 });
@@ -175,6 +176,7 @@ function projectRow(patch: ProjectPatch): Row {
   if (patch.stage !== undefined) row.stage = patch.stage;
   if (patch.script !== undefined) row.script = patch.script;
   if (patch.research !== undefined) row.research = patch.research;
+  if (patch.voice !== undefined) row.voice = patch.voice;
   return row;
 }
 

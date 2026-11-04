@@ -1,4 +1,4 @@
-import type { Project, ReelScript } from '@motionmind/shared';
+import type { Project, ReelScript, ReelVoice } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
 
@@ -42,6 +42,10 @@ export interface ClaudeService {
   researchPrompt(projectId: string): Promise<string>;
   importResearch(projectId: string, text: string): Promise<Project>;
   approveResearch(projectId: string): Promise<Project>;
+  /** Voice (ElevenLabs on the server key). */
+  voices(): Promise<{ voices: { id: string; name: string }[]; defaultVoiceId: string | null }>;
+  voiceFor(projectId: string): Promise<{ voice: ReelVoice | null; urls: string[]; stale: boolean }>;
+  generateVoice(projectId: string, voiceId?: string, voiceName?: string): Promise<{ project: Project; urls: string[] }>;
   /** Storyboard: save the user's edits to the script. */
   saveScript(projectId: string, script: ReelScript): Promise<Project>;
 }
@@ -64,6 +68,9 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     research: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research`, 'POST')).project,
     researchPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt`)).prompt,
     importResearch: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/research/import`, 'POST', { text })).project,
+    voices: () => call('/voices'),
+    voiceFor: (projectId) => call(`/projects/${projectId}/voice`),
+    generateVoice: (projectId, voiceId, voiceName) => call(`/projects/${projectId}/voice`, 'POST', { voiceId, voiceName }),
     saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,
     approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,
   };
