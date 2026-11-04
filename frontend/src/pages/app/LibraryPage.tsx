@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { ArrowRight, Search } from 'lucide-react';
 import type { ProjectStatus } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { PageHeader } from '../../layout/AppShell';
@@ -9,6 +9,15 @@ import { Spinner } from '../../components/ui';
 import { StageBadge, StatusBadge } from './ProjectBadges';
 import { timeAgo } from '../../lib/format';
 import { cn } from '../../lib/cn';
+import { ProgressRing, Reveal } from '../../components/motion';
+import { nextStage, progressOf } from '../../lib/progress';
+
+/** A stable pair of hues per project, so every cover looks different but never changes. */
+function hues(id: string): [number, number] {
+  let h = 0;
+  for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return [h % 360, (h * 7 + 140) % 360];
+}
 
 const FILTERS: { id: 'all' | ProjectStatus; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -52,21 +61,36 @@ export const LibraryPage = observer(function LibraryPage() {
         <p className="card p-10 text-center text-sm text-ink-400">{projects.items.length ? 'Nothing matches this filter.' : 'No projects yet. Use "New reel" to start one.'}</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {list.map((p) => (
-            <Link key={p.id} to={`/app/projects/${p.id}`} className="card group overflow-hidden transition hover:border-mint-400/30">
-              <div className="flex aspect-[16/9] items-end bg-[radial-gradient(circle_at_30%_20%,rgba(94,234,212,.25),transparent_60%),radial-gradient(circle_at_80%_80%,rgba(139,92,246,.3),transparent_60%)] p-4">
-                <span className="rounded-md bg-white/80 px-2 py-0.5 text-xs font-semibold text-ink-100">{p.durationSec}s · {p.qualityTier}</span>
-              </div>
-              <div className="p-4">
-                <div className="line-clamp-2 font-medium group-hover:text-accent">{p.title}</div>
-                <div className="mt-3 flex items-center gap-2">
-                  <StageBadge stage={p.stage} />
-                  <StatusBadge status={p.status} />
-                  <span className="ml-auto text-xs text-ink-400">{timeAgo(p.updatedAt)}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
+          {list.map((p, i) => {
+            const [h1, h2] = hues(p.id);
+            return (
+              <Reveal key={p.id} delay={(i % 3) * 70}>
+                <Link to={`/app/projects/${p.id}`} className="card card-hover group block overflow-hidden">
+                  <div
+                    className="relative flex aspect-[16/9] items-end justify-between overflow-hidden p-4"
+                    style={{ backgroundImage: `radial-gradient(circle at 25% 20%, hsl(${h1} 80% 70% / .55), transparent 60%), radial-gradient(circle at 85% 85%, hsl(${h2} 75% 65% / .5), transparent 60%)` }}
+                  >
+                    <div className="absolute -right-6 -top-6 h-28 w-28 rotate-12 rounded-3xl border border-white/30 bg-white/20 transition duration-500 group-hover:rotate-[24deg] group-hover:scale-110" aria-hidden />
+                    <span className="relative rounded-md bg-white/85 px-2 py-0.5 text-xs font-semibold text-ink-100">{p.durationSec}s · {p.qualityTier}</span>
+                    <ProgressRing value={progressOf(p)} size={40} stroke={5} className="relative rounded-full bg-white/85 text-ink-100">
+                      <span className="text-[9px]">{Math.round(progressOf(p) * 100)}%</span>
+                    </ProgressRing>
+                  </div>
+                  <div className="p-4">
+                    <div className="line-clamp-2 font-medium transition group-hover:text-accent">{p.title}</div>
+                    <div className="mt-1 flex items-center gap-1 text-xs text-ink-400">
+                      Next: {nextStage(p).label} <ArrowRight className="h-3 w-3 transition group-hover:translate-x-1" />
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <StageBadge stage={p.stage} />
+                      <StatusBadge status={p.status} />
+                      <span className="ml-auto text-xs text-ink-400">{timeAgo(p.updatedAt)}</span>
+                    </div>
+                  </div>
+                </Link>
+              </Reveal>
+            );
+          })}
         </div>
       )}
     </div>

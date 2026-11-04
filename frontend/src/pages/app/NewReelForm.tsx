@@ -6,10 +6,19 @@ import { useStores } from '../../stores/RootStore';
 import { Button, Select } from '../../components/ui';
 import { errorText } from '../../lib/format';
 
-export function NewReelForm({ autoFocus }: { autoFocus?: boolean }) {
+const IDEAS = [
+  'How does a UPI Soundbox know the money arrived?',
+  'How does a vaccine train your body?',
+  'How does Where is my Train work without GPS?',
+  'Why does 5G need so many towers?',
+  'How does Google Maps predict traffic?',
+  'What happens when you tap your card to pay?',
+];
+
+export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: boolean; initialTopic?: string }) {
   const { projects, toasts } = useStores();
   const nav = useNavigate();
-  const [topic, setTopic] = useState('');
+  const [topic, setTopic] = useState(initialTopic);
   const [duration, setDuration] = useState(60);
   const [tier, setTier] = useState<QualityTier>('standard');
   const [busy, setBusy] = useState(false);
@@ -45,6 +54,19 @@ export function NewReelForm({ autoFocus }: { autoFocus?: boolean }) {
         placeholder="How does the Where is my Train app work without GPS and internet?"
         className="field resize-none text-base"
       />
+      <div className="flex flex-wrap items-center gap-2" aria-label="Topic ideas">
+        <span className="text-xs text-ink-400">Try:</span>
+        {IDEAS.map((idea) => (
+          <button
+            key={idea}
+            type="button"
+            onClick={() => setTopic(idea)}
+            className="rounded-full border border-line/10 bg-line/[0.03] px-3 py-1 text-xs text-ink-300 transition hover:-translate-y-0.5 hover:border-mint-400/50 hover:bg-mint-400/10 hover:text-ink-100"
+          >
+            {idea}
+          </button>
+        ))}
+      </div>
       <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
         <Select label="Duration" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
           {[15, 30, 45, 60, 90].map((d) => (

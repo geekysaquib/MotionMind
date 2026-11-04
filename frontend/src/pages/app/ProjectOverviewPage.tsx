@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useNavigate, useOutletContext } from 'react-router-dom';
-import { Trash2 } from 'lucide-react';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
+import { ArrowRight, Trash2 } from 'lucide-react';
 import type { Project, ProjectStatus, QualityTier } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { Button, Card, Field, Select } from '../../components/ui';
 import { errorText } from '../../lib/format';
+import { nextStage, STAGE_INFO } from '../../lib/progress';
 
 export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
   const p = useOutletContext<Project>();
@@ -84,9 +85,22 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
       <div className="space-y-6">
         <Card>
           <h3 className="font-semibold">What happens next</h3>
-          <p className="mt-2 text-sm text-ink-400">
-            Research is the next module. It will search trusted sources for this topic, check claims against each other and show you a report to approve before any script is written.
-          </p>
+          <ol className="mt-3 space-y-2.5 text-sm">
+            {STAGE_INFO.slice(1).map((st, i) => (
+              <li key={st.path}>
+                <Link to={`/app/projects/${p.id}/${st.path}`} className="group flex items-start gap-3 rounded-lg p-1 transition hover:bg-line/[0.04]">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-mint-400/15 text-[10px] font-bold text-accent">{i + 2}</span>
+                  <span>
+                    <span className="font-medium group-hover:text-accent">{st.label}</span>
+                    <span className="block text-xs text-ink-400">{st.title}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+          <Link to={`/app/projects/${p.id}/${nextStage(p).path || 'research'}`} className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-mint-600 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:bg-mint-700">
+            Continue: {nextStage(p).label} <ArrowRight className="h-4 w-4" />
+          </Link>
         </Card>
         <Card>
           <h3 className="font-semibold text-danger">Delete project</h3>

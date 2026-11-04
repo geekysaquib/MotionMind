@@ -1,6 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Compass, FolderOpen, LayoutDashboard, LogOut, Settings, Plus } from 'lucide-react';
+import { ClipboardCopy, Compass, FolderOpen, KeyRound, LayoutDashboard, LogOut, Settings, Plus } from 'lucide-react';
 import { useStores } from '../stores/RootStore';
 import { Logo } from '../components/Logo';
 import { DemoBanner } from '../components/DemoBanner';
@@ -14,7 +14,7 @@ const NAV = [
 ];
 
 export const AppShell = observer(function AppShell() {
-  const { profile, auth } = useStores();
+  const { profile, auth, aiMode } = useStores();
   const nav = useNavigate();
   const p = profile.profile;
   const initials = (p?.displayName ?? p?.handle ?? '?').slice(0, 2).toUpperCase();
@@ -24,13 +24,14 @@ export const AppShell = observer(function AppShell() {
       <div className="flex min-h-0 flex-1">
         <aside className="hidden w-64 shrink-0 flex-col border-r border-line/[0.07] bg-ink-900 p-4 md:flex">
           <div className="px-2 py-2">
-            <Logo size="sm" />
+            <Logo size="sm" animated />
           </div>
           <button
             onClick={() => nav('/app?new=1')}
-            className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-mint-600 px-3 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:bg-mint-700"
+            className="group relative mt-6 flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-mint-600 to-mint-500 px-3 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
           >
-            <Plus className="h-4 w-4" /> New reel
+            <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" aria-hidden />
+            <Plus className="relative h-4 w-4 transition group-hover:rotate-90" /> <span className="relative">New reel</span>
           </button>
           <nav className="mt-6 flex flex-col gap-1" aria-label="Main">
             {NAV.map(({ to, label, icon: Icon, end }) => (
@@ -40,16 +41,27 @@ export const AppShell = observer(function AppShell() {
                 end={end}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition',
-                    isActive ? 'bg-line/[0.07] text-ink-100' : 'text-ink-400 hover:bg-line/[0.04] hover:text-ink-100',
+                    'group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition',
+                    isActive ? 'bg-gradient-to-r from-mint-400/15 to-transparent text-ink-100' : 'text-ink-400 hover:translate-x-0.5 hover:bg-line/[0.04] hover:text-ink-100',
                   )
                 }
               >
-                <Icon className="h-4 w-4" /> {label}
+                {({ isActive }) => (
+                  <>
+                    <span className={cn('absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-gradient-to-b from-mint-400 to-violet-500 transition-all duration-300', isActive ? 'opacity-100' : 'h-0 opacity-0')} aria-hidden />
+                    <Icon className={cn('h-4 w-4 transition', isActive ? 'text-accent' : 'group-hover:scale-110')} /> {label}
+                  </>
+                )}
               </NavLink>
             ))}
           </nav>
-          <div className="mt-auto rounded-2xl border border-line/[0.06] bg-ink-900 p-3">
+          <NavLink to="/app/settings/connectors" className="mt-auto flex items-center gap-2 rounded-xl border border-line/[0.07] px-3 py-2 text-xs text-ink-400 transition hover:border-mint-400/40 hover:text-ink-100" title="Change how you work with AI">
+            {aiMode.paste ? <ClipboardCopy className="h-3.5 w-3.5 text-accent" /> : <KeyRound className="h-3.5 w-3.5 text-violet-600" />}
+            <span>
+              AI: <span className="font-semibold text-ink-100">{aiMode.paste ? 'Copy and paste' : 'API keys'}</span>
+            </span>
+          </NavLink>
+          <div className="mt-3 rounded-2xl border border-line/[0.06] bg-ink-900 p-3">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-mint-400 to-violet-500 text-xs font-bold text-white">
                 {initials}
@@ -75,8 +87,12 @@ export const AppShell = observer(function AppShell() {
               ))}
             </nav>
           </header>
-          <main className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(45,212,191,0.07),transparent),radial-gradient(900px_500px_at_0%_0%,rgba(139,92,246,0.06),transparent)]">
-            <Outlet />
+          <main className="relative min-h-0 flex-1 overflow-y-auto">
+            <div className="orb right-10 top-0 h-80 w-80 bg-mint-400/20" aria-hidden />
+            <div className="orb -left-10 top-80 h-72 w-72 bg-violet-500/15" style={{ animationDelay: '-7s' }} aria-hidden />
+            <div className="relative">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>
@@ -88,8 +104,8 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-ink-400">{subtitle}</p>}
+        <h1 className="animate-fade-up font-display text-3xl font-bold tracking-tight">{title}</h1>
+        {subtitle && <p className="mt-1 animate-fade-up text-sm text-ink-400 [animation-delay:80ms]">{subtitle}</p>}
       </div>
       {actions}
     </div>
