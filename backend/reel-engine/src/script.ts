@@ -129,6 +129,8 @@ export type ReelSpec = {
   world: 'train' | 'iso' | 'cards';
   /** Iso world: what the ground and background look like. */
   theme?: WorldTheme;
+  /** Iso world: locked object spots by id. Objects without one are placed automatically around the locked ones. */
+  layout?: Record<string, { x: number; y: number }>;
   /** Names of the progress steps shown in the header (chapters 1..n). */
   steps: string[];
   brand: Brand;

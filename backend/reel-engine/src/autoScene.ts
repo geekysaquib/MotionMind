@@ -1,4 +1,5 @@
 import { hasGlyph } from './glyph';
+import { reelTiming } from './script';
 import type { Beat, IsoScene, PropKind, PropShape, ReelSpec, ScenePropSpec, Tone, TrainShot, WorldEvent } from './script';
 
 // Fills in 3D scenes for beats that don't describe one (older scripts, hand-added scenes), so every
@@ -176,4 +177,11 @@ export function withScenes(spec: ReelSpec): ReelSpec {
     return { ...spec, beats };
   }
   return spec;
+}
+
+/** Where the engine puts every 3D object right now (given the scenes and any locked spots), keyed by object id. */
+export function computeLayout(spec: ReelSpec, layoutProps: (timed: ReturnType<typeof reelTiming>['timed'], locked?: ReelSpec['layout']) => Map<string, { pos: { x: number; y: number } }>): Record<string, { x: number; y: number }> {
+  const full = withScenes(spec);
+  const placed = layoutProps(reelTiming(full).timed, full.layout);
+  return Object.fromEntries([...placed].map(([id, p]) => [id, { x: Math.round(p.pos.x * 100) / 100, y: Math.round(p.pos.y * 100) / 100 }]));
 }

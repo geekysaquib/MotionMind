@@ -106,6 +106,15 @@ describe('profile and projects', () => {
     expect((await app.inject({ method: 'PATCH', url: '/api/profile', headers: H, payload: { handle: 'ad' } })).statusCode).toBe(400);
   });
 
+  it('keeps how you work with AI on your account, and refuses anything else', async () => {
+    const { app, H } = await signedIn();
+    expect((await app.inject({ method: 'GET', url: '/api/profile', headers: H })).json().profile.aiMode).toBeNull();
+    const saved = await app.inject({ method: 'PATCH', url: '/api/profile', headers: H, payload: { aiMode: 'keys' } });
+    expect(saved.json().profile.aiMode).toBe('keys');
+    expect((await app.inject({ method: 'GET', url: '/api/profile', headers: H })).json().profile.aiMode).toBe('keys');
+    expect((await app.inject({ method: 'PATCH', url: '/api/profile', headers: H, payload: { aiMode: 'magic' } })).statusCode).toBe(400);
+  });
+
   it('creates, updates, lists and deletes only your own projects', async () => {
     const { app, H } = await signedIn();
     const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: null, durationSec: 30, qualityTier: 'draft' } });

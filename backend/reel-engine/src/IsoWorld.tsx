@@ -55,7 +55,7 @@ const GRID = 0.8;
  * Each new prop goes on the closest free spot to the props it shares its first scene with (a little further along the
  * story's direction), where its real footprint, plus a gap, does not touch any prop already placed.
  */
-export function layoutProps(timed: TimedBeat[]): Map<string, PlacedProp> {
+export function layoutProps(timed: TimedBeat[], locked?: Record<string, { x: number; y: number }>): Map<string, PlacedProp> {
   const placed = new Map<string, PlacedProp>();
   const feet = new Map<string, [number, number]>();
   let last: Vec3 | null = null;
@@ -74,6 +74,15 @@ export function layoutProps(timed: TimedBeat[]): Map<string, PlacedProp> {
     for (const sp of specs) {
       if (placed.has(sp.id)) continue;
       const f = footprint(sp.kind, sp);
+      const fixed = locked?.[sp.id];
+      if (fixed && Number.isFinite(fixed.x) && Number.isFinite(fixed.y)) {
+        // A locked object keeps its spot; the others are arranged around it.
+        const pos: Vec3 = { x: fixed.x, y: fixed.y, z: 0 };
+        feet.set(sp.id, f);
+        placed.set(sp.id, { id: sp.id, kind: sp.kind, spec: sp, pos, appearsAt: b.start });
+        last = pos;
+        continue;
+      }
       let best: { x: number; y: number } = { x: anchor.x, y: anchor.y };
       let bestCost = Infinity;
       for (let cx = anchor.x - 16; cx <= anchor.x + 16; cx += GRID) {

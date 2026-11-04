@@ -118,6 +118,8 @@ export interface ReelScript {
   world?: 'iso' | 'train';
   /** Iso world: the look of the ground and background. */
   theme?: WorldTheme;
+  /** Locked spots of the 3D objects, by object id (ground x, y in world units). Without it the engine arranges them. */
+  layout?: Record<string, { x: number; y: number }>;
   steps: string[];
   beats: ReelBeat[];
   /** Which Claude model wrote it, and when. */
@@ -134,6 +136,8 @@ export interface Profile {
   channelName: string | null;
   niche: string | null;
   language: 'en' | 'hi' | 'hinglish';
+  /** How the user works with AI. Null until they choose. */
+  aiMode: 'paste' | 'keys' | null;
   onboardedAt: string | null;
 }
 

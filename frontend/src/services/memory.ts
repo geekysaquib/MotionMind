@@ -67,7 +67,7 @@ export function memoryServices(storage: Storage = window.localStorage, apiUrl = 
       if (!user) {
         user = { id: uid(), email: e };
         db.users.push(user);
-        db.profiles.push({ id: user.id, handle: null, displayName: null, channelName: null, niche: null, language: 'hinglish', onboardedAt: null });
+        db.profiles.push({ id: user.id, handle: null, displayName: null, channelName: null, niche: null, language: 'hinglish', aiMode: null, onboardedAt: null });
       }
       startSession(user);
     },

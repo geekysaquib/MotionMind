@@ -13,6 +13,7 @@ const profilePatchSchema = z
     channelName: short(60),
     niche: short(60),
     language: z.enum(['en', 'hi', 'hinglish']),
+    aiMode: z.enum(['paste', 'keys']).nullable(),
     onboardedAt: z.string().datetime().nullable(),
   })
   .partial()

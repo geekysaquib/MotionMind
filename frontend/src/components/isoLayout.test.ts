@@ -138,3 +138,32 @@ describe('links and big vehicles', () => {
     expect(footprint('phone')[0]).toBe(0.5);
   });
 });
+
+describe('locked object positions', () => {
+  it('keeps locked spots, places the others around them, and a computed layout reproduces itself', async () => {
+    const spec = sample('models');
+    const timed = reelTiming(spec).timed;
+    const auto = layoutProps(timed);
+    // Lock everything in a shifted arrangement: the engine must use exactly these spots.
+    const locked = Object.fromEntries([...auto].map(([id, p]) => [id, { x: p.pos.x + 3, y: p.pos.y }]));
+    const again = layoutProps(timed, locked);
+    for (const [id, p] of again) expect([p.pos.x, p.pos.y]).toEqual([locked[id]!.x, locked[id]!.y]);
+    // One object unlocked: it is placed freely, but never on top of a locked one.
+    const some = { ...locked };
+    const free = [...auto.keys()][2]!;
+    delete some[free];
+    const mixed = layoutProps(timed, some);
+    const f = mixed.get(free)!;
+    for (const [id, q] of mixed) {
+      if (id === free) continue;
+      const fa = footprint(f.kind, f.spec);
+      const fb = footprint(q.kind, q.spec);
+      expect(Math.abs(f.pos.x - q.pos.x) >= fa[0] + fb[0] || Math.abs(f.pos.y - q.pos.y) >= fa[1] + fb[1]).toBe(true);
+    }
+    // computeLayout reads the arrangement, and locking it changes nothing.
+    const { computeLayout } = await import('../../../backend/reel-engine/src/autoScene');
+    const lay = computeLayout(spec, layoutProps as never);
+    expect(Object.keys(lay).sort()).toEqual([...auto.keys()].sort());
+    expect(computeLayout({ ...spec, layout: lay }, layoutProps as never)).toEqual(lay);
+  });
+});

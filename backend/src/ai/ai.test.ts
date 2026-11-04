@@ -304,6 +304,22 @@ describe('storyboard edits', () => {
     expect(res.json().project.script.beats[0].id).toBe('npci');
   });
 
+  it('keeps locked object positions, and refuses nonsense ones', async () => {
+    const { app } = await setup();
+    const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'x', durationSec: 60, qualityTier: 'standard' } });
+    const id = created.json().project.id;
+    await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
+    const put = (layout: unknown) => app.inject({ method: 'PUT', url: `/api/projects/${id}/script`, headers: H, payload: { script: { ...SCRIPT, layout } } });
+    const ok = await put({ you: { x: 1.5, y: -2 }, bank: { x: 8, y: 0 } });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().project.script.layout).toEqual({ you: { x: 1.5, y: -2 }, bank: { x: 8, y: 0 } });
+    expect((await put({ you: { x: 'left', y: 0 } })).statusCode).toBe(400);
+    expect((await put({ you: { x: 9999, y: 0 } })).statusCode).toBe(400);
+    // Saving without a layout unlocks.
+    const cleared = await app.inject({ method: 'PUT', url: `/api/projects/${id}/script`, headers: H, payload: { script: SCRIPT } });
+    expect(cleared.json().project.script.layout).toBeUndefined();
+  });
+
   it('rejects a broken or empty storyboard and other people\'s projects', async () => {
     const { app } = await setup();
     const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'x', durationSec: 60, qualityTier: 'standard' } });

@@ -30,7 +30,7 @@ export function specFromScript(
   audio?: { voice: ReelVoice; urls: string[] },
   editor?: { editor: ReelEditor | null; urls: { voice?: string; music?: string } },
 ): ReelSpec {
-  const spec: ReelSpec = { title: script.title, world: worldFor(script), theme: script.theme, steps: script.steps, brand, beats: script.beats };
+  const spec: ReelSpec = { title: script.title, world: worldFor(script), theme: script.theme, layout: script.layout, steps: script.steps, brand, beats: script.beats };
   // The Reel editor: pace, captions, music, and an uploaded recording when its cuts match the scenes.
   const parts = editor ? editorSpecParts(editor.editor, script.beats.length, editor.urls) : {};
   Object.assign(spec, parts);

@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { z as zv4 } from 'zod/v4';
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 import { ClaudeError, claudeClient, CLAUDE_MODEL, type ClaudeClient } from './claude';
@@ -9,6 +10,9 @@ import type { Project, ReelScript, ResearchReport } from '@motionmind/shared';
 
 const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude something.').max(12000) });
 const editSchema = z.object({ script: z.unknown() });
+// The storyboard may carry locked object spots; the schema Claude writes to does not.
+// (Same zod version as the script schema, or the two cannot be combined.)
+const scriptWithLayout = scriptSchemaV4.extend({ layout: zv4.record(zv4.string().max(60), zv4.object({ x: zv4.number().min(-200).max(200), y: zv4.number().min(-200).max(200) })).optional() });
 const importSchema = z.object({ text: z.string().min(1, "Paste Claude's answer first.").max(100_000) });
 
 /** Model label for scripts written in claude.ai and pasted in. */
@@ -178,7 +182,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   // The user edits the script beat by beat; we keep who wrote it and mark it edited.
   api.put('/projects/:id/script', async (req, reply) => {
     const body = editSchema.safeParse(req.body);
-    const parsed = scriptSchemaV4.safeParse(body.success ? body.data.script : undefined);
+    const parsed = scriptWithLayout.safeParse(body.success ? body.data.script : undefined);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       return reply.code(400).send({ error: 'invalid_script', message: `The storyboard has a problem${issue ? ` (${issue.path.join('.')}: ${issue.message})` : ''}.` });
@@ -187,7 +191,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     const id = (req.params as { id: string }).id;
     const project = z.string().uuid().safeParse(id).success ? await deps.data.getProject(req.userId, id) : null;
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
-    const saved: ReelScript = { ...parsed.data, model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
+    const saved: ReelScript = { ...parsed.data, layout: parsed.data.layout as ReelScript['layout'], model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
     return {
       project: await deps.data.updateProject(req.userId, project.id, { script: saved, stage: project.stage === 'script' ? 'storyboard' : project.stage }),
     };

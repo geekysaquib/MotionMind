@@ -48,7 +48,7 @@ export interface DataRepository {
   removeProject(ownerId: string, id: string): Promise<boolean>;
 }
 
-const emptyProfile = (id: string): Profile => ({ id, handle: null, displayName: null, channelName: null, niche: null, language: 'hinglish', onboardedAt: null });
+const emptyProfile = (id: string): Profile => ({ id, handle: null, displayName: null, channelName: null, niche: null, language: 'hinglish', aiMode: null, onboardedAt: null });
 
 export class MemoryDataRepository implements DataRepository {
   private codes = new Map<string, LoginCode>();
@@ -136,6 +136,7 @@ const profileFromRow = (r: Row): Profile => ({
   channelName: (r.channel_name as string | null) ?? null,
   niche: (r.niche as string | null) ?? null,
   language: (r.language as Profile['language']) ?? 'hinglish',
+  aiMode: (r.ai_mode as Profile['aiMode']) ?? null,
   onboardedAt: (r.onboarded_at as string | null) ?? null,
 });
 
@@ -163,6 +164,7 @@ function profileRow(patch: ProfilePatch): Row {
   if (patch.channelName !== undefined) row.channel_name = patch.channelName;
   if (patch.niche !== undefined) row.niche = patch.niche;
   if (patch.language !== undefined) row.language = patch.language;
+  if (patch.aiMode !== undefined) row.ai_mode = patch.aiMode;
   if (patch.onboardedAt !== undefined) row.onboarded_at = patch.onboardedAt;
   return row;
 }

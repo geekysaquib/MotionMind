@@ -38,6 +38,7 @@ export class ProfileStore {
         this.profile = p;
         this.error = null;
         if (!this.handleInput && p.handle) this.handleInput = p.handle;
+        this.root.aiMode.adopt(p.aiMode);
       });
     } catch (e) {
       log.error('profile', `Couldn't load the profile: ${(e as Error).message}`);

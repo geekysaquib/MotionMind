@@ -86,7 +86,7 @@ export const Reel: React.FC<ReelSpec> = (input) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { timed, storyFrames, endFrames, totalFrames, closing } = useMemo(() => reelTiming(spec), [spec]);
-  const placed = useMemo(() => layoutProps(timed), [timed]);
+  const placed = useMemo(() => layoutProps(timed, spec.layout), [timed, spec.layout]);
   const inStory = frame < storyFrames;
   const beat = timed.find((b) => frame >= b.start && frame < b.start + b.frames) ?? timed[timed.length - 1]!;
   const chapterStart = timed.find((b) => b.chapter === beat.chapter)?.start ?? 0;

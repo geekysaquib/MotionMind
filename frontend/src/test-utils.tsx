@@ -12,7 +12,7 @@ export function memStorage(): Storage {
 
 export async function makeStore(opts: { signedIn?: boolean; storage?: Storage; aiMode?: 'paste' | 'keys' } = {}) {
   const store = new RootStore(memoryServices(opts.storage ?? memStorage(), 'http://api.test'));
-  store.aiMode.set(opts.aiMode ?? 'keys');
+  store.aiMode.adopt(opts.aiMode ?? 'keys');
   await store.auth.init();
   if (opts.signedIn) {
     await store.auth.verifyCode('saquib@example.com', DEMO_CODE);

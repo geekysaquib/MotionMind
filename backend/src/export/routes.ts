@@ -17,6 +17,7 @@ export async function reelSpecFor(deps: AppDeps, userId: string, project: Projec
     // Same rule as the web app's worldFor().
     world: reelWorld(script),
     theme: script.theme,
+    layout: script.layout,
     steps: script.steps,
     brand: { name, initials, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', tagline: '' },
     beats: script.beats,
