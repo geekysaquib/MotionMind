@@ -143,6 +143,26 @@ describe('ReelEditorPage', () => {
     expect(screen.queryByRole('slider', { name: 'Start of the follow line' })).toBeNull();
   });
 
+  it('trims the silence at both ends of the recording and can go back to the whole file', async () => {
+    // Quiet for the first and last second, speech in between.
+    const peaks = Array.from({ length: 200 }, (_, i) => (i < 20 || i >= 180 ? 1 : 60));
+    const { calls } = await setup('editor', { ...EDITOR, upload: { ...EDITOR.upload!, track: { ...EDITOR.upload!.track, peaks }, cuts: [3, 7] } });
+    expect(screen.queryByRole('button', { name: 'Use the whole recording' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Trim the silence' }));
+    const start = Number(screen.getByRole('slider', { name: 'Start of the part that plays' }).getAttribute('aria-valuenow'));
+    const end = Number(screen.getByRole('slider', { name: 'End of the part that plays' }).getAttribute('aria-valuenow'));
+    expect(start).toBeGreaterThan(0.7);
+    expect(start).toBeLessThan(1);
+    expect(end).toBeGreaterThan(9);
+    expect(end).toBeLessThan(9.3);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    });
+    expect(calls.saved[0]!.upload).toMatchObject({ trimStart: start, trimEnd: end });
+    fireEvent.click(screen.getByRole('button', { name: 'Use the whole recording' }));
+    expect(screen.getByRole('slider', { name: 'Start of the part that plays' }).getAttribute('aria-valuenow')).toBe('0');
+  });
+
   it('offers to refit the scene breaks when the scene count changed', async () => {
     await setup('editor', { ...EDITOR, upload: { ...EDITOR.upload!, cuts: [5] } });
     expect(screen.getByRole('button', { name: 'Refit scene breaks' })).toBeTruthy();

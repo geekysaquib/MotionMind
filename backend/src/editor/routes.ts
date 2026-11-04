@@ -23,7 +23,7 @@ const pace = z.number().min(PACE_MIN).max(PACE_MAX);
 export const editorSchema = z
   .object({
     voiceSource: z.enum(['upload', 'elevenlabs']),
-    upload: z.object({ track: trackSchema, cuts: z.array(z.number().min(0)).max(80), closingAt: z.number().positive().nullable().optional() }).nullable(),
+    upload: z.object({ track: trackSchema, cuts: z.array(z.number().min(0)).max(80), closingAt: z.number().positive().nullable().optional(), trimStart: z.number().min(0).nullable().optional(), trimEnd: z.number().positive().nullable().optional() }).nullable(),
     pace,
     scenePace: z.array(pace).max(80),
     music: z.object({ track: trackSchema, volume: z.number().min(0).max(1) }).nullable(),
@@ -102,10 +102,15 @@ export function registerEditorRoutes(api: FastifyInstance, deps: AppDeps) {
         (c, i) => c >= MIN_SCENE_SEC - 0.01 && c <= track.durationSec - MIN_SCENE_SEC + 0.01 && (i === 0 || c - cuts[i - 1]! >= MIN_SCENE_SEC - 0.05),
       );
       if (!ordered) return reply.code(400).send({ error: 'invalid_cuts', message: 'The scene breaks must be in order, at least 0.3 s apart and inside the recording.' });
-      const { closingAt } = editor.upload;
+      const { closingAt, trimStart, trimEnd } = editor.upload;
+      const from = trimStart ?? 0;
+      const to = trimEnd ?? track.durationSec;
+      if (to > track.durationSec + 0.01 || to - from < 1 || (cuts.length && (cuts[0]! < from + MIN_SCENE_SEC - 0.05 || cuts[cuts.length - 1]! > to - MIN_SCENE_SEC + 0.05))) {
+        return reply.code(400).send({ error: 'invalid_trim', message: 'The trimmed part must be at least 1 second long and keep every scene break inside it.' });
+      }
       if (closingAt != null) {
-        const last = cuts.length ? cuts[cuts.length - 1]! : 0;
-        if (closingAt < last + MIN_SCENE_SEC - 0.05 || closingAt > track.durationSec - 0.3) {
+        const last = cuts.length ? cuts[cuts.length - 1]! : from;
+        if (closingAt < last + MIN_SCENE_SEC - 0.05 || closingAt > to - 0.3) {
           return reply.code(400).send({ error: 'invalid_closing', message: 'The follow line must start after the last scene break and before the end of the recording.' });
         }
       }

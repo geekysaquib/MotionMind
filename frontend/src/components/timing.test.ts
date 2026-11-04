@@ -127,3 +127,30 @@ describe('a follow line at the end of the recording', () => {
     expect(t.endFrames).toBe(Math.max(90, Math.round(2 * 30) + 15));
   });
 });
+
+describe('a trimmed recording', () => {
+  const spec = (trimStart?: number, trimEnd?: number, closingAt?: number): Pick<ReelSpec, 'beats' | 'voice' | 'pace' | 'scenePace' | 'voiceTrack'> => ({
+    beats, voice: [], pace: 1, scenePace: [], voiceTrack: { url: 'u', durationSec: 30, cuts: [12, 22], trimStart, trimEnd, closingAt },
+  });
+
+  it('plays only the trimmed part: the first scene starts where the trim starts and the last ends where it ends', () => {
+    const t = reelTiming(spec(2, 28));
+    expect(t.timed.map((b) => b.frames)).toEqual([300, 300, 180]);
+    expect(t.timed[0]!.audio?.srcStartSec).toBe(2);
+    expect(t.timed[1]!.audio?.srcStartSec).toBe(12);
+    expect(t.storyFrames).toBe(780);
+  });
+
+  it('is the whole file when the trim is missing or too short', () => {
+    expect(reelTiming(spec()).timed.map((b) => b.frames)).toEqual([360, 300, 240]);
+    expect(reelTiming(spec(10, 10.5)).timed.map((b) => b.frames)).toEqual([360, 300, 240]);
+  });
+
+  it('works with a follow line: it must lie before the trimmed end', () => {
+    const t = reelTiming(spec(2, 28, 26));
+    expect(t.timed.map((b) => b.frames)).toEqual([300, 300, 120]);
+    expect(t.closing).toEqual({ srcStartSec: 26, rate: 1 });
+    expect(t.endFrames).toBe(90); // 2 s left of the line is shorter than the usual end card
+    expect(reelTiming(spec(2, 25, 26)).closing).toBeNull();
+  });
+});

@@ -120,6 +120,23 @@ describe('reel editor routes', () => {
     expect((await put(null)).statusCode).toBe(200);
   });
 
+  it('saves a trimmed recording, and refuses a trim that cuts into a scene or leaves under a second', async () => {
+    const { app, id } = await setup();
+    const track = (await upload(app, id, 'voice', mp3())).json().track;
+    const put = (trimStart: number | null, trimEnd: number | null) => {
+      const e = editorFor(track);
+      return app.inject({ method: 'PUT', url: `/api/projects/${id}/editor`, headers: H, payload: { editor: { ...e, upload: { ...e.upload, trimStart, trimEnd } } } });
+    };
+    // editorFor cuts at 3 and 7 in a 10 second recording
+    const ok = await put(1, 9);
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().project.editor.upload).toMatchObject({ trimStart: 1, trimEnd: 9 });
+    expect((await put(3.1, 9)).statusCode).toBe(400); // starts after the first break
+    expect((await put(0, 6.9)).statusCode).toBe(400); // ends before the last break
+    expect((await put(0, 99)).statusCode).toBe(400); // longer than the file
+    expect((await put(null, null)).statusCode).toBe(200);
+  });
+
   it('refuses audio from another project, cuts out of order, and a cut count that does not match the scenes', async () => {
     const { app, id } = await setup();
     const track = (await upload(app, id, 'voice', mp3())).json().track;

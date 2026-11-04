@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from '@jest/globals';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { observer } from 'mobx-react-lite';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom';
 import type { Project, ReelScript } from '@motionmind/shared';
@@ -60,12 +60,13 @@ describe('GraphicsStagePage object positions', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Lock these positions' }));
     });
+    // The engine loads on demand, so wait for the result instead of assuming it is instant.
+    expect(await screen.findByText(/Object positions: locked/, undefined, { timeout: 15000 })).toBeTruthy();
     expect(Object.keys(saved[0]!.layout!).sort()).toEqual(['bank', 'you']);
-    expect(screen.getByText(/Object positions: locked/)).toBeTruthy();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Arrange automatically' }));
     });
+    await waitFor(() => expect(screen.getByText(/Object positions: automatic/)).toBeTruthy());
     expect(saved[1]!.layout).toBeUndefined();
-    expect(screen.getByText(/Object positions: automatic/)).toBeTruthy();
   });
 });

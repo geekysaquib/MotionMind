@@ -7,7 +7,9 @@ import {
   clampPace,
   DEFAULT_CAPTIONS,
   defaultClosingAt,
+  detectTrim,
   normalizeEditor,
+  trimWindow,
   PACE_MAX,
   PACE_MIN,
   PEAKS_PER_SEC,
@@ -110,7 +112,8 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
   const scenePace = (i: number) => draft.scenePace[i] ?? 1;
   const setScenePace = (i: number, v: number) =>
     patch({ scenePace: Array.from({ length: beats.length }, (_, j) => (j === i ? clampPace(v) : draft.scenePace[j] ?? 1)) });
-  const bounds = upload ? sceneBounds(upload.cuts, upload.track.durationSec) : [];
+  const win = upload ? trimWindow(upload) : { start: 0, end: 0 };
+  const bounds = upload ? sceneBounds(upload.cuts, upload.closingAt ?? win.end, win.start) : [];
   const total = bounds.reduce((n, b, i) => n + (b.end - b.start) / (clampPace(draft.pace) * scenePace(i)), 0);
 
   async function pick(kind: 'voice' | 'music', file: File | undefined) {
@@ -135,9 +138,9 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
   function refit() {
     if (!upload || !script) return;
     // With a follow line at the end, only the part before it is split into scenes.
-    const end = upload.closingAt ?? upload.track.durationSec;
-    const peaks = (upload.track.peaks ?? []).slice(0, Math.round(end * PEAKS_PER_SEC));
-    const cuts = autoCuts(peaks, end, script.beats.map((b) => b.narration));
+    const end = upload.closingAt ?? win.end;
+    const peaks = (upload.track.peaks ?? []).slice(Math.round(win.start * PEAKS_PER_SEC), Math.round(end * PEAKS_PER_SEC));
+    const cuts = autoCuts(peaks, end - win.start, script.beats.map((b) => b.narration)).map((c) => Math.round((c + win.start) * 100) / 100);
     patch({ upload: { ...upload, cuts } });
     log.info('editor', 'Scene breaks refitted', { projectId: project.id, scenes: beats.length });
   }
@@ -223,14 +226,30 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
                     onSelect={setScene}
                     closingAt={upload.closingAt}
                     onClosingChange={(closingAt) => patch({ upload: { ...upload, closingAt } })}
+                    trimStart={upload.trimStart}
+                    trimEnd={upload.trimEnd}
+                    onTrimChange={(t) => patch({ upload: { ...upload, ...t } })}
                   />
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-ink-400">
+                    <span>
+                      Using {win.start.toFixed(1)}s to {win.end.toFixed(1)}s of the recording. Drag the white handles at either end to cut off silence or a false start.
+                    </span>
+                    <Button variant="ghost" onClick={() => patch({ upload: { ...upload, ...(() => { const d = detectTrim(upload.track.peaks ?? [], upload.track.durationSec, upload.cuts, upload.closingAt); return { trimStart: d.start > 0.01 ? d.start : null, trimEnd: d.end < upload.track.durationSec - 0.01 ? d.end : null }; })() } })}>
+                      Trim the silence
+                    </Button>
+                    {(upload.trimStart != null || upload.trimEnd != null) && (
+                      <Button variant="ghost" onClick={() => patch({ upload: { ...upload, trimStart: null, trimEnd: null } })}>
+                        Use the whole recording
+                      </Button>
+                    )}
+                  </div>
                   <label className="flex items-start gap-2 text-sm">
                     <input
                       type="checkbox"
                       className="mt-1"
                       aria-label="My recording ends with the follow line"
                       checked={upload.closingAt != null}
-                      onChange={(e) => patch({ upload: { ...upload, closingAt: e.target.checked ? defaultClosingAt(upload.track.peaks ?? [], upload.track.durationSec, upload.cuts) : null } })}
+                      onChange={(e) => patch({ upload: { ...upload, closingAt: e.target.checked ? defaultClosingAt(upload.track.peaks ?? [], win.end, upload.cuts, undefined, win.start) : null } })}
                     />
                     <span>
                       My recording ends with the "follow us" line

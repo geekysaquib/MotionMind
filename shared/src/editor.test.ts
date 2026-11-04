@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { DEFAULT_CAPTIONS, clampClosingAt, clampPace, closingRange, defaultClosingAt, editorSpecParts, moveCut, normalizeEditor, sceneBounds, usesUploadedVoice, type ReelEditor } from './editor';
+import { DEFAULT_CAPTIONS, clampClosingAt, clampPace, clampTrimEnd, clampTrimStart, closingRange, defaultClosingAt, detectTrim, editorSpecParts, trimWindow, moveCut, normalizeEditor, sceneBounds, usesUploadedVoice, type ReelEditor } from './editor';
 
 const track = { path: 'u/p/voice-1.mp3', fileName: 'voice.mp3', mime: 'audio/mpeg', durationSec: 30 };
 const upload: ReelEditor = { ...normalizeEditor(null), upload: { track, cuts: [10, 20] } };
@@ -108,5 +108,47 @@ describe('the follow line at the end of a recording', () => {
     expect(editorSpecParts(e(null), 3, { voice: 'u' }).voiceTrack?.closingAt).toBeUndefined();
     expect(editorSpecParts(e(20.1), 3, { voice: 'u' }).voiceTrack?.closingAt).toBeUndefined();
     expect(editorSpecParts(e(29.9), 3, { voice: 'u' }).voiceTrack?.closingAt).toBeUndefined();
+  });
+});
+
+describe('trimming the recording', () => {
+  // 20 s at 20 peaks/s: 1.5 s of quiet, speech from 1.5 to 17, then quiet to the end.
+  const peaks = Array.from({ length: 400 }, (_, i) => (i >= 30 && i < 340 ? 55 : 1));
+  const withTrim = (trimStart: number | null, trimEnd: number | null, closingAt: number | null = null): ReelEditor => ({
+    ...upload,
+    upload: { track: { ...track, durationSec: 20 }, cuts: [6, 12], closingAt, trimStart, trimEnd },
+  });
+
+  it('finds the quiet at each end and keeps a small margin', () => {
+    const t = detectTrim(peaks, 20, [6, 12]);
+    expect(t.start).toBeGreaterThan(1.2);
+    expect(t.start).toBeLessThan(1.5);
+    expect(t.end).toBeGreaterThan(17);
+    expect(t.end).toBeLessThan(17.4);
+    expect(detectTrim([], 20, [6, 12])).toEqual({ start: 0, end: 20 });
+  });
+
+  it('never trims into a scene break or the follow line', () => {
+    expect(clampTrimStart(9, [6, 12], null, 20)).toBeCloseTo(5.7);
+    expect(clampTrimStart(-3, [6, 12], null, 20)).toBe(0);
+    expect(clampTrimEnd(1, [6, 12], null, 0, 20)).toBeCloseTo(12.3);
+    expect(clampTrimEnd(99, [6, 12], null, 0, 20)).toBe(20);
+    expect(clampTrimEnd(13, [6, 12], 14, 0, 20)).toBeCloseTo(14.4);
+  });
+
+  it('is the whole file unless the trimmed part is at least a second', () => {
+    expect(trimWindow({ track: { durationSec: 20 } })).toEqual({ start: 0, end: 20 });
+    expect(trimWindow({ track: { durationSec: 20 }, trimStart: 2, trimEnd: 18 })).toEqual({ start: 2, end: 18 });
+    expect(trimWindow({ track: { durationSec: 20 }, trimStart: 10, trimEnd: 10.5 })).toEqual({ start: 0, end: 20 });
+  });
+
+  it('reaches the engine, and the follow line is judged against the trimmed end', () => {
+    const p = editorSpecParts(withTrim(1.5, 18), 3, { voice: 'u' }).voiceTrack!;
+    expect(p.trimStart).toBe(1.5);
+    expect(p.trimEnd).toBe(18);
+    expect(editorSpecParts(withTrim(null, null), 3, { voice: 'u' }).voiceTrack).toMatchObject({ cuts: [6, 12] });
+    expect(editorSpecParts(withTrim(null, null), 3, { voice: 'u' }).voiceTrack!.trimStart).toBeUndefined();
+    expect(editorSpecParts(withTrim(null, 15, 14.8), 3, { voice: 'u' }).voiceTrack!.closingAt).toBeUndefined();
+    expect(editorSpecParts(withTrim(null, 15, 13), 3, { voice: 'u' }).voiceTrack!.closingAt).toBe(13);
   });
 });

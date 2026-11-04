@@ -144,7 +144,7 @@ export type ReelSpec = {
    * (seconds), so there is one cut fewer than beats. It replaces `voice` and `audioUrls`.
    */
   /** One recording for the whole reel. `closingAt` = where its follow line starts: the last scene ends there and the end card plays the line. */
-  voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number };
+  voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number };
   /** Speed of the voice for the whole reel (1 = as recorded). */
   pace?: number;
   /** Extra speed per scene, multiplied with `pace`. */
@@ -369,7 +369,7 @@ export interface TimingOptions {
   /** Playback speed per scene (1 = as recorded). Missing entries mean 1. */
   rates?: number[];
   /** One recording for the whole reel, cut into scenes. */
-  track?: { durationSec: number; cuts: number[]; closingAt?: number };
+  track?: { durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number };
 }
 
 const MIN_SCENE_FRAMES = Math.round(0.3 * FPS);
@@ -387,17 +387,26 @@ function spreadWords(words: string[], from: number, to: number): TimedBeat['word
   });
 }
 
+/** The part of the recording that plays, after trimming the quiet at either end. */
+export function windowOf(track: { durationSec: number; trimStart?: number; trimEnd?: number }): { start: number; end: number } {
+  const start = Math.min(Math.max(0, track.trimStart ?? 0), track.durationSec);
+  const end = Math.min(track.durationSec, track.trimEnd ?? track.durationSec);
+  return end - start >= 1 ? { start, end } : { start: 0, end: track.durationSec };
+}
+
 /** Where the follow line starts in a recording, when that is a usable point (after the last break, before the end). */
-export function closingOf(track: { durationSec: number; cuts: number[]; closingAt?: number } | undefined | null): number | null {
+export function closingOf(track: { durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number } | undefined | null): number | null {
   if (!track || track.closingAt == null) return null;
-  const last = track.cuts.length ? track.cuts[track.cuts.length - 1]! : 0;
-  return track.closingAt >= last + 0.3 - 1e-6 && track.closingAt <= track.durationSec - 0.4 + 1e-6 ? track.closingAt : null;
+  const w = windowOf(track);
+  const last = track.cuts.length ? track.cuts[track.cuts.length - 1]! : w.start;
+  return track.closingAt >= last + 0.3 - 1e-6 && track.closingAt <= w.end - 0.4 + 1e-6 ? track.closingAt : null;
 }
 
 export function timeBeats(beats: Beat[], voiceBeats: VoiceBeat[] = [], opts: TimingOptions = {}): TimedBeat[] {
   const track = opts.track && opts.track.durationSec > 0 && opts.track.cuts.length === beats.length - 1 ? opts.track : null;
   const useVoice = !track && voiceBeats.length === beats.length;
-  const edges = track ? [0, ...track.cuts, closingOf(track) ?? track.durationSec] : [];
+  const win = track ? windowOf(track) : { start: 0, end: 0 };
+  const edges = track ? [win.start, ...track.cuts, closingOf(track) ?? win.end] : [];
   let cursor = 0;
   return beats.map((beat, idx) => {
     const rate = Math.min(RATE_MAX, Math.max(RATE_MIN, opts.rates?.[idx] ?? 1));
@@ -444,14 +453,14 @@ export function timeBeats(beats: Beat[], voiceBeats: VoiceBeat[] = [], opts: Tim
 
 /** Frame layout of a reel: the timed beats, then a 3-second end card. */
 export function reelTiming(spec: Pick<ReelSpec, 'beats' | 'voice' | 'pace' | 'scenePace' | 'voiceTrack'>) {
-  const track = spec.voiceTrack ? { durationSec: spec.voiceTrack.durationSec, cuts: spec.voiceTrack.cuts, closingAt: spec.voiceTrack.closingAt } : undefined;
+  const track = spec.voiceTrack ? { durationSec: spec.voiceTrack.durationSec, cuts: spec.voiceTrack.cuts, closingAt: spec.voiceTrack.closingAt, trimStart: spec.voiceTrack.trimStart, trimEnd: spec.voiceTrack.trimEnd } : undefined;
   const timed = timeBeats(spec.beats, hasVoice(spec) && !track ? spec.voice : [], { rates: sceneRates(spec), track });
   const storyFrames = timed.reduce((n, b) => n + b.frames, 0);
   // With a follow line in the recording, the end card appears as the line starts and stays until it has been said.
   const usable = track && track.durationSec > 0 && track.cuts.length === spec.beats.length - 1;
   const at = usable ? closingOf(track) : null;
   const pace = Number.isFinite(spec.pace) && spec.pace! > 0 ? Math.min(RATE_MAX, Math.max(RATE_MIN, spec.pace!)) : 1;
-  const endFrames = at != null ? Math.max(END_CARD_FRAMES, Math.round(((track!.durationSec - at) / pace) * FPS) + Math.round(0.5 * FPS)) : END_CARD_FRAMES;
+  const endFrames = at != null ? Math.max(END_CARD_FRAMES, Math.round(((windowOf(track!).end - at) / pace) * FPS) + Math.round(0.5 * FPS)) : END_CARD_FRAMES;
   return { timed, storyFrames, endFrames, totalFrames: storyFrames + endFrames, closing: at != null ? { srcStartSec: at, rate: pace } : null };
 }
 

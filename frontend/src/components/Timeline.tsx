@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
-import { clampClosingAt, MIN_SCENE_SEC, moveCut, sceneBounds, PEAKS_PER_SEC } from '@motionmind/shared';
+import { clampClosingAt, clampTrimEnd, clampTrimStart, MIN_SCENE_SEC, moveCut, sceneBounds, PEAKS_PER_SEC } from '@motionmind/shared';
 import { cn } from '../lib/cn';
 
 interface Props {
@@ -16,6 +16,10 @@ interface Props {
   /** Where the "follow us" line starts, when the recording ends with one. The last scene ends there. */
   closingAt?: number | null;
   onClosingChange?: (t: number) => void;
+  /** Trim: the recording plays only from `trimStart` to `trimEnd` (seconds in the file). */
+  trimStart?: number | null;
+  trimEnd?: number | null;
+  onTrimChange?: (t: { trimStart?: number | null; trimEnd?: number | null }) => void;
 }
 
 const H = 104;
@@ -23,11 +27,13 @@ const H = 104;
 const CLIP = ['#E8734A', '#0D9488', '#7C3AED', '#0EA5E9'];
 
 /** The recording as a waveform, with one draggable break per scene. Arrow keys nudge a focused break by 0.05 s. */
-export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelect, playheadSec, closingAt, onClosingChange }: Props) {
+export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelect, playheadSec, closingAt, onClosingChange, trimStart, trimEnd, onTrimChange }: Props) {
   const box = useRef<HTMLDivElement>(null);
-  const [drag, setDrag] = useState<number | 'closing' | null>(null);
-  const sceneEnd = closingAt ?? durationSec;
-  const bounds = sceneBounds(cuts, sceneEnd);
+  const [drag, setDrag] = useState<number | 'closing' | 'ts' | 'te' | null>(null);
+  const from = trimStart ?? 0;
+  const to = trimEnd ?? durationSec;
+  const sceneEnd = closingAt ?? to;
+  const bounds = sceneBounds(cuts, sceneEnd, from);
   const pct = (t: number) => `${(t / durationSec) * 100}%`;
 
   const timeAt = (clientX: number) => {
@@ -35,29 +41,38 @@ export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelec
     return Math.min(durationSec, Math.max(0, ((clientX - r.left) / Math.max(1, r.width)) * durationSec));
   };
 
-  const down = (k: number | 'closing') => (e: PointerEvent) => {
+  const down = (k: number | 'closing' | 'ts' | 'te') => (e: PointerEvent) => {
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     setDrag(k);
   };
   const move = (e: PointerEvent) => {
     if (drag === null) return;
-    if (drag === 'closing') onClosingChange?.(clampClosingAt(timeAt(e.clientX), cuts, durationSec));
-    else onChange(moveCut(cuts, drag, timeAt(e.clientX), sceneEnd, MIN_SCENE_SEC));
+    if (drag === 'closing') onClosingChange?.(clampClosingAt(timeAt(e.clientX), cuts, to, from));
+    else if (drag === 'ts') onTrimChange?.({ trimStart: clampTrimStart(timeAt(e.clientX), cuts, closingAt, to) });
+    else if (drag === 'te') onTrimChange?.({ trimEnd: clampTrimEnd(timeAt(e.clientX), cuts, closingAt, from, durationSec) });
+    else onChange(moveCut(cuts, drag, timeAt(e.clientX), sceneEnd, MIN_SCENE_SEC, from));
   };
   const key = (k: number) => (e: KeyboardEvent) => {
     const step = e.shiftKey ? 0.25 : 0.05;
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
-      onChange(moveCut(cuts, k, cuts[k]! + (e.key === 'ArrowLeft' ? -step : step), sceneEnd, MIN_SCENE_SEC));
+      onChange(moveCut(cuts, k, cuts[k]! + (e.key === 'ArrowLeft' ? -step : step), sceneEnd, MIN_SCENE_SEC, from));
     }
   };
   const closingKey = (e: KeyboardEvent) => {
     const step = e.shiftKey ? 0.25 : 0.05;
     if (closingAt != null && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
       e.preventDefault();
-      onClosingChange?.(clampClosingAt(closingAt + (e.key === 'ArrowLeft' ? -step : step), cuts, durationSec));
+      onClosingChange?.(clampClosingAt(closingAt + (e.key === 'ArrowLeft' ? -step : step), cuts, to, from));
     }
+  };
+  const trimKey = (which: 'ts' | 'te') => (e: KeyboardEvent) => {
+    const step = (e.shiftKey ? 0.25 : 0.05) * (e.key === 'ArrowLeft' ? -1 : 1);
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    if (which === 'ts') onTrimChange?.({ trimStart: clampTrimStart(from + step, cuts, closingAt, to) });
+    else onTrimChange?.({ trimEnd: clampTrimEnd(to + step, cuts, closingAt, from, durationSec) });
   };
 
   const bars = peaks.length ? peaks : [];
@@ -112,6 +127,30 @@ export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelec
           <div className={cn('mx-auto h-full w-0.5 bg-coral group-focus:w-1', drag === k && 'w-1')} />
         </div>
       ))}
+      {onTrimChange && (
+        <>
+          {from > 0.01 && <div className="pointer-events-none absolute bottom-0 left-0 top-0 bg-ink-100/20 backdrop-blur-[1px]" style={{ width: pct(from) }} aria-hidden />}
+          {to < durationSec - 0.01 && <div className="pointer-events-none absolute bottom-0 right-0 top-0 bg-ink-100/20 backdrop-blur-[1px]" style={{ left: pct(to) }} aria-hidden />}
+          {([['ts', from, 'Start of the part that plays'], ['te', to, 'End of the part that plays']] as const).map(([which, t, label]) => (
+            <div
+              key={which}
+              role="slider"
+              tabIndex={0}
+              aria-label={label}
+              aria-valuemin={0}
+              aria-valuemax={durationSec}
+              aria-valuenow={Number(t.toFixed(2))}
+              aria-valuetext={`${t.toFixed(2)} seconds`}
+              onPointerDown={down(which)}
+              onKeyDown={trimKey(which)}
+              className="group absolute bottom-0 top-0 -ml-2 w-4 cursor-ew-resize focus:outline-none"
+              style={{ left: pct(t) }}
+            >
+              <div className={cn('mx-auto h-full w-1 rounded bg-ink-100', drag === which && 'w-1.5')} />
+            </div>
+          ))}
+        </>
+      )}
       {closingAt != null && (
         <>
           <div className="pointer-events-none absolute bottom-0 top-0 bg-violet-500/10" style={{ left: pct(closingAt), right: 0 }} aria-hidden />

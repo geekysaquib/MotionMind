@@ -40,7 +40,7 @@ export interface ReelEditor {
    * The uploaded voiceover (one file for the whole reel) and where each scene after the first starts in it, in
    * seconds. There is one cut fewer than there are scenes.
    */
-  upload: { track: AudioTrack; cuts: number[]; closingAt?: number | null } | null;
+  upload: { track: AudioTrack; cuts: number[]; closingAt?: number | null; trimStart?: number | null; trimEnd?: number | null } | null;
   /** Speed of the voice for the whole reel. 1 = as recorded. */
   pace: number;
   /** Extra speed for single scenes, multiplied with `pace`. Missing entries mean 1. */
@@ -88,7 +88,7 @@ export function usesUploadedVoice(editor: ReelEditor | null | undefined, beatCou
 export interface EditorSpecParts {
   pace?: number;
   scenePace?: number[];
-  voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number };
+  voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number };
   music?: { url: string; durationSec: number; volume: number };
   captions?: CaptionStyle;
 }
@@ -103,7 +103,10 @@ export function editorSpecParts(editor: ReelEditor | null | undefined, beatCount
   if (usesUploadedVoice(editor, beatCount) && urls.voice) {
     const up = editor.upload!;
     out.voiceTrack = { url: urls.voice, durationSec: up.track.durationSec, cuts: up.cuts };
-    const r = closingRange(up.cuts, up.track.durationSec);
+    const w = trimWindow(up);
+    if (w.start > 0.01) out.voiceTrack.trimStart = w.start;
+    if (w.end < up.track.durationSec - 0.01) out.voiceTrack.trimEnd = w.end;
+    const r = closingRange(up.cuts, w.end, w.start);
     if (up.closingAt != null && up.closingAt >= r.lo && up.closingAt <= r.hi) out.voiceTrack.closingAt = up.closingAt;
   }
   if (editor.music && urls.music) {
@@ -116,9 +119,9 @@ export function editorSpecParts(editor: ReelEditor | null | undefined, beatCount
  * Moves one scene break to `t` seconds, keeping every scene at least `min` long, and returns the new cuts.
  * Cut k is where scene k + 1 starts.
  */
-export function moveCut(cuts: number[], k: number, t: number, durationSec: number, min = MIN_SCENE_SEC): number[] {
+export function moveCut(cuts: number[], k: number, t: number, durationSec: number, min = MIN_SCENE_SEC, startSec = 0): number[] {
   if (k < 0 || k >= cuts.length) return cuts;
-  const lo = (k > 0 ? cuts[k - 1]! : 0) + min;
+  const lo = (k > 0 ? cuts[k - 1]! : startSec) + min;
   const hi = (k < cuts.length - 1 ? cuts[k + 1]! : durationSec) - min;
   if (hi < lo) return cuts;
   const next = Math.round(Math.min(hi, Math.max(lo, t)) * 100) / 100;
@@ -126,19 +129,19 @@ export function moveCut(cuts: number[], k: number, t: number, durationSec: numbe
 }
 
 /** Where the "follow us" line can start: after the last scene has had at least MIN_SCENE_SEC, and with a moment left to say it. */
-export function closingRange(cuts: number[], durationSec: number): { lo: number; hi: number } {
-  return { lo: (cuts.length ? cuts[cuts.length - 1]! : 0) + MIN_SCENE_SEC, hi: durationSec - 0.4 };
+export function closingRange(cuts: number[], durationSec: number, startSec = 0): { lo: number; hi: number } {
+  return { lo: (cuts.length ? cuts[cuts.length - 1]! : startSec) + MIN_SCENE_SEC, hi: durationSec - 0.4 };
 }
 
 /** Keeps a follow-line start inside the allowed range, rounded to 1/100 s. */
-export function clampClosingAt(t: number, cuts: number[], durationSec: number): number {
-  const { lo, hi } = closingRange(cuts, durationSec);
+export function clampClosingAt(t: number, cuts: number[], durationSec: number, startSec = 0): number {
+  const { lo, hi } = closingRange(cuts, durationSec, startSec);
   return Math.round(Math.min(Math.max(lo, hi), Math.max(lo, t)) * 100) / 100;
 }
 
 /** The follow-line start a recording usually has: where its last burst of speech begins (a pause of 0.5 s or more before it). */
-export function defaultClosingAt(peaks: number[], durationSec: number, cuts: number[], peaksPerSec = PEAKS_PER_SEC): number {
-  const fallback = clampClosingAt(durationSec - 4, cuts, durationSec);
+export function defaultClosingAt(peaks: number[], durationSec: number, cuts: number[], peaksPerSec = PEAKS_PER_SEC, startSec = 0): number {
+  const fallback = clampClosingAt(durationSec - 4, cuts, durationSec, startSec);
   if (!peaks.length) return fallback;
   const loud = Math.max(...peaks);
   const quiet = Math.max(6, loud * 0.12);
@@ -156,11 +159,47 @@ export function defaultClosingAt(peaks: number[], durationSec: number, cuts: num
   const t = start / peaksPerSec;
   // A "last burst" longer than 8 s is the last scene itself, not a follow line.
   if (durationSec - t > 8 || t <= 0) return fallback;
-  return clampClosingAt(t - 0.1, cuts, durationSec);
+  return clampClosingAt(t - 0.1, cuts, durationSec, startSec);
+}
+
+/** The part of the recording that is used: [start, end] in seconds, after trimming. */
+export function trimWindow(up: { track: { durationSec: number }; trimStart?: number | null; trimEnd?: number | null }): { start: number; end: number } {
+  const d = up.track.durationSec;
+  const start = Math.min(Math.max(0, up.trimStart ?? 0), d);
+  const end = Math.min(d, up.trimEnd ?? d);
+  return end - start >= 1 ? { start, end } : { start: 0, end: d };
+}
+
+/** Earliest and latest the start of the recording can be trimmed to: before the first scene break (or follow line). */
+export function clampTrimStart(t: number, cuts: number[], closingAt: number | null | undefined, endSec: number): number {
+  const first = cuts.length ? cuts[0]! : closingAt ?? endSec - 1;
+  const hi = Math.max(0, first - MIN_SCENE_SEC);
+  return Math.round(Math.min(hi, Math.max(0, t)) * 100) / 100;
+}
+
+/** The end of the recording can be trimmed to anywhere after the last scene break (or after the follow line has begun). */
+export function clampTrimEnd(t: number, cuts: number[], closingAt: number | null | undefined, startSec: number, durationSec: number): number {
+  const lo = closingAt != null ? closingAt + 0.4 : cuts.length ? cuts[cuts.length - 1]! + MIN_SCENE_SEC : startSec + 1;
+  return Math.round(Math.min(durationSec, Math.max(Math.min(lo, durationSec), t)) * 100) / 100;
+}
+
+/** Finds the quiet at the start and the end of a recording, keeping a short margin so nothing is clipped. */
+export function detectTrim(peaks: number[], durationSec: number, cuts: number[], closingAt?: number | null, peaksPerSec = PEAKS_PER_SEC): { start: number; end: number } {
+  if (!peaks.length) return { start: 0, end: durationSec };
+  const loud = Math.max(...peaks);
+  const quiet = Math.max(6, loud * 0.1);
+  let a = 0;
+  while (a < peaks.length - 1 && peaks[a]! < quiet) a++;
+  let b = peaks.length - 1;
+  while (b > a && peaks[b]! < quiet) b--;
+  const margin = 0.15;
+  const start = clampTrimStart(a / peaksPerSec - margin, cuts, closingAt, durationSec);
+  const end = clampTrimEnd((b + 1) / peaksPerSec + margin, cuts, closingAt, start, durationSec);
+  return { start, end };
 }
 
 /** Start and end of every scene in the uploaded file, in seconds. */
-export function sceneBounds(cuts: number[], durationSec: number): { start: number; end: number }[] {
-  const edges = [0, ...cuts, durationSec];
+export function sceneBounds(cuts: number[], durationSec: number, startSec = 0): { start: number; end: number }[] {
+  const edges = [startSec, ...cuts, durationSec];
   return edges.slice(0, -1).map((start, i) => ({ start, end: edges[i + 1]! }));
 }
