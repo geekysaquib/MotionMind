@@ -5,7 +5,7 @@ import { C, World } from './World';
 import { Backdrop } from './Backdrop';
 import { IsoWorld, frameScene, layoutProps, themeFade } from './IsoWorld';
 import { withScenes } from './autoScene';
-import { cameraAt, fxAt, pinProgressAt } from './Reel';
+import { cameraAt, fxAt, logoUrlsOf, pinProgressAt, useLogosLoaded } from './Reel';
 import { Highlight } from './Ui';
 import { fitHeadline, worldRegion, type CoverProps } from './coverLayout';
 
@@ -87,6 +87,8 @@ export const Cover: React.FC<CoverSpec> = (input) => {
   const { cover, ...rest } = input;
   const { width: W, height: H, fps } = useVideoConfig();
   const spec = useMemo(() => withScenes(rest as ReelSpec), [rest]);
+  // The picture is taken only after the company logos have loaded.
+  useLogosLoaded(useMemo(() => logoUrlsOf(spec), [spec]));
   const { timed, storyFrames } = useMemo(() => reelTiming(spec), [spec]);
   const placed = useMemo(() => layoutProps(timed, spec.layout), [timed, spec.layout]);
   const idx = Math.min(timed.length - 1, Math.max(0, Math.round(cover.scene) || 0));
@@ -102,7 +104,7 @@ export const Cover: React.FC<CoverSpec> = (input) => {
 
   const world =
     spec.world === 'iso' ? (
-      <IsoWorld frame={frame} fps={fps} cam={frameScene(beat.scene, placed, region)} beat={beat} placed={placed} theme={spec.theme} fade={false} />
+      <IsoWorld frame={frame} fps={fps} cam={frameScene(beat.scene, placed, region)} beat={beat} placed={placed} theme={spec.theme} fade={false} logoBase={spec.logoBase} />
     ) : spec.world === 'train' ? (
       <World frame={frame} fps={fps} cam={cameraAt(timed, storyFrames, frame, fps)} fx={fxAt(timed, frame)} pinProgress={pinProgressAt(timed, frame, fps)} />
     ) : (

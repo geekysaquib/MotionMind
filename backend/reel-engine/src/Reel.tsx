@@ -80,8 +80,13 @@ export function pinProgressAt(timed: TimedBeat[], frame: number, fps: number): n
   return clamp01((frame - first.start - 10) / (3.5 * fps));
 }
 
+/** Every logo image a reel uses (company chips and logo tiles), so they can be loaded before drawing. */
+export function logoUrlsOf(spec: Pick<ReelSpec, 'brands' | 'beats' | 'logoBase'>): string[] {
+  return [...new Set([...(spec.brands ?? []).map((b) => logoUrl(spec.logoBase, b.domain, b.name)), ...spec.beats.flatMap((b) => (b.scene?.props ?? []).flatMap((p) => (p.logo ? [logoUrl(spec.logoBase, p.logo, p.label)] : [])))])];
+}
+
 /** Loads every company logo before a frame is drawn (a missing one is skipped, never an error). */
-function useLogosLoaded(urls: string[]) {
+export function useLogosLoaded(urls: string[]) {
   const key = urls.join('|');
   const [handle] = useState(() => (urls.length ? delayRender('Loading company logos') : null));
   useEffect(() => {
@@ -107,10 +112,7 @@ function useLogosLoaded(urls: string[]) {
 export const Reel: React.FC<ReelSpec> = (input) => {
   // Every beat gets a 3D scene (or train shot), even when the script didn't describe one.
   const spec = useMemo(() => withScenes(input), [input]);
-  const logoUrls = useMemo(
-    () => [...new Set([...(spec.brands ?? []).map((b) => logoUrl(spec.logoBase, b.domain, b.name)), ...spec.beats.flatMap((b) => (b.scene?.props ?? []).flatMap((p) => (p.logo ? [logoUrl(spec.logoBase, p.logo, p.label)] : [])))])],
-    [spec.brands, spec.beats, spec.logoBase],
-  );
+  const logoUrls = useMemo(() => logoUrlsOf(spec), [spec]);
   useLogosLoaded(logoUrls);
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();

@@ -109,7 +109,7 @@ export function logoItems(p: { id: string; pos: Vec3; url: string; initials: str
     depth: d + 0.7,
     el: (
       <g key={`li${k}`} transform={`matrix(${COS30 * s} ${0.5 * s} 0 ${s} ${e} ${f})`}>
-        <image href={p.url} x={0} y={0} width={24} height={24} preserveAspectRatio="xMidYMid meet" />
+        <image href={p.url} x={0} y={0} width={24} height={24} preserveAspectRatio="xMidYMid meet" onError={(e) => ((e.currentTarget as SVGImageElement).style.display = 'none')} />
       </g>
     ),
   });
