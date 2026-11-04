@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 // The engine's own logic, tested here because the engine has no Jest project of its own.
-import { footprint, isoCamera, layoutProps, propTop } from '../../../backend/reel-engine/src/IsoWorld';
+import { arcFor, footprint, isoCamera, KIND_SCALE, layoutProps, propTop } from '../../../backend/reel-engine/src/IsoWorld';
 import { toScreen } from '../../../backend/reel-engine/src/iso';
 import { reelTiming, type ReelSpec } from '../../../backend/reel-engine/src/script';
 
@@ -112,5 +112,29 @@ describe('footprint-aware layout', () => {
   it('gives wide objects more room than small ones', () => {
     expect(footprint('train')[0]).toBeGreaterThan(footprint('phone')[0] * 4);
     expect(footprint('custom', { id: 'x', kind: 'custom', glyph: 'wheat' })[0]).toBeGreaterThan(1);
+  });
+});
+
+describe('links and big vehicles', () => {
+  const at = (id: string, kind: string, x: number, y: number) => ({ id, kind: kind as never, spec: { id, kind: kind as never }, pos: { x, y, z: 0 }, appearsAt: 0 });
+
+  it('a link goes straight when nothing is in the way, and bends away from an object that is', () => {
+    const a = at('a', 'phone', 0, 0);
+    const b = at('b', 'phone', 12, 0);
+    expect(arcFor(a, b, [a, b])).toEqual({ dx: 0, dy: 0, lift: 0 });
+    const blocker = at('c', 'bank', 6, 0.3);
+    const arc = arcFor(a, b, [a, b, blocker]);
+    expect(Math.hypot(arc.dx, arc.dy)).toBeGreaterThan(0.5);
+    expect(Math.hypot(arc.dx, arc.dy)).toBeLessThanOrEqual(2.2 + 1e-9);
+    // It bends to the side the blocker is not on (the blocker sits slightly toward +y).
+    expect(arc.dy).toBeLessThan(0);
+    // An object that is only near an end does not bend it.
+    expect(arcFor(a, b, [a, b, at('d', 'bank', 0.5, 1)])).toEqual({ dx: 0, dy: 0, lift: 0 });
+  });
+
+  it('draws trains, planes and ships smaller, and their footprint follows', () => {
+    expect(KIND_SCALE.train).toBeLessThan(1);
+    expect(footprint('train')[0]).toBeCloseTo(2.9 * KIND_SCALE.train!, 5);
+    expect(footprint('phone')[0]).toBe(0.5);
   });
 });

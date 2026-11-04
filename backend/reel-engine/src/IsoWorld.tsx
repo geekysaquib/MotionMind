@@ -27,8 +27,17 @@ const FOOT: Partial<Record<string, [number, number]>> = {
   tower: [0.6, 0.6], windmill: [0.7, 0.7], phone: [0.5, 0.4], person: [0.4, 0.4], rocket: [0.9, 0.9], gear: [1.2, 1.2], flame: [0.9, 0.5], atm: [0.9, 0.6], speaker: [0.7, 0.6], tree: [1.0, 0.8],
 };
 
-/** Ground footprint (half-extents) of a placed object. */
+/** Big vehicles are drawn a little smaller, so a scene with several of them does not need a huge camera pull-back. */
+export const KIND_SCALE: Partial<Record<string, number>> = { train: 0.78, plane: 0.78, ship: 0.82, bus: 0.88, truck: 0.88 };
+
+/** Ground footprint (half-extents) of a placed object, as drawn. */
 export function footprint(kind: string, spec?: ScenePropSpec): [number, number] {
+  const sc = KIND_SCALE[kind] ?? 1;
+  const f = rawFootprint(kind, spec);
+  return [f[0] * sc, f[1] * sc];
+}
+
+function rawFootprint(kind: string, spec?: ScenePropSpec): [number, number] {
   if (kind === 'custom') {
     if (hasGlyph(spec?.glyph)) return [1.2, 0.7];
     return ({ block: [1.0, 1.0], tall: [0.7, 0.7], wide: [1.5, 1.0], flat: [1.4, 1.4], round: [1.0, 1.0] } as Record<string, [number, number]>)[spec?.shape ?? 'block'] ?? [1.0, 1.0];
@@ -37,6 +46,8 @@ export function footprint(kind: string, spec?: ScenePropSpec): [number, number] 
 }
 
 const GAP = 1.5;
+/** Objects that appear in the same scene sit a little closer, so the camera does not have to pull back so far. */
+const GAP_TOGETHER = 0.8;
 const GRID = 0.8;
 
 /**
@@ -59,6 +70,7 @@ export function layoutProps(timed: TimedBeat[]): Map<string, PlacedProp> {
     const anchor: { x: number; y: number } = known.length
       ? { x: known.reduce((n, q) => n + q.pos.x, 0) / known.length, y: known.reduce((n, q) => n + q.pos.y, 0) / known.length }
       : { x: last ? last.x + 6 : 0, y: 0 };
+    const together = new Set(specs.map((sp) => sp.id));
     for (const sp of specs) {
       if (placed.has(sp.id)) continue;
       const f = footprint(sp.kind, sp);
@@ -69,7 +81,8 @@ export function layoutProps(timed: TimedBeat[]): Map<string, PlacedProp> {
           let free = true;
           for (const [id, q] of placed) {
             const g = feet.get(id)!;
-            if (Math.abs(q.pos.x - cx) < g[0] + f[0] + GAP && Math.abs(q.pos.y - cy) < g[1] + f[1] + GAP) {
+            const gap = together.has(id) ? GAP_TOGETHER : GAP;
+            if (Math.abs(q.pos.x - cx) < g[0] + f[0] + gap && Math.abs(q.pos.y - cy) < g[1] + f[1] + gap) {
               free = false;
               break;
             }
@@ -183,9 +196,44 @@ const SHAPE_TOP: Record<PropShape, number> = { block: 2.2, tall: 4.2, wide: 1.5,
 
 /** Height of a prop: where its icon, label and links attach. */
 export function propTop(p: PlacedProp): number {
+  return rawTop(p) * (KIND_SCALE[p.kind] ?? 1);
+}
+
+function rawTop(p: PlacedProp): number {
   if (p.kind === 'custom' && hasGlyph(p.spec.glyph)) return GLYPH_TOP;
   if (p.kind === 'custom') return SHAPE_TOP[p.spec.shape ?? 'block'] ?? SHAPE_TOP.block;
   return PROP_TOP[p.kind as keyof typeof PROP_TOP] ?? EXTRA_TOP[p.kind as ExtraKind] ?? MORE_TOP[p.kind as MoreKind] ?? SHAPE_TOP.block;
+}
+
+/**
+ * How a link between two objects bends to get around the other objects near its straight line: sideways (dx, dy in
+ * world units, at the middle of the arc, away from the blocker) and extra height. Zero when nothing is in the way.
+ */
+export function arcFor(a: PlacedProp, b: PlacedProp, all: PlacedProp[]): { dx: number; dy: number; lift: number } {
+  const vx = b.pos.x - a.pos.x;
+  const vy = b.pos.y - a.pos.y;
+  const len = Math.hypot(vx, vy) || 1;
+  let worst = 0;
+  let side = 0;
+  let lift = 0;
+  for (const o of all) {
+    if (o.id === a.id || o.id === b.id) continue;
+    const t = ((o.pos.x - a.pos.x) * vx + (o.pos.y - a.pos.y) * vy) / (len * len);
+    if (t < 0.12 || t > 0.88) continue;
+    const cross = ((o.pos.x - a.pos.x) * vy - (o.pos.y - a.pos.y) * vx) / len; // signed distance from the line
+    const f = footprint(o.kind, o.spec);
+    const reach = Math.max(f[0], f[1]) + 0.6;
+    if (Math.abs(cross) >= reach) continue;
+    const need = Math.min(2.2, reach - Math.abs(cross) + 0.6);
+    if (need > worst) {
+      worst = need;
+      side = cross >= 0 ? -1 : 1;
+      lift = Math.max(0, propTop(o) - 1.5);
+    }
+  }
+  if (!worst) return { dx: 0, dy: 0, lift: 0 };
+  // Perpendicular to the link, pointing away from the blocker.
+  return { dx: (-vy / len) * worst * side * -1, dy: (vx / len) * worst * side * -1, lift: Math.min(1.2, lift) };
 }
 
 /** Any object the named kinds can't draw: a body in the object's colour and shape; its emoji floats above it. */
@@ -416,11 +464,14 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
     const drop = spring({ frame: frame - p.appearsAt - 4, fps, config: { damping: 13, mass: 0.7 } });
     const lift = (1 - drop) * 3;
     const its = propItems({ ...p, pos: { ...p.pos, z: 0 } }, inScene.has(p.id) ? accent : '#B8BCC6', frame);
+    const sc = KIND_SCALE[p.kind] ?? 1;
+    const [bx, by] = project({ ...p.pos, z: 0 });
+    const scaleAbout = sc === 1 ? '' : ` translate(${bx} ${by}) scale(${sc}) translate(${-bx} ${-by})`;
     items.push(
       ...its.map((it, j) => ({
         depth: it.depth + 0.0001 * j,
         el: (
-          <g key={`${p.id}-${j}`} transform={`translate(0 ${-lift})`} opacity={clamp01(drop * 1.6) * (inScene.has(p.id) || !scene ? 1 : 0.55)}>
+          <g key={`${p.id}-${j}`} transform={`translate(0 ${-lift})${scaleAbout}`} opacity={clamp01(drop * 1.6) * (inScene.has(p.id) || !scene ? 1 : 0.55)}>
             {it.el}
           </g>
         ),
@@ -451,6 +502,7 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
   };
 
   // Where every label goes, with overlaps resolved (prop labels first, then the labels on links).
+  const props0 = [...placed.values()];
   const lay = (() => {
     const props = (scene?.props ?? []).map((sp) => {
       const pp = placed.get(sp.id);
@@ -468,7 +520,9 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
       if (!a || !b) return;
       const n = scene?.links?.length ?? 1;
       const t = n > 1 ? [0.5, 0.3, 0.7, 0.4][index % 4]! : 0.5;
-      const mid = toScreen({ x: lerp(a.pos.x, b.pos.x, t), y: lerp(a.pos.y, b.pos.y, t), z: lerp(propTop(a) * 0.7, propTop(b) * 0.7, t) + Math.sin(Math.PI * t) * 2.2 + 0.9 }, cam);
+      const arc = arcFor(a, b, props0.filter((q) => inScene.has(q.id)));
+      const w = Math.sin(Math.PI * t);
+      const mid = toScreen({ x: lerp(a.pos.x, b.pos.x, t) + arc.dx * w, y: lerp(a.pos.y, b.pos.y, t) + arc.dy * w, z: lerp(propTop(a) * 0.7, propTop(b) * 0.7, t) + w * (2.2 + arc.lift) + 0.9 }, cam);
       links.push({ index, x: mid[0], y: mid[1], dy: 0, w: pillWidth(l.label) });
     });
     const boxes: LabelBox[] = [
@@ -536,7 +590,8 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
           const A = { ...a.pos, z: propTop(a) * 0.7 };
           const B = { ...b.pos, z: propTop(b) * 0.7 };
           const N = 24;
-          const pt = (t: number) => toScreen({ x: lerp(A.x, B.x, t), y: lerp(A.y, B.y, t), z: lerp(A.z, B.z, t) + Math.sin(Math.PI * t) * 2.2 }, cam);
+          const arc = arcFor(a, b, props.filter((q) => inScene.has(q.id)));
+          const pt = (t: number) => toScreen({ x: lerp(A.x, B.x, t) + arc.dx * Math.sin(Math.PI * t), y: lerp(A.y, B.y, t) + arc.dy * Math.sin(Math.PI * t), z: lerp(A.z, B.z, t) + Math.sin(Math.PI * t) * (2.2 + arc.lift) }, cam);
           const path = Array.from({ length: Math.max(2, Math.round(N * grow)) }, (_, j) => pt((j / (N - 1)) * grow));
           const loop = 2 * fps;
           const pk = pt(((local + i * 13) % loop) / loop);
