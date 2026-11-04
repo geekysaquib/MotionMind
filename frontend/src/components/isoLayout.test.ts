@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 // The engine's own logic, tested here because the engine has no Jest project of its own.
-import { isoCamera, layoutProps, propTop } from '../../../backend/reel-engine/src/IsoWorld';
+import { footprint, isoCamera, layoutProps, propTop } from '../../../backend/reel-engine/src/IsoWorld';
 import { toScreen } from '../../../backend/reel-engine/src/iso';
 import { reelTiming, type ReelSpec } from '../../../backend/reel-engine/src/script';
 
@@ -91,5 +91,26 @@ describe('label declutter', () => {
     expect(shift.get('a')).toBe(0);
     expect(shift.get('b')).toBeGreaterThan(0);
     expect(shift.get('c')).toBe(0);
+  });
+});
+
+describe('footprint-aware layout', () => {
+  it.each(['soundbox', 'vaccine', 'models', 'models2', 'icons'])('never puts two objects on top of each other: %s sample', (name) => {
+    const placed = [...layoutProps(reelTiming(sample(name)).timed).values()];
+    for (let i = 0; i < placed.length; i++)
+      for (let j = i + 1; j < placed.length; j++) {
+        const a = placed[i]!;
+        const b = placed[j]!;
+        const fa = footprint(a.kind, a.spec);
+        const fb = footprint(b.kind, b.spec);
+        const apartX = Math.abs(a.pos.x - b.pos.x) >= fa[0] + fb[0];
+        const apartY = Math.abs(a.pos.y - b.pos.y) >= fa[1] + fb[1];
+        expect(apartX || apartY).toBe(true);
+      }
+  });
+
+  it('gives wide objects more room than small ones', () => {
+    expect(footprint('train')[0]).toBeGreaterThan(footprint('phone')[0] * 4);
+    expect(footprint('custom', { id: 'x', kind: 'custom', glyph: 'wheat' })[0]).toBeGreaterThan(1);
   });
 });

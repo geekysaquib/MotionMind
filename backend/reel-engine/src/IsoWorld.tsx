@@ -20,19 +20,34 @@ export interface PlacedProp {
   appearsAt: number;
 }
 
-const STEP_X = 6.4;
-const STEP_Y = 5.2;
+/** Half the width (x) and depth (y) an object takes on the ground, in world units, so neighbours can be kept apart. */
+const FOOT: Partial<Record<string, [number, number]>> = {
+  train: [2.9, 0.9], plane: [2.5, 2.2], ship: [2.1, 1.3], bus: [1.6, 0.8], truck: [1.5, 0.8], car: [1.1, 0.7], bank: [1.5, 1.2], factory: [1.4, 1.0], school: [1.5, 1.0], hospital: [1.2, 0.9],
+  solar: [1.4, 0.9], chart: [1.4, 0.9], router: [1.1, 0.7], laptop: [1.0, 0.7], money: [0.9, 0.6], document: [0.7, 0.9], cart: [1.1, 0.7], book: [1.0, 0.8], camera: [0.9, 0.6], envelope: [1.0, 0.7],
+  tower: [0.6, 0.6], windmill: [0.7, 0.7], phone: [0.5, 0.4], person: [0.4, 0.4], rocket: [0.9, 0.9], gear: [1.2, 1.2], flame: [0.9, 0.5], atm: [0.9, 0.6], speaker: [0.7, 0.6], tree: [1.0, 0.8],
+};
+
+/** Ground footprint (half-extents) of a placed object. */
+export function footprint(kind: string, spec?: ScenePropSpec): [number, number] {
+  if (kind === 'custom') {
+    if (hasGlyph(spec?.glyph)) return [1.2, 0.7];
+    return ({ block: [1.0, 1.0], tall: [0.7, 0.7], wide: [1.5, 1.0], flat: [1.4, 1.4], round: [1.0, 1.0] } as Record<string, [number, number]>)[spec?.shape ?? 'block'] ?? [1.0, 1.0];
+  }
+  return FOOT[kind] ?? [1.0, 0.9];
+}
+
+const GAP = 1.5;
+const GRID = 0.8;
 
 /**
  * Gives every distinct prop a fixed spot, so the camera can glide from one part of the world to the next.
- * A new prop goes on the free grid cell closest to the props it shares its first scene with (and a little
- * further along the story's direction), so each scene's objects sit close together and fit in one shot.
+ * Each new prop goes on the closest free spot to the props it shares its first scene with (a little further along the
+ * story's direction), where its real footprint, plus a gap, does not touch any prop already placed.
  */
 export function layoutProps(timed: TimedBeat[]): Map<string, PlacedProp> {
   const placed = new Map<string, PlacedProp>();
-  const cells = new Map<string, [number, number]>();
-  const taken = new Set<string>();
-  let frontier: [number, number] = [-1, 0];
+  const feet = new Map<string, [number, number]>();
+  let last: Vec3 | null = null;
   for (const b of timed) {
     const specs = b.scene?.props ?? [];
     for (const sp of specs) {
@@ -40,30 +55,39 @@ export function layoutProps(timed: TimedBeat[]): Map<string, PlacedProp> {
       // A later scene can add the icon, shape or colour the first one left out.
       if (have) have.spec = { ...have.spec, icon: have.spec.icon ?? sp.icon, glyph: have.spec.glyph ?? sp.glyph, shape: have.spec.shape ?? sp.shape, tone: have.spec.tone ?? sp.tone };
     }
-    const known = specs.map((sp) => cells.get(sp.id)).filter((c): c is [number, number] => Boolean(c));
-    const anchor: [number, number] = known.length
-      ? [known.reduce((n, c) => n + c[0], 0) / known.length, known.reduce((n, c) => n + c[1], 0) / known.length]
-      : [frontier[0] + 1, 0];
+    const known = specs.map((sp) => placed.get(sp.id)).filter((q): q is PlacedProp => Boolean(q));
+    const anchor: { x: number; y: number } = known.length
+      ? { x: known.reduce((n, q) => n + q.pos.x, 0) / known.length, y: known.reduce((n, q) => n + q.pos.y, 0) / known.length }
+      : { x: last ? last.x + 6 : 0, y: 0 };
     for (const sp of specs) {
       if (placed.has(sp.id)) continue;
-      let best: [number, number] = [0, 0];
+      const f = footprint(sp.kind, sp);
+      let best: { x: number; y: number } = { x: anchor.x, y: anchor.y };
       let bestCost = Infinity;
-      for (let i = -3; i < 80; i++) {
-        for (let j = -1; j <= 1; j++) {
-          if (taken.has(`${i},${j}`)) continue;
-          const dx = i - anchor[0];
-          const dy = j - anchor[1];
-          const cost = dx * dx * 0.8 + dy * dy * 1.2 + (dx < 0 ? 2.5 : 0) + i * 0.001;
-          if (cost < bestCost) {
+      for (let cx = anchor.x - 16; cx <= anchor.x + 16; cx += GRID) {
+        for (let cy = -6; cy <= 6; cy += GRID) {
+          let free = true;
+          for (const [id, q] of placed) {
+            const g = feet.get(id)!;
+            if (Math.abs(q.pos.x - cx) < g[0] + f[0] + GAP && Math.abs(q.pos.y - cy) < g[1] + f[1] + GAP) {
+              free = false;
+              break;
+            }
+          }
+          if (!free) continue;
+          const dx = cx - anchor.x;
+          const dy = cy - anchor.y;
+          const cost = dx * dx * 0.8 + dy * dy * 1.2 + (dx < 0 && placed.size > 0 ? 3 : 0) + (cx < 0 ? 4 : 0);
+          if (cost < bestCost - 1e-9) {
             bestCost = cost;
-            best = [i, j];
+            best = { x: cx, y: cy };
           }
         }
       }
-      taken.add(`${best[0]},${best[1]}`);
-      cells.set(sp.id, best);
-      frontier = best;
-      placed.set(sp.id, { id: sp.id, kind: sp.kind, spec: sp, pos: { x: best[0] * STEP_X, y: best[1] * STEP_Y, z: 0 }, appearsAt: b.start });
+      const pos: Vec3 = { x: best.x, y: best.y, z: 0 };
+      feet.set(sp.id, f);
+      placed.set(sp.id, { id: sp.id, kind: sp.kind, spec: sp, pos, appearsAt: b.start });
+      last = pos;
     }
   }
   return placed;
@@ -87,7 +111,8 @@ function sceneCameraKey(scene: IsoScene | undefined, placed: Map<string, PlacedP
   let maxY = -Infinity;
   for (const p of ps) {
     const top = propTop(p) + (p.spec.icon && !hasGlyph(p.spec.glyph) ? 3.0 : 1.9); // room for the icon and the label above it
-    for (const [dx, dy, z] of [[-1.5, -1.5, 0], [1.5, 1.5, 0], [-1.5, 1.5, 0], [1.5, -1.5, 0], [0, 0, top]] as const) {
+    const [fx, fy] = footprint(p.kind, p.spec);
+    for (const [dx, dy, z] of [[-fx, -fy, 0], [fx, fy, 0], [-fx, fy, 0], [fx, -fy, 0], [0, 0, top]] as const) {
       const [px, py] = project({ x: p.pos.x + dx, y: p.pos.y + dy, z });
       minX = Math.min(minX, px);
       maxX = Math.max(maxX, px);
