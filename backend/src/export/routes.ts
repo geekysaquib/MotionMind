@@ -7,7 +7,7 @@ import type { AppDeps } from '../app';
 import { voicePath } from '../voice/audioStore';
 
 /** The reel as the engine renders it (same rules as the web app's specFromScript). */
-export async function reelSpecFor(deps: AppDeps, userId: string, project: Project, platform?: Platform) {
+export async function reelSpecFor(deps: AppDeps, userId: string, project: Project, platform?: Platform, origin?: string) {
   const script = project.script!;
   const profile = await deps.data.getProfile(userId);
   const name = profile?.channelName?.trim() || 'Motion Mind';
@@ -21,6 +21,10 @@ export async function reelSpecFor(deps: AppDeps, userId: string, project: Projec
     steps: script.steps,
     brand: { name, initials, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', tagline: '' },
     beats: script.beats,
+    glossary: script.glossary,
+    brands: script.brands,
+    // The renderer's browser loads company logos from this API.
+    ...(origin ? { logoBase: origin } : {}),
     ...(platform ? { platform } : {}),
   };
   // The Reel editor: uploaded voice, music, pace and caption style.
@@ -63,7 +67,7 @@ export function registerExportRoutes(api: FastifyInstance, deps: AppDeps) {
     if (!asked.success) return reply.code(400).send({ error: 'invalid_platform', message: 'Pick Instagram or YouTube Shorts.' });
     const platform = asked.data.platform ?? project.platforms[0] ?? 'instagram';
     if (!project.platforms.includes(platform)) return reply.code(400).send({ error: 'invalid_platform', message: 'This reel is not set up for that platform. Add it on the Topic page first.' });
-    const { spec, withVoice } = await reelSpecFor(deps, req.userId, project, platform);
+    const { spec, withVoice } = await reelSpecFor(deps, req.userId, project, platform, `${req.protocol}://${req.headers.host}`);
     const job = deps.renderer.start(req.userId, project.id, spec, platform);
     req.log.info({ projectId: project.id, jobId: job.id, withVoice, platform }, 'export started');
     return { job, withVoice, platform };

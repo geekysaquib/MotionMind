@@ -111,6 +111,16 @@ export function SceneEditor({ beat, index, known, previous, onChange }: Props) {
             </div>
             {p.kind === 'custom' && (
               <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-400">
+                Logo of
+                <input
+                  className={cn(inputCls, 'w-36')}
+                  aria-label={`Scene ${n} object ${i + 1} logo website`}
+                  placeholder="e.g. irctc.co.in"
+                  title="A company's website: its logo is drawn on a raised 3D tile. Leave empty for an icon."
+                  maxLength={80}
+                  value={p.logo ?? ''}
+                  onChange={(e) => setProp(i, { logo: e.target.value.trim().toLowerCase() || undefined })}
+                />
                 Icon name
                 <input
                   className={cn(inputCls, 'w-36')}

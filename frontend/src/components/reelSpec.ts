@@ -1,6 +1,7 @@
 import { BRAND, editorSpecParts, reelWorld, type Platform, type ReelEditor, type ReelScript, type ReelVoice } from '@motionmind/shared';
 // Types only: the engine itself loads lazily with the preview player.
 import type { Brand, ReelSpec } from '@motionmind/reel-engine';
+import { config } from '../config';
 
 const FALLBACK_BRAND: Brand = { name: BRAND.name, initials: 'MM', handle: '@motionmind', tagline: '' };
 
@@ -31,7 +32,7 @@ export function specFromScript(
   editor?: { editor: ReelEditor | null; urls: { voice?: string; music?: string; sfx?: Record<string, string> } },
   platform?: Platform,
 ): ReelSpec {
-  const spec: ReelSpec = { title: script.title, world: worldFor(script), theme: script.theme, layout: script.layout, steps: script.steps, brand, beats: script.beats, ...(platform ? { platform } : {}) };
+  const spec: ReelSpec = { title: script.title, world: worldFor(script), theme: script.theme, layout: script.layout, steps: script.steps, brand, beats: script.beats, glossary: script.glossary, brands: script.brands, logoBase: config.apiUrl, ...(platform ? { platform } : {}) };
   // The Reel editor: pace, captions, music, and an uploaded recording when its cuts match the scenes.
   const parts = editor ? editorSpecParts(editor.editor, script.beats.length, editor.urls) : {};
   Object.assign(spec, parts);

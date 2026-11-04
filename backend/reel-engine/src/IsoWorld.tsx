@@ -4,7 +4,8 @@ import { Camera, Vec3, cameraTransform, clamp01, easeInOutCubic, lerp, project, 
 import { EXTRA_TOP, extraItems, type ExtraKind } from './props3d';
 import { MORE_TOP, moreItems, type MoreKind } from './props3d-more';
 import { declutter, pillWidth, type LabelBox } from './declutter';
-import { GLYPH_TOP, glyphItems, hasGlyph } from './glyph';
+import { GLYPH_TOP, glyphItems, hasGlyph, logoItems } from './glyph';
+import { bareDomain, logoUrl } from './terms';
 import { C, Pill, box, rand, shadow, tree, windowsOnHouse, type Item } from './World';
 import type { IsoScene, PropKind, PropShape, ScenePropSpec, TimedBeat, Tone, WorldTheme } from './script';
 
@@ -39,7 +40,7 @@ export function footprint(kind: string, spec?: ScenePropSpec): [number, number] 
 
 function rawFootprint(kind: string, spec?: ScenePropSpec): [number, number] {
   if (kind === 'custom') {
-    if (hasGlyph(spec?.glyph)) return [1.2, 0.7];
+    if (hasGlyph(spec?.glyph) || spec?.logo) return [1.2, 0.7];
     return ({ block: [1.0, 1.0], tall: [0.7, 0.7], wide: [1.5, 1.0], flat: [1.4, 1.4], round: [1.0, 1.0] } as Record<string, [number, number]>)[spec?.shape ?? 'block'] ?? [1.0, 1.0];
   }
   return FOOT[kind] ?? [1.0, 0.9];
@@ -64,7 +65,7 @@ export function layoutProps(timed: TimedBeat[], locked?: Record<string, { x: num
     for (const sp of specs) {
       const have = placed.get(sp.id);
       // A later scene can add the icon, shape or colour the first one left out.
-      if (have) have.spec = { ...have.spec, icon: have.spec.icon ?? sp.icon, glyph: have.spec.glyph ?? sp.glyph, shape: have.spec.shape ?? sp.shape, tone: have.spec.tone ?? sp.tone };
+      if (have) have.spec = { ...have.spec, icon: have.spec.icon ?? sp.icon, glyph: have.spec.glyph ?? sp.glyph, logo: have.spec.logo ?? sp.logo, shape: have.spec.shape ?? sp.shape, tone: have.spec.tone ?? sp.tone };
     }
     const known = specs.map((sp) => placed.get(sp.id)).filter((q): q is PlacedProp => Boolean(q));
     const anchor: { x: number; y: number } = known.length
@@ -133,7 +134,7 @@ function sceneCameraKey(scene: IsoScene | undefined, placed: Map<string, PlacedP
   let maxY = -Infinity;
   for (const p of ps) {
     // Room for the icon and label above the object, and for the arcs and their labels when the scene has links.
-    const top = propTop(p) + (p.spec.icon && !hasGlyph(p.spec.glyph) ? 3.0 : 1.9) + (scene?.links?.length ? 1.6 : 0);
+    const top = propTop(p) + (p.spec.icon && !hasGlyph(p.spec.glyph) && !p.spec.logo ? 3.0 : 1.9) + (scene?.links?.length ? 1.6 : 0);
     const [fx, fy] = footprint(p.kind, p.spec);
     for (const [dx, dy, z] of [[-fx, -fy, 0], [fx, fy, 0], [-fx, fy, 0], [fx, -fy, 0], [0, 0, top]] as const) {
       const [px, py] = project({ x: p.pos.x + dx, y: p.pos.y + dy, z });
@@ -229,7 +230,7 @@ export function propTop(p: PlacedProp): number {
 }
 
 function rawTop(p: PlacedProp): number {
-  if (p.kind === 'custom' && hasGlyph(p.spec.glyph)) return GLYPH_TOP;
+  if (p.kind === 'custom' && (hasGlyph(p.spec.glyph) || p.spec.logo)) return GLYPH_TOP;
   if (p.kind === 'custom') return SHAPE_TOP[p.spec.shape ?? 'block'] ?? SHAPE_TOP.block;
   return PROP_TOP[p.kind as keyof typeof PROP_TOP] ?? EXTRA_TOP[p.kind as ExtraKind] ?? MORE_TOP[p.kind as MoreKind] ?? SHAPE_TOP.block;
 }
@@ -266,7 +267,11 @@ export function arcFor(a: PlacedProp, b: PlacedProp, all: PlacedProp[]): { dx: n
 }
 
 /** Any object the named kinds can't draw: a body in the object's colour and shape; its emoji floats above it. */
-function customItems(p: PlacedProp, accent: string, frame = 0): Item[] {
+function customItems(p: PlacedProp, accent: string, frame = 0, logoBase?: string): Item[] {
+  if (p.spec.logo) {
+    const name = (p.spec.label ?? bareDomain(p.spec.logo)).replace(/[^A-Za-z0-9]/g, '');
+    return logoItems({ id: p.id, pos: p.pos, url: logoUrl(logoBase, p.spec.logo, p.spec.label), initials: name.slice(0, 4).toUpperCase(), tone: p.spec.tone ? (TONE[p.spec.tone] ?? accent) : accent }, frame);
+  }
   if (hasGlyph(p.spec.glyph)) return glyphItems({ id: p.id, pos: p.pos, glyph: p.spec.glyph, tone: p.spec.tone ? (TONE[p.spec.tone] ?? accent) : accent }, frame);
   const { x, y } = p.pos;
   const k = p.id;
@@ -297,7 +302,7 @@ function customItems(p: PlacedProp, accent: string, frame = 0): Item[] {
   return out;
 }
 
-function propItems(p: PlacedProp, accent: string, frame: number): Item[] {
+function propItems(p: PlacedProp, accent: string, frame: number, logoBase?: string): Item[] {
   const { x, y } = p.pos;
   const k = p.id;
   const out: Item[] = [shadow(`sh${k}`, x - 1.1, y - 1.1, 2.2, 2.2)];
@@ -426,7 +431,7 @@ function propItems(p: PlacedProp, accent: string, frame: number): Item[] {
       break;
     }
     default:
-      return extraItems(p.kind, p, accent, frame) ?? moreItems(p.kind, p, accent, frame) ?? customItems(p, accent, frame);
+      return extraItems(p.kind, p, accent, frame) ?? moreItems(p.kind, p, accent, frame) ?? customItems(p, accent, frame, logoBase);
   }
   return out;
 }
@@ -443,6 +448,8 @@ export interface IsoWorldProps {
   placed: Map<string, PlacedProp>;
   /** The look of the ground and scenery. Defaults to the town. */
   theme?: WorldTheme;
+  /** Where company logos are served from (see `logoUrl`). */
+  logoBase?: string;
   /** Fade the top and bottom of the picture into the sky colour (the reel does, to make room for the card and captions). Default true. */
   fade?: boolean;
 }
@@ -462,7 +469,7 @@ const THEMES: Record<WorldTheme, Look> = {
   desert: { ground: '#F3DFB5', water: '#F4E6C6', waterDeep: '#E2C791', road: '#E8CE9B', fade: '#FBF1DA', scenery: 'rocks' },
 };
 
-export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, placed, theme = 'city', fade = true }) => {
+export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, placed, theme = 'city', fade = true, logoBase }) => {
   const look = THEMES[theme] ?? THEMES.city;
   const accent = TONE[beat.card.tone] ?? C.teal;
   const scene = beat.scene;
@@ -494,7 +501,7 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
     if (frame < p.appearsAt) continue;
     const drop = spring({ frame: frame - p.appearsAt - 4, fps, config: { damping: 13, mass: 0.7 } });
     const lift = (1 - drop) * 3;
-    const its = propItems({ ...p, pos: { ...p.pos, z: 0 } }, inScene.has(p.id) ? accent : '#B8BCC6', frame);
+    const its = propItems({ ...p, pos: { ...p.pos, z: 0 } }, inScene.has(p.id) ? accent : '#B8BCC6', frame, logoBase);
     const sc = KIND_SCALE[p.kind] ?? 1;
     const [bx, by] = project({ ...p.pos, z: 0 });
     const scaleAbout = sc === 1 ? '' : ` translate(${bx} ${by}) scale(${sc}) translate(${-bx} ${-by})`;
@@ -545,7 +552,7 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
     const props = (scene?.props ?? []).map((sp) => {
       const pp = placed.get(sp.id);
       if (!pp) return null;
-      const icon = hasGlyph(pp.spec.glyph) ? undefined : pp.spec.icon;
+      const icon = hasGlyph(pp.spec.glyph) || pp.spec.logo ? undefined : pp.spec.icon;
       const at = toScreen({ ...pp.pos, z: propTop(pp) + (icon ? 1.2 : 0.3) }, cam);
       const cx = Math.max(150, Math.min(930, at[0]));
       return { id: sp.id, icon, at, cx, y: at[1] - (icon ? 58 : 8), dy: 0, w: pillWidth(sp.label ?? '') };

@@ -11,6 +11,7 @@ import { registerVoiceRoutes } from './voice/routes';
 import { registerEditorRoutes } from './editor/routes';
 import type { Renderer } from './export/renderer';
 import { registerExportRoutes, registerRenderDownload } from './export/routes';
+import { registerLogoRoute, type LogoFetcher } from './logo/routes';
 import type { Mailer } from './auth/mailer';
 import { registerLoginRoutes } from './auth/routes';
 import type { SessionTokens } from './auth/session';
@@ -20,6 +21,8 @@ import { registerClientLogRoutes, type ClientLogReport } from './logs/routes';
 
 /** Everything the API needs, passed in so tests can swap any piece. Built from env in bootstrap.ts. */
 export interface AppDeps {
+  /** Looks up a company's logo by website. Defaults to the public favicon services. */
+  fetchLogo?: LogoFetcher;
   data: DataRepository;
   sessions: SessionTokens;
   mailer: Mailer;
@@ -65,6 +68,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
 
   app.get('/health', async () => ({ ok: true, mode: deps.mode }));
   registerRenderDownload(app, deps);
+  registerLogoRoute(app, deps);
 
   // Public
   app.register(async (auth) => registerLoginRoutes(auth, deps), { prefix: '/api/auth' });

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { AbsoluteFill, Audio, Loop, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AbsoluteFill, Audio, Loop, Sequence, continueRender, delayRender, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { DEFAULT_CAPTION_STYLE, reelTiming, type Brand, type CameraKey, type ReelSpec, type TimedBeat, type TrainShot, type WorldEvent } from './script';
 import { World, phonePos, type WorldProps } from './World';
 import { Backdrop } from './Backdrop';
@@ -7,6 +7,7 @@ import { CardsScene } from './CardsScene';
 import { IsoWorld, isoCamera, layoutProps } from './IsoWorld';
 import { withScenes } from './autoScene';
 import { Header, InfoCard, Captions, EndCard } from './Ui';
+import { brandsFor, logoUrl, termsFor } from './terms';
 import { Camera, clamp01, easeInOutCubic, lerp } from './iso';
 
 const FX: Exclude<WorldEvent, 'none'>[] = ['rings', 'towerIds', 'pins', 'gpsLog', 'stationGlow', 'errorBand'];
@@ -79,10 +80,38 @@ export function pinProgressAt(timed: TimedBeat[], frame: number, fps: number): n
   return clamp01((frame - first.start - 10) / (3.5 * fps));
 }
 
+/** Loads every company logo before a frame is drawn (a missing one is skipped, never an error). */
+function useLogosLoaded(urls: string[]) {
+  const key = urls.join('|');
+  const [handle] = useState(() => (urls.length ? delayRender('Loading company logos') : null));
+  useEffect(() => {
+    if (handle === null) return;
+    let left = urls.length;
+    const done = () => {
+      left -= 1;
+      if (left <= 0) continueRender(handle);
+    };
+    const timer = setTimeout(() => continueRender(handle), 8000);
+    for (const u of urls) {
+      const img = new Image();
+      img.onload = done;
+      img.onerror = done;
+      img.src = u;
+    }
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+}
+
 /** One reel, driven entirely by its spec. Used by the CLI renderer and by the in-app preview player. */
 export const Reel: React.FC<ReelSpec> = (input) => {
   // Every beat gets a 3D scene (or train shot), even when the script didn't describe one.
   const spec = useMemo(() => withScenes(input), [input]);
+  const logoUrls = useMemo(
+    () => [...new Set([...(spec.brands ?? []).map((b) => logoUrl(spec.logoBase, b.domain, b.name)), ...spec.beats.flatMap((b) => (b.scene?.props ?? []).flatMap((p) => (p.logo ? [logoUrl(spec.logoBase, p.logo, p.label)] : [])))])],
+    [spec.brands, spec.beats, spec.logoBase],
+  );
+  useLogosLoaded(logoUrls);
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { timed, storyFrames, endFrames, totalFrames, closing } = useMemo(() => reelTiming(spec), [spec]);
@@ -97,13 +126,13 @@ export const Reel: React.FC<ReelSpec> = (input) => {
       {spec.world === 'train' ? (
         <World frame={frame} fps={fps} cam={cameraAt(timed, storyFrames, frame, fps)} fx={fxAt(timed, frame)} pinProgress={pinProgressAt(timed, frame, fps)} />
       ) : spec.world === 'iso' ? (
-        <IsoWorld frame={frame} fps={fps} cam={isoCamera(timed, placed, storyFrames, frame)} beat={beat} placed={placed} theme={spec.theme} />
+        <IsoWorld frame={frame} fps={fps} cam={isoCamera(timed, placed, storyFrames, frame)} beat={beat} placed={placed} theme={spec.theme} logoBase={spec.logoBase} />
       ) : (
         <Backdrop frame={frame} fps={fps} tone={beat.card.tone} chapter={beat.chapter} progress={progress} />
       )}
       <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} steps={spec.steps} brand={spec.brand} platform={spec.platform} dark={spec.world === 'iso' && spec.theme === 'night'} />
       {inStory && spec.world === 'cards' && <CardsScene key={`scene-${beat.id}`} beat={beat} frame={frame} fps={fps} />}
-      {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards'} platform={spec.platform} />}
+      {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards'} platform={spec.platform} terms={termsFor(beat, spec.glossary)} logos={brandsFor(beat, spec.brands).map((b) => ({ name: b.name, url: logoUrl(spec.logoBase, b.domain, b.name) }))} />}
       {inStory && <Captions beat={beat} frame={frame} style={spec.captions ?? DEFAULT_CAPTION_STYLE} platform={spec.platform} />}
       {/* The voice: one clip per scene, each playing its part of the recording at the scene's speed. */}
       {timed.map((b, i) =>

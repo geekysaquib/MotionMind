@@ -242,7 +242,7 @@ function Row({ row, tone, appear }: { row: CardRow; tone: string; appear: number
 }
 
 /** `compact` hides the rows: the 'cards' world draws them large in the middle of the frame instead. */
-export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start: number; compact?: boolean; platform?: PlatformId }> = ({ card, frame, fps, start, compact, platform = 'instagram' }) => {
+export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start: number; compact?: boolean; platform?: PlatformId; terms?: { short: string; full: string }[]; logos?: { name: string; url: string }[] }> = ({ card, frame, fps, start, compact, platform = 'instagram', terms = [], logos = [] }) => {
   const local = frame - start;
   const inS = spring({ frame: local, fps, config: { damping: 18, mass: 0.7 } });
   const tone = TONE[card.tone];
@@ -282,6 +282,26 @@ export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start
         const appear = spring({ frame: local - 14 - i * 10, fps, config: { damping: 200 } });
         return <Row key={i} row={r} tone={tone} appear={appear} />;
       })}
+      {(terms.length > 0 || logos.length > 0) && (
+        <div style={{ marginTop: 22, paddingTop: 18, borderTop: `2px dashed ${tone}44`, display: 'flex', flexDirection: 'column', gap: 10, opacity: interpolate(frame - start, [8, 20], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
+          {terms.map((t) => (
+            <div key={t.short} style={{ fontFamily: 'Space Grotesk', fontSize: 30, lineHeight: 1.2, color: C.ink }}>
+              <span style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, color: tone, marginRight: 12 }}>{t.short}</span>
+              <span style={{ opacity: 0.8 }}>= {t.full}</span>
+            </div>
+          ))}
+          {logos.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center' }}>
+              {logos.map((l) => (
+                <div key={l.name} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', border: `2px solid ${tone}33`, borderRadius: 16, padding: '6px 16px 6px 8px', fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 28, color: C.ink }}>
+                  <img src={l.url} width={40} height={40} style={{ borderRadius: 10, objectFit: 'contain' }} alt="" />
+                  {l.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -98,7 +98,7 @@ export type WorldTheme = 'city' | 'nature' | 'lab' | 'plain' | 'night' | 'sunset
 
 /** A beat's 3D scene: which objects are on screen, what moves between them, and the effect. */
 export interface ReelScene {
-  props: { id: string; kind: ScenePropKind; label?: string; icon?: string; glyph?: string; shape?: ScenePropShape; tone?: 'red' | 'teal' | 'purple' | 'blue' | 'amber' }[];
+  props: { id: string; kind: ScenePropKind; label?: string; icon?: string; glyph?: string; logo?: string; shape?: ScenePropShape; tone?: 'red' | 'teal' | 'purple' | 'blue' | 'amber' }[];
   links?: { from: string; to: string; label?: string }[];
   effect?: 'rings' | 'pulse' | 'none';
   focus?: string;
@@ -126,7 +126,7 @@ export interface ReelBeat {
 export function reelWorld(script: Pick<ReelScript, 'world' | 'title' | 'steps'> & { beats: Pick<ReelBeat, 'narration'>[] }): 'iso' | 'train' {
   if (script.world) return script.world;
   const text = [script.title, ...script.steps, ...script.beats.slice(0, 3).map((b) => b.narration)].join(' ');
-  return /\b(train|trains|railway|railways|rail|irctc|metro)\b/i.test(text) ? 'train' : 'iso';
+  return /\b(train|trains|railway|railways|rail|metro)\b/i.test(text) ? 'train' : 'iso';
 }
 
 /** A reel script: what the voice says and what each on-screen card shows. The reel engine renders it. */
@@ -142,6 +142,10 @@ export interface ReelScript {
   cover?: import('./cover').CoverSettings;
   steps: string[];
   beats: ReelBeat[];
+  /** Short forms used in the reel with what they stand for. The reel shows the full form whenever a beat uses one. */
+  glossary?: { short: string; full: string }[];
+  /** Companies and products named in the reel, with their website so their logo can be shown. */
+  brands?: { name: string; domain: string }[];
   /** Which Claude model wrote it, and when. */
   model?: string;
   writtenAt?: string;

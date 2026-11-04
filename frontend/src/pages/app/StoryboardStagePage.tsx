@@ -10,6 +10,7 @@ import { errorText } from '../../lib/format';
 import { brandFor, specFromScript } from '../../components/reelSpec';
 import { cn } from '../../lib/cn';
 import { SceneEditor } from '../../components/SceneEditor';
+import { TermsEditor } from '../../components/TermsEditor';
 
 const THEME_LABELS: Record<WorldTheme, string> = { city: 'City (apps, payments, services)', nature: 'Nature (food, biology, outdoors)', lab: 'Lab (science, chips, AI)', plain: 'Plain (anything abstract)', night: 'Night (security, space, late-night tech)', sunset: 'Sunset (stories, culture, travel)', ocean: 'Ocean (water, ships, climate)', desert: 'Desert (energy, mining, history)' };
 
@@ -86,7 +87,7 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
     setSaving(true);
     setError(null);
     try {
-      await projects.saveScript(project.id, { ...draft, beats: draft.beats.map(cleanKeywords) });
+      await projects.saveScript(project.id, { ...draft, glossary: draft.glossary?.filter((g) => g.short.trim() && g.full.trim()), brands: draft.brands?.filter((b) => b.name.trim() && b.domain.trim()), beats: draft.beats.map(cleanKeywords) });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -142,6 +143,7 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
               ))}
             </div>
           </div>
+          <TermsEditor script={draft} onChange={setDraft} />
           {error && <div className="mt-4"><Alert>{error}</Alert></div>}
         </Card>
 

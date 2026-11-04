@@ -46,7 +46,7 @@ export function registerCoverRoutes(api: FastifyInstance, deps: AppDeps) {
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
     if (!project.script?.beats.length) return reply.code(400).send({ error: 'no_script', message: 'Write the script first.' });
     if (body.data.cover.scene >= project.script.beats.length) return reply.code(400).send({ error: 'invalid_cover', message: "That scene doesn't exist." });
-    const { spec } = await reelSpecFor(deps, req.userId, project);
+    const { spec } = await reelSpecFor(deps, req.userId, project, undefined, `${req.protocol}://${req.headers.host}`);
     try {
       const file = await deps.renderer.still({ ...spec, cover: body.data.cover }, body.data.format);
       req.log.info({ projectId: project.id, file, style: body.data.cover.style, size: body.data.cover.size }, 'cover rendered');

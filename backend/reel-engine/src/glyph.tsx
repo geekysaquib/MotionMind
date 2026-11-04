@@ -86,3 +86,32 @@ export function glyphItems(p: { id: string; pos: Vec3; glyph: string; tone: stri
   });
   return out;
 }
+
+/** A company's logo as a raised white tile on a small base, like a glyph tile. The logo route always answers with an image (a monogram when it has no real logo). */
+export function logoItems(p: { id: string; pos: Vec3; url: string; initials: string; tone: string }, frame: number): Item[] {
+  const { x, y } = p.pos;
+  const k = p.id;
+  const d = x + y;
+  const bob = Math.sin(frame / 22) * 0.06;
+  const tile = 2.3;
+  const thick = 0.5;
+  const baseZ = 0.3;
+  const out: Item[] = [shadow(`lsh${k}`, x - 1.3, y - 1.1, 2.6, 2.2)];
+  out.push(box(`lpb${k}`, x - 0.6, y - 0.35, 0, 1.2, 0.7, baseZ, '#D5D9E0'));
+  out.push({ ...box(`lt${k}`, x - tile / 2, y - thick / 2, baseZ + bob, tile, thick, tile, '#FFFFFF'), depth: d + 0.3 });
+  const s = 1.9 / 24;
+  const fx = x - 0.95;
+  const fz = baseZ + bob + tile / 2 + 0.95;
+  const fy = y + thick / 2 + 0.02;
+  const e = COS30 * (fx - fy);
+  const f = (fx + fy) / 2 - fz;
+  out.push({
+    depth: d + 0.7,
+    el: (
+      <g key={`li${k}`} transform={`matrix(${COS30 * s} ${0.5 * s} 0 ${s} ${e} ${f})`}>
+        <image href={p.url} x={0} y={0} width={24} height={24} preserveAspectRatio="xMidYMid meet" />
+      </g>
+    ),
+  });
+  return out;
+}

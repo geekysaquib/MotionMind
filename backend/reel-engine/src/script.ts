@@ -67,6 +67,8 @@ export interface ScenePropSpec {
   icon?: string;
   /** 'custom' only: the name of a Lucide icon (e.g. 'microscope', 'wheat'), drawn as a raised 3D tile. Beats `icon` and `shape`. */
   glyph?: string;
+  /** 'custom' only: a company's website (like 'irctc.co.in'); its logo is drawn on a raised tile. Beats `glyph`. */
+  logo?: string;
   /** 'custom' only: the body shape. */
   shape?: PropShape;
   /** Colour of a 'custom' body. Defaults to the scene's tone. */
@@ -127,6 +129,12 @@ export type ReelSpec = {
   title: string;
   /** 'train' = the isometric railway world; 'iso' = the 3D isometric scene kit for any topic; 'cards' = flat animated graphics. */
   world: 'train' | 'iso' | 'cards';
+  /** Short forms and what they stand for: every scene that uses one shows its full form. */
+  glossary?: { short: string; full: string }[];
+  /** Companies named in the reel, so their logos can be shown next to the text. */
+  brands?: { name: string; domain: string }[];
+  /** Where the logo images come from (the API's origin, or empty for the same origin). Logos are `<base>/api/logo/<domain>`. */
+  logoBase?: string;
   /** Where the reel is going. Shorts keeps clear of its taller top bar and bottom caption area, and the end card asks to subscribe. Default: instagram. */
   platform?: 'instagram' | 'youtube';
   /** Iso world: what the ground and background look like. */

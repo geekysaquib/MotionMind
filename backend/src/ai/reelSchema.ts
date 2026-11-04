@@ -19,7 +19,7 @@ const propKind = z.enum(['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 
 const scene = z
   .object({
     props: z
-      .array(z.object({ id: z.string().describe('short id; reuse the same id in later scenes for the same object'), kind: propKind.describe("one of the named kinds, or 'custom' for anything else"), label: z.string().optional().describe('1 to 3 words shown above it'), glyph: z.string().max(40).optional().describe("custom only: a Lucide icon name like 'microscope' or 'wheat', drawn as a raised 3D tile. Preferred over an emoji."), icon: z.string().max(8).optional().describe("ONE emoji that shows what it is; required for 'custom'"), shape: z.enum(['block', 'tall', 'wide', 'flat', 'round']).optional().describe("custom only: body shape"), tone: tone.optional().describe("custom only: body colour") }))
+      .array(z.object({ id: z.string().describe('short id; reuse the same id in later scenes for the same object'), kind: propKind.describe("one of the named kinds, or 'custom' for anything else"), label: z.string().optional().describe('1 to 3 words shown above it'), logo: z.string().max(80).optional().describe("custom only: the website of a real company or product (like 'irctc.co.in' or 'npci.org.in') to show its LOGO as a raised tile. Use it for every brand or company the narration names. Takes the place of glyph."), glyph: z.string().max(40).optional().describe("custom only: a Lucide icon name like 'microscope' or 'wheat', drawn as a raised 3D tile. Preferred over an emoji."), icon: z.string().max(8).optional().describe("ONE emoji that shows what it is; required for 'custom'"), shape: z.enum(['block', 'tall', 'wide', 'flat', 'round']).optional().describe("custom only: body shape"), tone: tone.optional().describe("custom only: body colour") }))
       .describe('1 to 4 objects this scene shows'),
     links: z.array(z.object({ from: z.string(), to: z.string(), label: z.string().optional() })).optional().describe('signals or money moving between two of the props'),
     effect: z.enum(['rings', 'pulse', 'none']).optional().describe('rings = signal waves from the focus; pulse = it glows'),
@@ -35,6 +35,14 @@ export const reelScriptSchema = z.object({
   theme: z.enum(['city', 'nature', 'lab', 'plain', 'night', 'sunset', 'ocean', 'desert']).optional().describe('iso world: the look of the ground and background that fits the topic'),
   title: z.string().describe('Short reel title, 2 to 6 words'),
   steps: z.array(z.string()).describe('3 or 4 one-word step names for the progress header'),
+  glossary: z
+    .array(z.object({ short: z.string().max(20).describe('The short form exactly as written in the reel, e.g. "PRS"'), full: z.string().max(90).describe('What it stands for, e.g. "Passenger Reservation System"') }))
+    .optional()
+    .describe('EVERY abbreviation or acronym used anywhere in the reel (IRCTC, PRS, OTP, UPI, CAPTCHA, API ...) with its full form. The reel shows the full form next to the short form.'),
+  brands: z
+    .array(z.object({ name: z.string().max(40).describe('The name exactly as written in the reel, e.g. "IRCTC"'), domain: z.string().max(80).describe('The official website, e.g. "irctc.co.in", no https://') }))
+    .optional()
+    .describe('Every real company, brand, app or government body named in the reel, with its official website, so its logo can be shown.'),
   beats: z
     .array(
       z.object({
