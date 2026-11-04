@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ExternalLink, Flame, RefreshCw, Sparkles } from 'lucide-react';
+import { ArrowRight, ExternalLink, Flame, RefreshCw } from 'lucide-react';
 import { useStores } from '../../stores/RootStore';
 import { Alert, Button, Card, Spinner } from '../../components/ui';
 import { Reveal } from '../../components/motion';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
 import { cn } from '../../lib/cn';
+import { ClaudeIcon, WikipediaIcon } from '../../components/BrandIcons';
 import type { TrendIdea, Trending } from '../../services/claudeHttp';
 import { ClaudeAiPanel } from './PasteScriptPanel';
 
@@ -87,7 +88,7 @@ export const TrendingPanel = observer(function TrendingPanel() {
             <Flame className="h-5 w-5 text-coral-500" /> Trending now
           </h2>
           <p className="mt-1 text-sm text-ink-400">
-            The pages most read on Wikipedia{trending ? ` on ${trending.date}` : ' yesterday'}. This is a real signal of what people are curious about, with the numbers and the source.
+            <WikipediaIcon className="-mt-0.5 mr-1 inline h-3.5 w-3.5" />The pages most read on Wikipedia{trending ? ` on ${trending.date}` : ' yesterday'}. This is a real signal of what people are curious about, with the numbers and the source.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -150,7 +151,7 @@ export const TrendingPanel = observer(function TrendingPanel() {
             <Card>
               <h3 className="font-semibold">Turn these into reel ideas</h3>
               <p className="mt-1 text-sm text-ink-400">Claude picks the pages worth explaining and writes a topic and an opening hook for each.</p>
-              <Button className="mt-3" loading={busy} disabled={!trending} icon={<Sparkles className="h-4 w-4" />} onClick={() => void askClaude()}>
+              <Button className="mt-3" loading={busy} disabled={!trending} icon={<ClaudeIcon className="h-4 w-4" />} onClick={() => void askClaude()}>
                 {saved ? 'Make new ideas' : 'Make reel ideas'}
               </Button>
               {ideaError && <div className="mt-3"><Alert>{ideaError}</Alert></div>}

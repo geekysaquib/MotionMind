@@ -1,12 +1,15 @@
 import { observer } from 'mobx-react-lite';
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom';
-import { ArrowRight, Check, Lightbulb } from 'lucide-react';
+import { ArrowRight, Box, Check, Clapperboard, FileText, LayoutGrid, Lightbulb, Mic, PenLine, Scissors, Search, type LucideIcon } from 'lucide-react';
 import { useStores } from '../../stores/RootStore';
 import { Spinner } from '../../components/ui';
 import { ProgressRing } from '../../components/motion';
 import { StatusBadge } from './ProjectBadges';
 import { nextStage, progressOf, stageDone, STAGE_INFO } from '../../lib/progress';
 import { cn } from '../../lib/cn';
+
+/** A small icon for each step. */
+export const STAGE_ICONS: Record<string, LucideIcon> = { '': PenLine, research: Search, script: FileText, storyboard: LayoutGrid, graphics: Box, voice: Mic, editor: Scissors, export: Clapperboard };
 
 export const PROJECT_TABS = STAGE_INFO.map(({ path, label }) => ({ path, label }));
 
@@ -53,9 +56,12 @@ export const ProjectLayout = observer(function ProjectLayout() {
           <ol className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:mx-0 lg:mt-4 lg:block lg:space-y-0.5 lg:overflow-visible lg:px-0 lg:pb-0" aria-label="Project steps">
             {STAGE_INFO.map((t, i) => {
               const isCurrent = i === current;
+              const StepIcon = STAGE_ICONS[t.path] ?? PenLine;
               return (
                 <li key={t.path} ref={isCurrent ? (el) => el?.scrollIntoView?.({ inline: 'center', block: 'nearest' }) : undefined} className="relative shrink-0 lg:shrink">
-                  {i < STAGE_INFO.length - 1 && <span className={cn('absolute left-[19px] hidden lg:block top-9 h-[calc(100%-1.5rem)] w-px', done[i] ? 'bg-mint-500/50' : 'bg-line/10')} aria-hidden />}
+                  {i < STAGE_INFO.length - 1 && <span className="absolute left-[19px] top-9 hidden h-[calc(100%-1.5rem)] w-px bg-line/10 lg:block" aria-hidden>
+                      <span className={cn('block h-full w-full origin-top bg-mint-500/60 transition-transform duration-700 ease-out', done[i] ? 'scale-y-100' : 'scale-y-0')} />
+                    </span>}
                   <NavLink
                     to={href(t.path)}
                     end
@@ -72,7 +78,10 @@ export const ProjectLayout = observer(function ProjectLayout() {
                       {done[i] && !isCurrent ? <Check className="h-3.5 w-3.5 animate-pop" strokeWidth={3} /> : isCurrent ? <span className="h-2 w-2 rounded-full bg-mint-600" /> : i + 1}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className={cn('block truncate text-sm', isCurrent ? 'font-semibold' : done[i] ? 'text-ink-100' : 'text-ink-300')}>{t.label}</span>
+                      <span className={cn('flex items-center gap-1.5 truncate text-sm', isCurrent ? 'font-semibold' : done[i] ? 'text-ink-100' : 'text-ink-300')}>
+                        <StepIcon className={cn('h-3.5 w-3.5 shrink-0 transition group-hover:scale-110', isCurrent ? 'text-accent' : 'text-ink-400')} aria-hidden />
+                        {t.label}
+                      </span>
                       {isCurrent && <span className="hidden truncate text-xs text-ink-400 lg:block">{t.title}</span>}
                     </span>
                   </NavLink>
@@ -94,10 +103,18 @@ export const ProjectLayout = observer(function ProjectLayout() {
 
       <div className="min-w-0">
         <div key={info.path} className="mb-5 flex animate-fade-up flex-wrap items-start justify-between gap-4 rounded-xl border border-line/[0.09] bg-ink-900 p-5 shadow-soft">
-          <div className="min-w-[240px] flex-1">
+          <div className="flex min-w-[240px] flex-1 items-start gap-4">
+            <span className="flex h-11 w-11 shrink-0 animate-pop items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500 text-white shadow-glow">
+              {(() => {
+                const HeroIcon = STAGE_ICONS[info.path] ?? PenLine;
+                return <HeroIcon className="h-5 w-5" aria-hidden />;
+              })()}
+            </span>
+            <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-accent">{info.label}</div>
             <h2 className="mt-1 font-display text-xl font-bold">{info.title}</h2>
             <p className="mt-1 max-w-2xl text-sm text-ink-400">{info.why}</p>
+            </div>
           </div>
           <p className="flex max-w-xs items-start gap-2 rounded-lg bg-ink-800 p-3 text-xs text-ink-300">
             <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" /> {info.tip}

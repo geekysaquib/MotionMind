@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { AudioLines, ClipboardCopy, KeyRound, Sparkles } from 'lucide-react';
+import { ClipboardCopy, KeyRound } from 'lucide-react';
 import { useStores } from '../../stores/RootStore';
 import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
 import { cn } from '../../lib/cn';
+import { ClaudeIcon, ElevenLabsIcon } from '../../components/BrandIcons';
 import type { AiMode } from '../../stores/AiModeStore';
 import type { ClaudeAnswer, Connector, ElevenLabsCheck } from '../../services/claudeHttp';
 
 const TEST_PROMPT = 'In one short sentence, confirm you are connected to Motion Mind and say which Claude model you are.';
-const ICONS = { claude: Sparkles, elevenlabs: AudioLines } as const;
+const ICONS = { claude: ClaudeIcon, elevenlabs: ElevenLabsIcon } as const;
 
 /**
  * Settings > Connectors: the two services Motion Mind uses, Claude and ElevenLabs.
@@ -106,7 +107,7 @@ function Header({ connector }: { connector: Connector }) {
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h2 className="flex items-center gap-2 font-semibold">
-          <Icon className="h-4 w-4 text-accent" /> {connector.name}
+          <Icon className="h-5 w-5" /> {connector.name}
         </h2>
         <p className="mt-1 text-sm text-ink-400">{connector.purpose}.</p>
       </div>

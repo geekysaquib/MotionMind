@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react';
 import { PLATFORMS, PLATFORM_IDS, type Platform } from '@motionmind/shared';
 import { cn } from '../lib/cn';
+import { PlatformIcon } from './BrandIcons';
 
 /** Pick Instagram Reels, YouTube Shorts, or both. At least one stays on. */
 export function PlatformPicker({ value, onChange, compact }: { value: Platform[]; onChange: (next: Platform[]) => void; compact?: boolean }) {
@@ -25,8 +26,9 @@ export function PlatformPicker({ value, onChange, compact }: { value: Platform[]
               on ? 'border-mint-500/60 bg-mint-400/10 text-accent' : 'border-line/[0.12] bg-ink-900 text-ink-300 hover:bg-ink-800',
             )}
           >
-            {on && <Check className="h-3.5 w-3.5" />}
+            <PlatformIcon platform={p} className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
             {PLATFORMS[p].label}
+            {on && <Check className="h-3.5 w-3.5 animate-pop" />}
           </button>
         );
       })}

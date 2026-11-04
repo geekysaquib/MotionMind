@@ -59,6 +59,23 @@
   /* Animated stroke (logo, stepper lines): set --len to the path length. */
   .draw { stroke-dasharray: var(--len, 400); stroke-dashoffset: var(--len, 400); animation: draw 1.1s .2s cubic-bezier(.4,0,.2,1) forwards; }
   @keyframes draw { to { stroke-dashoffset: 0; } }
+  /* Children arrive one after another. Put it on a list or grid: <ul className="stagger">. */
+  .stagger > * { animation: fade-up .45s cubic-bezier(.2,.8,.2,1) both; }
+  .stagger > *:nth-child(1) { animation-delay: 0ms; } .stagger > *:nth-child(2) { animation-delay: 60ms; } .stagger > *:nth-child(3) { animation-delay: 120ms; }
+  .stagger > *:nth-child(4) { animation-delay: 180ms; } .stagger > *:nth-child(5) { animation-delay: 240ms; } .stagger > *:nth-child(6) { animation-delay: 300ms; }
+  .stagger > *:nth-child(n+7) { animation-delay: 360ms; }
+  @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  /* A progress bar that is working: a bright band sweeps along the fill. */
+  .bar-live { position: relative; overflow: hidden; background-image: linear-gradient(90deg, #7c3aed, #6366f1 60%, #0ea5e9); }
+  .bar-live::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,.55) 50%, transparent 80%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+  /* Icons nudge when their row or button is hovered. */
+  .icon-hover svg { transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+  .icon-hover:hover svg { transform: scale(1.12) rotate(-3deg); }
+  /* A soft, slow colour wash behind the app's pages. */
+  .app-wash { background-image: radial-gradient(60rem 28rem at 0% -10%, rgba(124,58,237,.07), transparent 60%), radial-gradient(48rem 24rem at 100% 0%, rgba(14,165,233,.06), transparent 60%); }
+  /* Background outline icons: a slow drift with a gentle turn. */
+  .float-icon { transform: rotate(var(--r, 0deg)); animation: icon-drift var(--t, 12s) ease-in-out infinite; will-change: transform; }
+  @keyframes icon-drift { 0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--r, 0deg)); } 50% { transform: translate3d(10px, -22px, 0) rotate(calc(var(--r, 0deg) + 9deg)); } }
   .orb { position: absolute; border-radius: 9999px; filter: blur(70px); opacity: .5; animation: drift 14s ease-in-out infinite; pointer-events: none; }
   .dot-grid { background-image: radial-gradient(rgb(var(--line) / .08) 1px, transparent 1px); background-size: 22px 22px; }
   .label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-400; }

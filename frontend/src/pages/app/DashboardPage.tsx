@@ -7,7 +7,8 @@ import { Spinner } from '../../components/ui';
 import { CountUp, ProgressRing, Reveal } from '../../components/motion';
 import { NewReelForm } from './NewReelForm';
 import { StatusBadge } from './ProjectBadges';
-import { platformNames, timeAgo } from '../../lib/format';
+import { PlatformIcons } from '../../components/BrandIcons';
+import { timeAgo } from '../../lib/format';
 import { nextStage, progressOf } from '../../lib/progress';
 import { cn } from '../../lib/cn';
 
@@ -109,19 +110,20 @@ export const DashboardPage = observer(function DashboardPage() {
                     <span role="columnheader">Progress</span>
                     <span role="columnheader" className="hidden text-right md:block">Updated</span>
                   </div>
-                  {rows.map((p) => {
+                  {rows.map((p, i) => {
                     const pr = progressOf(p);
                     return (
                       <Link
                         key={p.id}
                         role="row"
+                        style={{ animationDelay: `${Math.min(i, 8) * 50}ms` }}
                         to={`/app/projects/${p.id}`}
-                        className="group grid grid-cols-[minmax(0,1fr)_96px] items-center gap-3 border-b border-line/[0.06] px-5 py-3 text-sm transition last:border-b-0 hover:bg-ink-800/70 md:grid-cols-[minmax(0,1fr)_130px_140px_84px]"
+                        className="group grid animate-fade-up grid-cols-[minmax(0,1fr)_96px] items-center gap-3 border-b border-line/[0.06] px-5 py-3 text-sm transition last:border-b-0 hover:bg-ink-800/70 md:grid-cols-[minmax(0,1fr)_130px_140px_84px]"
                       >
                         <span role="cell" className="min-w-0">
                           <span className="block truncate font-medium group-hover:text-accent">{p.title}</span>
                           <span className="mt-1 flex items-center gap-2 text-xs text-ink-400">
-                            <StatusBadge status={p.status} /> {p.durationSec}s · {platformNames(p.platforms)}
+                            <StatusBadge status={p.status} /> {p.durationSec}s <PlatformIcons list={p.platforms} />
                           </span>
                         </span>
                         <span role="cell" className="hidden items-center gap-1 text-ink-300 md:flex">

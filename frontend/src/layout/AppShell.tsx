@@ -1,7 +1,9 @@
 import { observer } from 'mobx-react-lite';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronRight, ClipboardCopy, Compass, FolderClosed, FolderOpen, KeyRound, LayoutDashboard, LogOut, Plus, Settings } from 'lucide-react';
+import { ChevronRight, Compass, FolderClosed, FolderOpen, LayoutDashboard, LogOut, Plus, Settings } from 'lucide-react';
 import { useStores } from '../stores/RootStore';
+import { FloatingIcons } from '../components/FloatingIcons';
+import { ClaudeIcon } from '../components/BrandIcons';
 import { Logo } from '../components/Logo';
 import { DemoBanner } from '../components/DemoBanner';
 import { ProgressRing } from '../components/motion';
@@ -38,6 +40,7 @@ export const AppShell = observer(function AppShell() {
   const { profile, auth, aiMode, projects } = useStores();
   const nav = useNavigate();
   const crumbs = useCrumbs();
+  const { pathname } = useLocation();
   const p = profile.profile;
   const initials = (p?.displayName ?? p?.handle ?? '?').slice(0, 2).toUpperCase();
   const total = projects.stats.total;
@@ -69,7 +72,7 @@ export const AppShell = observer(function AppShell() {
                 to={to}
                 end={end}
                 className={({ isActive }) =>
-                  cn('flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition', isActive ? 'bg-ink-700/70 text-ink-100' : 'text-ink-300 hover:bg-ink-800 hover:text-ink-100')
+                  cn('icon-hover flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition', isActive ? 'bg-ink-700/70 text-ink-100' : 'text-ink-300 hover:bg-ink-800 hover:text-ink-100')
                 }
               >
                 <Icon className="h-4 w-4 shrink-0 text-ink-400" />
@@ -102,7 +105,7 @@ export const AppShell = observer(function AppShell() {
 
           <NavLink to="/app/settings/connectors" className="mt-3 block rounded-xl border border-line/[0.09] bg-ink-800/60 p-3 transition hover:border-mint-500/40" title="Change how you work with AI">
             <div className="flex items-center gap-2 text-xs font-semibold text-ink-300">
-              {aiMode.paste ? <ClipboardCopy className="h-3.5 w-3.5 text-accent" /> : <KeyRound className="h-3.5 w-3.5 text-accent" />} AI mode
+              <ClaudeIcon className="h-3.5 w-3.5" /> AI mode
             </div>
             <div className="mt-1.5 font-display text-base font-bold">{aiMode.paste ? 'Copy and paste' : 'API keys'}</div>
             <div className="mt-0.5 flex items-center justify-between text-xs text-ink-400">
@@ -158,9 +161,14 @@ export const AppShell = observer(function AppShell() {
               </button>
             </div>
           </header>
-          <main className="min-h-0 flex-1 overflow-y-auto bg-ink-800/70">
-            <Outlet />
+          <div className="app-wash relative flex min-h-0 flex-1 flex-col bg-ink-800/70">
+          <FloatingIcons />
+          <main className="relative min-h-0 flex-1 overflow-y-auto">
+            <div key={pathname.split("/").slice(0, 3).join("/")} className="animate-fade-up">
+              <Outlet />
+            </div>
           </main>
+          </div>
         </div>
       </div>
     </div>

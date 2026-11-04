@@ -5,6 +5,7 @@ import { Download, Film, Clapperboard } from 'lucide-react';
 import { PLATFORMS, normalizePlatforms, type Platform, type Project } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
+import { PlatformIcon } from '../../components/BrandIcons';
 import { CoverMaker } from '../../components/CoverMaker';
 import { config } from '../../config';
 import { Alert, Button, Card, Spinner } from '../../components/ui';
@@ -28,7 +29,7 @@ function PlatformCard({ platform, project, job, withVoice, available, onStart }:
       <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_200px]">
         <div>
           <h3 className="flex items-center gap-2 font-semibold">
-            <Film className="h-4 w-4 text-accent" /> {meta.label}
+            <PlatformIcon platform={platform} className="h-5 w-5" /> {meta.label}
           </h3>
           <p className="mt-1 text-sm text-ink-400">
             1080 × 1920 H.264 MP4 at 30 fps. {platform === 'youtube' ? 'Text keeps clear of the Shorts title and buttons, and the end card says subscribe.' : 'The end card says follow.'} Uses the voiceover if it matches the script.
@@ -41,7 +42,7 @@ function PlatformCard({ platform, project, job, withVoice, available, onStart }:
               {running && (
                 <div className="mt-4">
                   <div className="h-2 overflow-hidden rounded-full bg-line/10" role="progressbar" aria-label={`${meta.short} progress`} aria-valuenow={Math.round((job?.progress ?? 0) * 100)} aria-valuemin={0} aria-valuemax={100}>
-                    <div className="h-full bg-accent transition-all" style={{ width: `${Math.round((job?.progress ?? 0) * 100)}%` }} />
+                    <div className="bar-live h-full rounded-full transition-all duration-500" style={{ width: `${Math.round((job?.progress ?? 0) * 100)}%` }} />
                   </div>
                   <p className="mt-2 text-sm text-ink-400">
                     {job?.status === 'bundling' ? 'Preparing the engine. The very first export also downloads a headless Chrome, which takes a few minutes.' : `Rendering… ${Math.round((job?.progress ?? 0) * 100)}%`}

@@ -7,7 +7,8 @@ import { useStores } from '../../stores/RootStore';
 import { PageHeader } from '../../layout/AppShell';
 import { Spinner } from '../../components/ui';
 import { StageBadge, StatusBadge } from './ProjectBadges';
-import { platformNames, timeAgo } from '../../lib/format';
+import { PlatformIcons } from '../../components/BrandIcons';
+import { timeAgo } from '../../lib/format';
 import { cn } from '../../lib/cn';
 import { ProgressRing, Reveal } from '../../components/motion';
 import { nextStage, progressOf } from '../../lib/progress';
@@ -71,7 +72,7 @@ export const LibraryPage = observer(function LibraryPage() {
                     style={{ backgroundImage: `radial-gradient(circle at 25% 20%, hsl(${h1} 80% 70% / .55), transparent 60%), radial-gradient(circle at 85% 85%, hsl(${h2} 75% 65% / .5), transparent 60%)` }}
                   >
                     <div className="absolute -right-6 -top-6 h-28 w-28 rotate-12 rounded-3xl border border-white/30 bg-white/20 transition duration-500 group-hover:rotate-[24deg] group-hover:scale-110" aria-hidden />
-                    <span className="relative rounded-md bg-white/85 px-2 py-0.5 text-xs font-semibold text-ink-100">{p.durationSec}s · {platformNames(p.platforms)}</span>
+                    <span className="relative inline-flex items-center gap-1.5 rounded-md bg-white/85 px-2 py-0.5 text-xs font-semibold text-ink-100">{p.durationSec}s <PlatformIcons list={p.platforms} /></span>
                     <ProgressRing value={progressOf(p)} size={40} stroke={5} className="relative rounded-full bg-white/85 text-ink-100">
                       <span className="text-[9px]">{Math.round(progressOf(p) * 100)}%</span>
                     </ProgressRing>

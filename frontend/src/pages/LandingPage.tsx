@@ -24,6 +24,8 @@ import { BRAND } from '@motionmind/shared';
 import { useStores } from '../stores/RootStore';
 import { Logo, LogoMark } from '../components/Logo';
 import { CountUp, Reveal, Typewriter } from '../components/motion';
+import { ClaudeIcon, ElevenLabsIcon, InstagramIcon, WikipediaIcon, YouTubeIcon } from '../components/BrandIcons';
+import { FloatingIcons } from '../components/FloatingIcons';
 
 const STEPS = [
   { icon: Sparkles, title: 'Pick a topic', text: 'Type a question, or start from an idea. Choose the length and the quality.', sample: '“How does a Soundbox know the money arrived?”' },
@@ -32,7 +34,7 @@ const STEPS = [
   { icon: Layers3, title: 'Storyboard', text: 'Every line becomes a scene. Edit the words, the objects, the links and the look.', sample: 'Phone → NPCI → Bank → Soundbox' },
   { icon: Boxes, title: 'See it in 3D', text: 'An animated isometric world where the camera glides between the things you are explaining.', sample: 'Any object, any topic' },
   { icon: Mic, title: 'Add the voice', text: 'Copy the narration into any text-to-speech tool, or upload your own recording. Set the pace per scene.', sample: 'Captions follow every word' },
-  { icon: Clapperboard, title: 'Export', text: 'A 1080 × 1920 MP4 with safe margins for the Reels interface and your branded end card.', sample: 'Ready to post' },
+  { icon: Clapperboard, title: 'Export', text: 'A 1080 × 1920 MP4 for Instagram Reels, YouTube Shorts or both, with safe margins for each app and your branded end card.', sample: 'Ready to post' },
 ];
 
 const FEATURES = [
@@ -79,14 +81,16 @@ function PhoneMock() {
       <Chip className="-left-16 top-16 sm:-left-24" icon={<FileSearch className="h-3.5 w-3.5" />} text="12 facts verified" delay="0s" />
       <Chip className="-right-12 top-44 sm:-right-20" icon={<Boxes className="h-3.5 w-3.5" />} text="3D scene ready" delay="-2s" />
       <Chip className="-left-12 bottom-24 sm:-left-20" icon={<Mic className="h-3.5 w-3.5" />} text="Voice in sync" delay="-4s" />
+      <Chip className="-right-10 top-6 sm:-right-16" icon={<InstagramIcon className="h-3.5 w-3.5" />} text="Reels ready" delay="-1s" raw />
+      <Chip className="-right-14 bottom-10 sm:-right-24" icon={<YouTubeIcon className="h-3.5 w-3.5" />} text="Shorts ready" delay="-3s" raw />
     </div>
   );
 }
 
-function Chip({ icon, text, className, delay }: { icon: React.ReactNode; text: string; className: string; delay: string }) {
+function Chip({ icon, text, className, delay, raw }: { icon: React.ReactNode; text: string; className: string; delay: string; raw?: boolean }) {
   return (
     <div className={`absolute hidden animate-float-slow items-center gap-1.5 rounded-full border border-line/10 bg-ink-900 px-3 py-1.5 text-xs font-semibold shadow-soft md:flex ${className}`} style={{ animationDelay: delay }}>
-      <span className="text-accent">{icon}</span> {text}
+      <span className={raw ? undefined : "text-accent"}>{icon}</span> {text}
     </div>
   );
 }
@@ -106,6 +110,7 @@ export const LandingPage = observer(function LandingPage() {
           <nav className="hidden gap-6 text-sm text-ink-300 md:flex" aria-label="Sections">
             <a href="#how" className="hover:text-ink-100">How it works</a>
             <a href="#features" className="hover:text-ink-100">Features</a>
+            <a href="#platforms" className="hover:text-ink-100">Instagram &amp; YouTube</a>
             <a href="#ways" className="hover:text-ink-100">Two ways to work</a>
             <a href="#faq" className="hover:text-ink-100">FAQ</a>
           </nav>
@@ -123,23 +128,24 @@ export const LandingPage = observer(function LandingPage() {
       </header>
 
       <section className="relative overflow-hidden">
+        <FloatingIcons tone="text-ink-100/[0.18]" />
         <div className="dot-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_50%_30%,black,transparent_75%)]" />
         <div className="orb -right-24 top-0 h-96 w-96 bg-mint-400/40" />
         <div className="orb -left-24 top-72 h-80 w-80 bg-violet-500/30" style={{ animationDelay: '-7s' }} />
         <div className="relative mx-auto grid max-w-6xl items-center gap-16 px-5 pb-24 pt-14 md:grid-cols-[1.15fr_1fr] md:pt-24">
           <div>
-            <span className="inline-flex animate-rise items-center gap-2 rounded-full border border-mint-500/30 bg-mint-400/10 px-3 py-1 text-xs font-semibold text-accent">
-              <Sparkles className="h-3.5 w-3.5" /> AI studio for explainer reels
+            <span className="inline-flex animate-rise items-center gap-2 rounded-full border border-line/10 bg-ink-900 px-3 py-1.5 text-xs font-semibold text-ink-300 shadow-soft">
+              <InstagramIcon className="h-4 w-4" /> <YouTubeIcon className="h-4 w-4" /> AI studio for Reels &amp; Shorts
             </span>
             <h1 className="mt-6 animate-rise font-display text-5xl font-bold leading-[1.05] tracking-tight [animation-delay:80ms] md:text-6xl">
-              Turn any question into a <span className="text-gradient">cinematic</span> Instagram reel.
+              Turn any question into a <span className="text-gradient">cinematic</span> Reel or Short.
             </h1>
             <p className="mt-5 h-8 animate-rise text-xl font-medium text-ink-300 [animation-delay:160ms]">
               Today: <Typewriter className="text-accent" phrases={['how UPI Soundbox speaks', 'how a vaccine trains your body', 'where my train is, offline', 'why 5G needs so many towers']} />
             </p>
             <p className="mt-5 max-w-xl animate-rise text-lg text-ink-400 [animation-delay:240ms]">
               {BRAND.name} researches the topic, writes the script, builds animated 3D scenes that match what you are explaining, and gives you a voice script,
-              timed captions and a ready-to-post 9:16 video.
+              timed captions and a ready-to-post 9:16 video for Instagram Reels, YouTube Shorts, or both.
             </p>
             <div className="mt-9 flex animate-rise flex-wrap items-center gap-3 [animation-delay:320ms]">
               <Link to={primary.to} className="group inline-flex items-center gap-2 rounded-xl bg-mint-600 px-6 py-3.5 text-base font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:bg-mint-700">
@@ -150,7 +156,7 @@ export const LandingPage = observer(function LandingPage() {
               </a>
             </div>
             <ul className="mt-9 flex animate-rise flex-wrap gap-x-6 gap-y-2 text-sm text-ink-400 [animation-delay:400ms]">
-              {['Sources on every fact', 'Hindi · Hinglish · English', 'No API key needed', '1080 × 1920 MP4'].map((t) => (
+              {['Sources on every fact', 'Hindi · Hinglish · English', 'No API key needed', 'Instagram + YouTube Shorts'].map((t) => (
                 <li key={t} className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-accent" /> {t}
                 </li>
@@ -172,10 +178,23 @@ export const LandingPage = observer(function LandingPage() {
         </div>
       </section>
 
+      <section aria-label="Built with" className="border-b border-line/[0.06] py-6">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-3 px-5 text-sm font-semibold text-ink-400">
+          <span className="text-xs font-medium uppercase tracking-wider">Made for</span>
+          <span className="inline-flex items-center gap-2 text-ink-100"><InstagramIcon className="h-5 w-5" /> Instagram Reels</span>
+          <span className="inline-flex items-center gap-2 text-ink-100"><YouTubeIcon className="h-5 w-5" /> YouTube Shorts</span>
+          <span className="hidden h-4 w-px bg-line/15 sm:block" />
+          <span className="text-xs font-medium uppercase tracking-wider">Powered by</span>
+          <span className="inline-flex items-center gap-2 text-ink-100"><ClaudeIcon className="h-5 w-5" /> Claude</span>
+          <span className="inline-flex items-center gap-2 text-ink-100"><ElevenLabsIcon className="h-5 w-5" /> ElevenLabs</span>
+          <span className="inline-flex items-center gap-2 text-ink-100"><WikipediaIcon className="h-5 w-5" /> Wikipedia trends</span>
+        </div>
+      </section>
+
       <section className="py-14">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-5 text-center md:grid-cols-4">
           {[
-            { n: 7, label: 'steps, each one yours to approve' },
+            { n: 2, label: 'platforms: Instagram Reels and YouTube Shorts' },
             { n: 16, label: 'ready 3D objects, plus any icon you like', suffix: '+' },
             { n: 3, label: 'languages for voice and captions' },
             { n: 0, label: 'API keys needed in copy-paste mode' },
@@ -236,6 +255,41 @@ export const LandingPage = observer(function LandingPage() {
                 </span>
                 <h3 className="mt-5 text-lg font-semibold">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-ink-400">{text}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section id="platforms" className="relative overflow-hidden py-20">
+        <FloatingIcons count={6} tone="text-ink-100/[0.12]" />
+        <div className="relative mx-auto max-w-6xl px-5">
+          <Reveal>
+            <p className="text-sm font-semibold uppercase tracking-wider text-accent">One reel, both platforms</p>
+            <h2 className="mt-3 max-w-2xl font-display text-4xl font-bold tracking-tight">Make it for Instagram, YouTube Shorts, or both.</h2>
+            <p className="mt-3 max-w-2xl text-ink-400">Each app covers the screen with its own buttons and captions. Motion Mind lays the text out for the one you pick and renders a separate video for each.</p>
+          </Reveal>
+          <div className="mt-10 grid gap-5 md:grid-cols-2">
+            {[
+              { name: 'Instagram Reels', logo: <InstagramIcon className="h-9 w-9" />, cta: 'follow', points: ['Captions sit above the Reels caption area', 'End card: follow @yourhandle', 'Cover with 4:5 and 1:1 profile-grid guides'] },
+              { name: 'YouTube Shorts', logo: <YouTubeIcon className="h-9 w-9" />, cta: 'subscribe', points: ['Text kept clear of the Shorts title and buttons', 'End card: subscribe @yourhandle', 'The voice script closes with a subscribe line'] },
+            ].map((pl, i) => (
+              <Reveal key={pl.name} delay={i * 110} className="card card-hover p-7">
+                <div className="flex items-center gap-3">
+                  {pl.logo}
+                  <div>
+                    <h3 className="font-display text-xl font-bold">{pl.name}</h3>
+                    <p className="text-xs text-ink-400">1080 × 1920 · 9:16 · MP4</p>
+                  </div>
+                  <span className="ml-auto rounded-full bg-ink-800 px-3 py-1 text-xs font-semibold text-ink-300">{pl.cta}</span>
+                </div>
+                <ul className="mt-5 space-y-2.5 text-sm">
+                  {pl.points.map((t) => (
+                    <li key={t} className="flex items-start gap-2.5">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" /> {t}
+                    </li>
+                  ))}
+                </ul>
               </Reveal>
             ))}
           </div>
@@ -304,6 +358,7 @@ export const LandingPage = observer(function LandingPage() {
       <section className="pb-20">
         <div className="mx-auto max-w-4xl px-5">
           <Reveal className="relative overflow-hidden rounded-3xl bg-ink-100 px-8 py-16 text-center text-ink-950">
+            <FloatingIcons count={7} tone="text-ink-950/[0.14]" />
             <div className="orb -right-10 -top-10 h-72 w-72 bg-mint-400/60" />
             <div className="orb -bottom-16 -left-10 h-72 w-72 bg-violet-500/50" style={{ animationDelay: '-7s' }} />
             <div className="relative">
