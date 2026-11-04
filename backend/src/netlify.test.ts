@@ -1,5 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { beforeAll, describe, expect, it } from '@jest/globals';
+import { beforeAll, describe, expect, it, jest } from '@jest/globals';
+
+// The first call imports and builds the whole API, which can take a few seconds on a cold cache.
+jest.setTimeout(20_000);
 
 // Netlify treats every file in netlify/functions as a function, so this test lives here.
 // The Netlify function builds the app from process.env on first call; use demo (memory) mode.

@@ -1,6 +1,6 @@
 # Motion Mind: context for Claude
 
-Motion Mind is an AI studio that turns a topic into a researched, animated Instagram explainer reel (1080x1920). The flow per project: topic, research, script, storyboard, graphics, voice, final. **Phase 1 is built:** email-code accounts, handles, onboarding, dashboard, project library, a route for every stage, and encrypted provider API keys. The stage screens after "topic" are placeholders that say so plainly; never add fake buttons. The reel renderer (`backend/reel-engine`) is a working prototype that isn't wired into the app yet (Phase 3).
+Motion Mind is an AI studio that turns a topic into a researched, animated Instagram explainer reel (1080x1920). The flow per project: topic, research, script, storyboard, graphics, voice, final. **Phase 1 is built:** email-code accounts, handles, onboarding, dashboard, project library, a route for every stage, Claude and ElevenLabs connectors on server keys. The stage screens after "topic" are placeholders that say so plainly; never add fake buttons. The reel renderer (`backend/reel-engine`) is a working prototype that isn't wired into the app yet (Phase 3).
 
 Owner: Saquib. Read this file first, then the README for setup steps.
 
@@ -43,6 +43,7 @@ MotionMind/
 │   │   ├── auth/             routes (request-code, verify-code), otp, session tokens, mailer, verifiers
 │   │   ├── account/          routes: /profile, /handles/:h/available, /projects CRUD
 │   │   ├── ai/               Claude (claude-opus-5-5, server's ANTHROPIC_API_KEY): /claude/status, /claude/ask, /projects/:id/script
+│   │   ├── connectors/       GET /connectors (Claude, ElevenLabs: ready or not), POST /connectors/elevenlabs/test
 │   │   ├── logs/             POST /api/client-logs: browser warnings/errors into the server log
 │   │   ├── data/             DataRepository: users, login codes, profiles, projects (Memory + Supabase)
 │   │   └── app.test.ts       API tests via app.inject() (each folder also has its own *.test.ts)
@@ -74,7 +75,7 @@ Every route only ever reads or writes rows for `req.userId`. Repositories take `
 - Claude runs only on the API with the server's `ANTHROPIC_API_KEY`. Users never set up API keys (decided by Saquib); add any future provider the same way, as a server env var. `backend/src/ai/claude.ts` uses `@anthropic-ai/sdk`, model `claude-opus-5-5`, server-side refusal fallback (`fallbacks: 'default'`), and structured output (`betaZodOutputFormat(reelScriptSchema)`) for scripts. Tests inject `AppDeps.claude` instead of calling Anthropic.
 - A project's script is `projects.script` (jsonb) with the `ReelScript` shape in `shared/src/projects.ts`. `frontend/src/components/reelSpec.ts` turns it into the engine's `ReelSpec` (cards world, branded with the user's channel).
 - The web app embeds the engine through `@remotion/player` (`components/ReelPreview.tsx`, lazy-loaded). Keep the engine browser-safe: no Node imports in `backend/reel-engine/src`.
-- Settings → Claude shows whether Claude is ready, tests it and has an "Ask Claude" box. Project → Script has "Write with Claude" and the live preview.
+- Settings → Connectors has exactly two connectors, Claude and ElevenLabs, both on server keys (`ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`). Each shows Ready/Not available and a test; Claude also has an "Ask Claude" box. No key fields for users. Project → Script has "Write with Claude" and the live preview.
 - Netlify Functions time out at about 10 to 26 seconds, and a long script can take longer. If that bites, move script writing to a Netlify Background Function or stream it.
 
 ## Sign-in
@@ -99,9 +100,9 @@ Every route only ever reads or writes rows for `req.userId`. Repositories take `
 
 ## Environment (`.env` at the root, template `.env.example`)
 
-- API: `API_DATA_MODE` (`supabase` | `memory`), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `AUTH_SECRET`, `ANTHROPIC_API_KEY`, `SMTP_HOST/PORT/USER/PASS/FROM`, `PORT`, `WEB_ORIGIN`.
+- API: `API_DATA_MODE` (`supabase` | `memory`), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `AUTH_SECRET`, `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `SMTP_HOST/PORT/USER/PASS/FROM`, `PORT`, `WEB_ORIGIN`.
 - Web: `VITE_DATA_MODE` (`api` | `memory`). Only `VITE_*` values reach the browser, so never prefix a secret with `VITE_`. `VITE_API_URL` is optional; leave it unset to use the same origin.
-- Reel engine: `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`.
+- Reel engine: `ELEVENLABS_API_KEY` (shared with the API), `ELEVENLABS_VOICE_ID`.
 - On Netlify, set the API variables in the dashboard. The web app needs none.
 - Changing `AUTH_SECRET` signs everyone out.
 
@@ -129,5 +130,5 @@ Every route only ever reads or writes rows for `req.userId`. Repositories take `
 
 - Windows dev machine, PowerShell 5.1: `Set-Content -Encoding utf8` writes a BOM, which breaks JSON. Write files with the editor tools, or `[IO.File]::WriteAllText`.
 - Vite, PostCSS and Tailwind configs use paths relative to their own files (`import.meta.url`), because commands run from the root.
-- `reel-engine/render.mjs` hardcodes `browserExecutable: '/opt/pw-browsers/chromium'` (from the cloud test box). Change it, or remove it to let Remotion download Chrome, before rendering on Windows.
+- `reel-engine/render.mjs` lets Remotion download its own Chrome; set `REMOTION_BROWSER` to use an installed one.
 - The Netlify function bundles with esbuild, which resolves `@motionmind/shared` through `backend/tsconfig.json` → `tsconfig.base.json` paths.

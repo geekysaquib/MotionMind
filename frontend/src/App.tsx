@@ -13,7 +13,7 @@ import { SettingsPage } from './pages/app/SettingsPage';
 import { ProfileSettings } from './pages/app/ProfileSettings';
 import { AccountSettings } from './pages/app/AccountSettings';
 import { DiagnosticsSettings } from './pages/app/DiagnosticsSettings';
-import { ClaudeSettings } from './pages/app/ClaudeSettings';
+import { ConnectorsSettings } from './pages/app/ConnectorsSettings';
 import { ScriptStagePage } from './pages/app/ScriptStagePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LandingPage } from './pages/LandingPage';
@@ -61,7 +61,9 @@ export const routes = [
         element: <SettingsPage />,
         children: [
           { index: true, element: <ProfileSettings /> },
-          { path: 'claude', element: <ClaudeSettings /> },
+          { path: 'connectors', element: <ConnectorsSettings /> },
+          // Old link from before connectors existed.
+          { path: 'claude', element: <Navigate to="/app/settings/connectors" replace /> },
           { path: 'account', element: <AccountSettings /> },
           { path: 'diagnostics', element: <DiagnosticsSettings /> },
         ],

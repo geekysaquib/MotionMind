@@ -13,6 +13,8 @@ const schema = z
     AUTH_SECRET: base64Secret('AUTH_SECRET'),
     // Claude for every user (script writing, Ask Claude). Users never add their own keys.
     ANTHROPIC_API_KEY: z.string().min(20).optional(),
+    // Voiceover for every user. Also read by the reel engine's tts.mjs.
+    ELEVENLABS_API_KEY: z.string().min(10).optional(),
     // Login-code email. Leave SMTP_HOST empty in the root .env during development to print codes in the terminal instead.
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().positive().default(465),

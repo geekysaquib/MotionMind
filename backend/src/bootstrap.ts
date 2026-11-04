@@ -28,5 +28,5 @@ export async function createAppFromEnv(env: Env, opts: { logger: boolean }): Pro
     deps = { data: new SupabaseDataRepository(db) };
   }
 
-  return buildApp({ ...deps, sessions, mailer, authSecret: env.AUTH_SECRET, anthropicApiKey: env.ANTHROPIC_API_KEY, webOrigin: env.WEB_ORIGIN, mode: env.API_DATA_MODE, logger: opts.logger });
+  return buildApp({ ...deps, sessions, mailer, authSecret: env.AUTH_SECRET, anthropicApiKey: env.ANTHROPIC_API_KEY, elevenLabsApiKey: env.ELEVENLABS_API_KEY, webOrigin: env.WEB_ORIGIN, mode: env.API_DATA_MODE, logger: opts.logger });
 }

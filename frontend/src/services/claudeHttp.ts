@@ -12,7 +12,24 @@ export interface ClaudeAnswer {
   ms: number;
 }
 
+export interface Connector {
+  id: 'claude' | 'elevenlabs';
+  name: string;
+  purpose: string;
+  connected: boolean;
+  detail: string | null;
+}
+
+export interface ElevenLabsCheck {
+  ok: boolean;
+  detail: string;
+  voices?: { id: string; name: string }[];
+}
+
 export interface ClaudeService {
+  /** The app's connectors (Claude, ElevenLabs), all on server keys. */
+  connectors(): Promise<Connector[]>;
+  testElevenLabs(): Promise<ElevenLabsCheck>;
   status(): Promise<ClaudeStatus>;
   ask(prompt: string): Promise<ClaudeAnswer>;
   /** Claude writes the project's reel script; returns the updated project. */
@@ -27,6 +44,8 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     return apiRequest<T>(baseUrl, path, { method, body, token, fetchImpl });
   }
   return {
+    connectors: async () => (await call<{ connectors: Connector[] }>('/connectors')).connectors,
+    testElevenLabs: async () => (await call<{ result: ElevenLabsCheck }>('/connectors/elevenlabs/test', 'POST')).result,
     status: () => call<ClaudeStatus>('/claude/status'),
     ask: (prompt) => call<ClaudeAnswer>('/claude/ask', 'POST', { prompt }),
     writeScript: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'POST')).project,

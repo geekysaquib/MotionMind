@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import { registerAccountRoutes } from './account/routes';
 import type { ClaudeClient } from './ai/claude';
 import { registerClaudeRoutes } from './ai/routes';
+import { registerConnectorRoutes } from './connectors/routes';
 import type { Mailer } from './auth/mailer';
 import { registerLoginRoutes } from './auth/routes';
 import type { SessionTokens } from './auth/session';
@@ -27,6 +28,8 @@ export interface AppDeps {
   clientLogSink?: (report: ClientLogReport) => void;
   /** The server's Anthropic key (ANTHROPIC_API_KEY). Users never set up keys. */
   anthropicApiKey?: string;
+  /** The server's ElevenLabs key (ELEVENLABS_API_KEY), for voiceover. */
+  elevenLabsApiKey?: string;
   /** Builds the Claude client. Tests pass a fake. */
   claude?: (apiKey: string) => ClaudeClient;
 }
@@ -64,6 +67,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
       });
       registerAccountRoutes(api, deps);
       registerClaudeRoutes(api, deps);
+      registerConnectorRoutes(api, deps);
     },
     { prefix: '/api' },
   );

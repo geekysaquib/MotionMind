@@ -63,7 +63,7 @@ The web app calls `/api` on its own address, and Vite forwards it to the local A
 
 1. In Netlify, choose **Add new site → Import from Git** and pick this repo. The build settings come from `netlify.toml`.
 2. Under **Site configuration → Environment variables**, add:
-   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `AUTH_SECRET`, `ANTHROPIC_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (all secret, all for the API).
+   - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `AUTH_SECRET`, `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (all secret, all for the API).
 
 The web app needs no environment variables on Netlify.
 
@@ -92,7 +92,7 @@ npm run build
 | `/app/discover` | Topic discovery (next module) |
 | `/app/library` | Project library |
 | `/app/projects/:id` + `/research`, `/script`, `/storyboard`, `/graphics`, `/voice`, `/editor`, `/export` | Project workspace by stage |
-| `/app/settings`, `/app/settings/claude`, `/app/settings/account`, `/app/settings/diagnostics` | Profile & handle, Claude, account, app log |
+| `/app/settings`, `/app/settings/connectors`, `/app/settings/account`, `/app/settings/diagnostics` | Profile & handle, connectors (Claude, ElevenLabs), account, app log |
 
 Stages that are not built yet say so plainly and have no fake buttons.
 
