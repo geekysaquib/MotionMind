@@ -99,7 +99,7 @@ export const PasteScriptPanel = observer(function PasteScriptPanel({ project }: 
   const { projects, services, auth } = useStores();
   return (
     <ClaudeAiPanel
-      title="Or write it in claude.ai"
+      title="Write it in claude.ai"
       placeholder='{ "title": "...", "steps": [...], "beats": [...] }'
       disabled={!project.topic}
       logScope="Script"

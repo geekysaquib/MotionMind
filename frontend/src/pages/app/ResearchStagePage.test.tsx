@@ -19,8 +19,8 @@ const REPORT: ResearchReport = {
   model: 'claude-opus-5-5',
 };
 
-async function setup() {
-  const store = await makeStore({ signedIn: true });
+async function setup(aiMode: 'keys' | 'paste' = 'keys') {
+  const store = await makeStore({ signedIn: true, aiMode });
   const project = await store.projects.create({ title: 'WIMT', topic: 'Where is my Train offline', durationSec: 60, qualityTier: 'standard' });
   const withResearch = (approvedAt: string | null): Project => ({ ...store.projects.byId(project.id)!, research: { ...REPORT, approvedAt } });
   store.services.claude = () =>
@@ -70,9 +70,17 @@ describe('ResearchStagePage', () => {
     expect(store.projects.byId(project.id)?.research?.approvedAt).toBeTruthy();
   });
 
-  it('offers the claude.ai route too', async () => {
-    await setup();
-    expect(screen.getByText('Or research it in claude.ai')).toBeTruthy();
+  it('in API-key mode shows only the Research with Claude button', async () => {
+    await setup('keys');
+    expect(screen.getByRole('button', { name: 'Research with Claude' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Copy prompt' })).toBeNull();
+  });
+
+  it('in copy-paste mode shows only the claude.ai prompt and paste box', async () => {
+    await setup('paste');
+    expect(screen.getByText('Research it in claude.ai')).toBeTruthy();
     expect(screen.getByText(/Turn on web search/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Copy prompt' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Research with Claude/ })).toBeNull();
   });
 });

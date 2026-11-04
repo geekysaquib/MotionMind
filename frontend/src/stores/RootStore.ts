@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { Services } from '../services/types';
+import { AiModeStore } from './AiModeStore';
 import { AuthStore } from './AuthStore';
 import { ProfileStore } from './ProfileStore';
 import { ProjectStore } from './ProjectStore';
@@ -10,6 +11,7 @@ export class RootStore {
   readonly profile: ProfileStore;
   readonly projects: ProjectStore;
   readonly toasts = new ToastStore();
+  readonly aiMode = new AiModeStore();
 
   constructor(readonly services: Services) {
     this.auth = new AuthStore(this);

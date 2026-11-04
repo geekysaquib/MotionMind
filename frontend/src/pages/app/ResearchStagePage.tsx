@@ -18,7 +18,7 @@ const STATUS_TONE: Record<FactStatus, 'mint' | 'violet' | 'amber' | 'coral'> = {
 /** Research stage: Claude finds how the topic really works, with sources; the user approves it before the script. */
 export const ResearchStagePage = observer(function ResearchStagePage() {
   const project = useOutletContext<Project>();
-  const { projects, services, auth } = useStores();
+  const { projects, services, auth, aiMode } = useStores();
   const [busy, setBusy] = useState<'research' | 'approve' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const research = project.research;
@@ -37,8 +37,19 @@ export const ResearchStagePage = observer(function ResearchStagePage() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+    <div className="max-w-3xl">
       <div className="space-y-6">
+        {aiMode.paste ? (
+          <ClaudeAiPanel
+            title="Research it in claude.ai"
+            chatHint="Turn on web search in claude.ai first, so Claude can read real sources."
+            placeholder='{ "summary": "...", "facts": [...], "sources": [...] }'
+            disabled={!project.topic}
+            logScope="Research"
+            getPrompt={() => services.claude(() => auth.session?.accessToken ?? null).researchPrompt(project.id)}
+            onImport={(text) => projects.importResearch(project.id, text)}
+          />
+        ) : (
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -64,6 +75,7 @@ export const ResearchStagePage = observer(function ResearchStagePage() {
             </div>
           )}
         </Card>
+        )}
 
         {research && (
           <Card>
@@ -123,17 +135,6 @@ export const ResearchStagePage = observer(function ResearchStagePage() {
         )}
       </div>
 
-      <div>
-        <ClaudeAiPanel
-          title="Or research it in claude.ai"
-          chatHint="Turn on web search in claude.ai first, so Claude can read real sources."
-          placeholder='{ "summary": "...", "facts": [...], "sources": [...] }'
-          disabled={!project.topic}
-          logScope="Research"
-          getPrompt={() => services.claude(() => auth.session?.accessToken ?? null).researchPrompt(project.id)}
-          onImport={(text) => projects.importResearch(project.id, text)}
-        />
-      </div>
     </div>
   );
 });

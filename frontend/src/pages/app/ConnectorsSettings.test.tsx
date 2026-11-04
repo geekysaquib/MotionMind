@@ -77,4 +77,20 @@ describe('ConnectorsSettings', () => {
     expect(screen.getByText(/needs to add ELEVENLABS_API_KEY/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Test ElevenLabs' })).toBeNull();
   });
+
+  it('switches to copy-paste and hides the connector cards', async () => {
+    const store = await makeStore({ signedIn: true, aiMode: 'keys' });
+    store.services.claude = () => fakeService([CLAUDE, ELEVEN]);
+    await act(async () => {
+      renderWithStore(<ConnectorsSettings />, store);
+    });
+    expect(screen.getByRole('button', { name: 'Test Claude' })).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('radio', { name: /Copy and paste/ }));
+    });
+    expect(store.aiMode.mode).toBe('paste');
+    expect(screen.getByText('Copy and paste is on')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Test Claude' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Test ElevenLabs' })).toBeNull();
+  });
 });

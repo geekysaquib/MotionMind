@@ -15,7 +15,7 @@ const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 /** Script stage: Claude writes the reel script from the topic, and the embedded engine plays it. */
 export const ScriptStagePage = observer(function ScriptStagePage() {
   const project = useOutletContext<Project>();
-  const { projects, profile } = useStores();
+  const { projects, profile, aiMode } = useStores();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSample, setShowSample] = useState(false);
@@ -37,6 +37,9 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
       <div className="space-y-6">
+        {aiMode.paste ? (
+          <PasteScriptPanel project={project} />
+        ) : (
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -62,8 +65,7 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
           )}
           {busy && <p className="mt-4 text-sm text-ink-400">Claude is writing. This usually takes 20 to 60 seconds.</p>}
         </Card>
-
-        <PasteScriptPanel project={project} />
+        )}
 
         {script && (
           <Card>

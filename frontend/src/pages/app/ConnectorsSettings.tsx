@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { AudioLines, Sparkles } from 'lucide-react';
+import { AudioLines, ClipboardCopy, KeyRound, Sparkles } from 'lucide-react';
 import { useStores } from '../../stores/RootStore';
 import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
+import { cn } from '../../lib/cn';
+import type { AiMode } from '../../stores/AiModeStore';
 import type { ClaudeAnswer, Connector, ElevenLabsCheck } from '../../services/claudeHttp';
 
 const TEST_PROMPT = 'In one short sentence, confirm you are connected to Motion Mind and say which Claude model you are.';
@@ -16,30 +18,85 @@ const ICONS = { claude: Sparkles, elevenlabs: AudioLines } as const;
  * whether each is ready and lets you test them.
  */
 export const ConnectorsSettings = observer(function ConnectorsSettings() {
-  const { services, auth } = useStores();
+  const { services, auth, aiMode } = useStores();
   const api = services.claude(() => auth.session?.accessToken ?? null);
   const [list, setList] = useState<Connector[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (aiMode.paste) return;
     api
       .connectors()
       .then(setList)
       .catch((e) => setListError(errorText(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [aiMode.mode]);
 
-  if (listError) return <Alert>{listError}</Alert>;
-  if (!list) return <Spinner label="Checking connectors" />;
-  const claude = list.find((c) => c.id === 'claude');
-  const eleven = list.find((c) => c.id === 'elevenlabs');
+  const claude = list?.find((c) => c.id === 'claude');
+  const eleven = list?.find((c) => c.id === 'elevenlabs');
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-ink-400">Motion Mind connects to these for you. There are no keys to add.</p>
-      {claude && <ClaudeCard connector={claude} ask={api.ask} />}
-      {eleven && <ElevenLabsCard connector={eleven} test={api.testElevenLabs} />}
+      <ModePicker />
+      {aiMode.paste ? (
+        <Card>
+          <h2 className="font-semibold">Copy and paste is on</h2>
+          <p className="mt-2 text-sm text-ink-400">
+            Research and the script show a ready-made prompt. Copy it, run it in claude.ai, and paste the answer back. Nothing here needs a key.
+            For the voice, upload your own recording on the Voice tab.
+          </p>
+        </Card>
+      ) : listError ? (
+        <Alert>{listError}</Alert>
+      ) : !list ? (
+        <Spinner label="Checking connectors" />
+      ) : (
+        <>
+          <p className="text-sm text-ink-400">Motion Mind connects to these for you. There are no keys to add.</p>
+          {claude && <ClaudeCard connector={claude} ask={api.ask} />}
+          {eleven && <ElevenLabsCard connector={eleven} test={api.testElevenLabs} />}
+        </>
+      )}
     </div>
+  );
+});
+
+const MODES: { id: AiMode; title: string; text: string; icon: typeof ClipboardCopy }[] = [
+  { id: 'paste', title: 'Copy and paste', text: 'No key needed. Copy a prompt into claude.ai (your own subscription), then paste the answer back. You upload your own voiceover.', icon: ClipboardCopy },
+  { id: 'keys', title: 'API keys', text: "One click does the research, the script and the voice, using this server's Claude and ElevenLabs keys.", icon: KeyRound },
+];
+
+/** Picks how AI work is done. Every stage shows only the chosen way. */
+const ModePicker = observer(function ModePicker() {
+  const { aiMode } = useStores();
+  return (
+    <fieldset>
+      <legend className="text-sm font-semibold">How do you want to work with AI?</legend>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {MODES.map((m) => {
+          const on = aiMode.mode === m.id;
+          return (
+            <label key={m.id} className={cn('cursor-pointer rounded-2xl border p-4 transition-colors', on ? 'border-accent bg-accent/5' : 'border-line/15 hover:border-line/30')}>
+              <input
+                type="radio"
+                name="ai-mode"
+                className="sr-only"
+                checked={on}
+                onChange={() => {
+                  aiMode.set(m.id);
+                  log.info('settings', `AI mode: ${m.id}`);
+                }}
+              />
+              <span className="flex items-center gap-2 font-semibold">
+                <m.icon className="h-4 w-4 text-accent" /> {m.title}
+                {on && <Badge tone="mint">On</Badge>}
+              </span>
+              <span className="mt-1 block text-sm text-ink-400">{m.text}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 });
 

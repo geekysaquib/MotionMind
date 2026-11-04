@@ -78,6 +78,21 @@ describe('VoiceStagePage', () => {
     expect(screen.getByText('Preview with voice')).toBeTruthy();
   });
 
+  it('shows the narration script and copies it for text-to-speech', async () => {
+    const writes: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t: string) => void writes.push(t) } });
+    await setup({ voice: null, urls: [], stale: false });
+    expect(screen.getByText('Your narration script')).toBeTruthy();
+    expect(screen.getByText('NPCI.')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy the whole script' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy scene 2' }));
+    });
+    expect(writes).toEqual(['Ek second.\n\nNPCI.', 'NPCI.']);
+  });
+
   it('warns when the narration changed after recording and plays without it', async () => {
     await setup({ voice: VOICE, urls: ['u0', 'u1'], stale: true });
     expect(screen.getByText('Script changed since')).toBeTruthy();

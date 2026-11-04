@@ -52,7 +52,7 @@ function Seg<T extends string>({ label, value, options, onChange }: { label: str
 /** Reel editor: manage the voice (upload, scene breaks, pace), the words on screen, music and captions, with a live preview. */
 export const ReelEditorPage = observer(function ReelEditorPage() {
   const project = useOutletContext<Project>();
-  const { projects, profile, services, auth, toasts } = useStores();
+  const { projects, profile, services, auth, toasts, aiMode } = useStores();
   const api = services.claude(() => auth.session?.accessToken ?? null);
   const [draft, setDraft] = useState<ReelEditor>(() => normalizeEditor(project.editor, Boolean(project.voice)));
   const [script, setScript] = useState<ReelScript | null>(project.script);
@@ -187,13 +187,15 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
               <Button loading={busy === 'voice'} onClick={() => voiceFile.current?.click()}>
                 <Upload className="mr-2 h-4 w-4" /> Upload voiceover
               </Button>
-              <p>
-                Or use ElevenLabs from the{' '}
-                <Link to={`/app/projects/${project.id}/voice`} className="text-accent hover:underline">
-                  Voice
-                </Link>{' '}
-                tab.
-              </p>
+              {!aiMode.paste && (
+                <p>
+                  Or use ElevenLabs from the{' '}
+                  <Link to={`/app/projects/${project.id}/voice`} className="text-accent hover:underline">
+                    Voice
+                  </Link>{' '}
+                  tab.
+                </p>
+              )}
             </div>
           ) : (
             <div className="mt-4 space-y-4">
@@ -263,7 +265,7 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
               Pace for this scene: <span className="font-semibold text-ink-100">{scenePace(sceneIdx).toFixed(2)}×</span> (on top of the reel pace)
               <input type="range" className="mt-1 block w-full" min={PACE_MIN} max={PACE_MAX} step={0.05} value={scenePace(sceneIdx)} onChange={(e) => setScenePace(sceneIdx, Number(e.target.value))} aria-label="Scene pace" />
             </label>
-            {!upload && <p className="text-xs text-ink-400">Without an uploaded recording the pace still changes how long each scene stays on screen and how fast the ElevenLabs voice plays.</p>}
+            {!upload && <p className="text-xs text-ink-400">Without an uploaded recording the pace changes how long each scene stays on screen{aiMode.paste ? '.' : ' and how fast the ElevenLabs voice plays.'}</p>}
           </div>
         </Card>
 
