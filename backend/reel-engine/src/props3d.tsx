@@ -12,7 +12,7 @@ export type ExtraKind = (typeof EXTRA_KINDS)[number];
 
 /** Height of each model: where its icon, label and links attach. */
 export const EXTRA_TOP: Record<ExtraKind, number> = {
-  qr: 2.3, speaker: 1.9, lock: 2.7, database: 2.3, router: 2.3, battery: 2.5, heart: 3.1, gear: 1.2, truck: 2.2, plane: 3.2, train: 2.2, tree: 3.4,
+  qr: 2.3, speaker: 1.9, lock: 2.7, database: 2.3, router: 2.3, battery: 2.5, heart: 3.1, gear: 1.2, truck: 2.2, plane: 3.6, train: 2.9, tree: 3.4,
   hospital: 3.4, school: 3.6, cart: 2.0, camera: 1.6, bulb: 3.6, globe: 3.3, envelope: 0.9, clock: 3.4, rocket: 5.2, syringe: 3.6, chart: 3.0, atm: 3.2,
 };
 
@@ -164,20 +164,48 @@ export function extraItems(kind: string, p: { id: string; pos: Vec3 }, accent: s
       break;
     }
     case 'plane': {
-      const bob = Math.sin(frame / 18) * 0.2;
-      out.push(over(box(`pb${k}`, x - 1.4, y - 0.22, 1.9 + bob, 2.8, 0.44, 0.44, '#EEF1F6'), d + 2));
-      out.push(over(box(`pw${k}`, x - 0.3, y - 1.3, 1.95 + bob, 0.7, 2.6, 0.07, accent), d + 2.05));
-      out.push(over(box(`pt${k}`, x - 1.4, y - 0.5, 1.95 + bob, 0.45, 1.0, 0.07, accent), d + 2.1));
-      out.push(over(box(`pf${k}`, x - 1.4, y - 0.05, 2.1 + bob, 0.45, 0.1, 0.7, accent), d + 2.15));
-      out.push(ball(`pn${k}`, { x: x + 1.4, y, z: 2.12 + bob }, 0.26, '#EEF1F6', d + 2.2));
+      const bob = Math.sin(frame / 18) * 0.18;
+      const z = 2.3 + bob;
+      const v = (px: number, py: number, pz: number): Vec3 => ({ x: x + px, y: y + py, z: z + pz });
+      // A soft contrail behind the tail, then the far wing, the body, and the near wing in front.
+      out.push(poly(`pc${k}`, [v(-1.9, -0.08, 0), v(-4.2, -0.5, -0.05), v(-4.2, 0.5, -0.05), v(-1.9, 0.08, 0)], '#FFFFFF', d + 1.6, 0.4));
+      const wing = (sg: number, fill: string, dep: number, key: string) => [
+        poly(`${key}a${k}`, [v(0.55, sg * 0.28, -0.12), v(-0.35, sg * 0.28, -0.12), v(-1.2, sg * 2.2, -0.12), v(-0.7, sg * 2.2, -0.12)], hex(fill, -0.2), dep),
+        poly(`${key}b${k}`, [v(0.55, sg * 0.28, -0.04), v(-0.35, sg * 0.28, -0.04), v(-1.2, sg * 2.2, -0.04), v(-0.7, sg * 2.2, -0.04)], fill, dep + 0.01),
+        poly(`${key}t${k}`, [v(-0.95, sg * 1.95, -0.04), v(-0.7, sg * 2.2, -0.04), v(-1.2, sg * 2.2, -0.04)], accent, dep + 0.02),
+      ];
+      out.push(...wing(-1, '#DDE3EC', d + 1.8, 'pf'));
+      out.push(over(box(`pb${k}`, x - 1.9, y - 0.3, z - 0.3, 3.2, 0.6, 0.6, '#FFFFFF'), d + 2));
+      out.push(over(box(`pq${k}`, x - 2.3, y - 0.2, z - 0.12, 0.5, 0.4, 0.34, '#EEF1F6'), d + 2.05));
+      out.push(ball(`pn${k}`, v(1.3, 0, 0), 0.33, '#FFFFFF', d + 2.1));
+      out.push(poly(`pk${k}`, [v(0.75, 0.31, 0.12), v(1.25, 0.31, 0.1), v(1.3, 0.31, 0.0), v(0.75, 0.31, 0.0)], '#2F3A4D', d + 2.2));
+      for (let i = 0; i < 6; i++) out.push(poly(`pw${k}${i}`, [v(0.4 - i * 0.28, 0.31, 0.08), v(0.2 - i * 0.28, 0.31, 0.08), v(0.2 - i * 0.28, 0.31, -0.06), v(0.4 - i * 0.28, 0.31, -0.06)], '#2F3A4D', d + 2.2));
+      out.push(poly(`ps${k}`, [v(1.25, 0.31, -0.12), v(-2.2, 0.31, -0.12), v(-2.2, 0.31, -0.2), v(1.25, 0.31, -0.2)], accent, d + 2.2));
+      out.push(poly(`pe${k}`, [v(-1.0, 0.4, -0.5), v(-0.6, 0.4, -0.5), v(-0.6, 0.4, -0.12), v(-1.0, 0.4, -0.12)], '#8892A6', d + 2.3));
+      out.push(poly(`pn2${k}`, [v(-1.95, 0.02, 0.28), v(-1.6, 0.02, 0.28), v(-1.85, 0.02, 1.15), v(-2.25, 0.02, 1.1)], accent, d + 2.3));
+      out.push(poly(`pst${k}`, [v(-1.95, 0.3, 0.0), v(-1.55, 0.3, 0.0), v(-2.2, 1.0, 0.0), v(-2.4, 0.9, 0.0)], '#DDE3EC', d + 2.3));
+      out.push(...wing(1, '#FFFFFF', d + 2.4, 'pn'));
       break;
     }
     case 'train': {
-      out.push(box(`rt${k}`, x - 1.6, y - 0.55, 0.3, 3.2, 1.1, 1.3, '#F7F7F4'));
-      out.push(poly(`rs${k}`, face(x - 1.6, x + 1.6, 0.55, 0.8, y + 0.56), accent, d + 0.6));
-      for (let i = 0; i < 4; i++) out.push(poly(`rw${k}${i}`, face(x - 1.35 + i * 0.75, x - 0.85 + i * 0.75, 1.0, 1.35, y + 0.56), '#2F3A4D', d + 0.7));
-      out.push(box(`rn${k}`, x + 1.1, y - 0.55, 0.3, 0.5, 1.1, 0.8, C.trainNose));
-      for (const dx of [-1.1, -0.4, 0.4, 1.1]) out.push(ball(`rb${k}${dx}`, { x: x + dx, y: y + 0.6, z: 0.28 }, 0.22, '#2F3A4D', d + 0.8));
+      for (const sy of [-0.45, 0.45]) out.push(over(box(`rl${k}${sy}`, x - 3, y + sy - 0.06, 0, 6, 0.12, 0.1, '#8892A6'), d - 0.3));
+      for (let i = 0; i < 11; i++) out.push(over(box(`rs${k}${i}`, x - 2.9 + i * 0.55, y - 0.7, 0, 0.22, 1.4, 0.06, '#B9AA90'), d - 0.4));
+      const car = (x0: number, len: number, body: string, name: string, front: boolean) => {
+        out.push(over(box(`${name}b${k}`, x + x0, y - 0.55, 0.3, len, 1.1, 1.4, body), d + 0.2 + x0 * 0.01));
+        out.push(poly(`${name}t${k}`, face(x + x0, x + x0 + len, 0.55, 0.78, y + 0.551), accent, d + 0.5 + x0 * 0.01));
+        const n = Math.floor((len - 0.3) / 0.5);
+        for (let i = 0; i < n; i++) out.push(poly(`${name}w${k}${i}`, face(x + x0 + 0.2 + i * 0.5, x + x0 + 0.5 + i * 0.5, 0.95, 1.5, y + 0.551), '#2F3A4D', d + 0.52 + x0 * 0.01));
+        for (const bx of [0.4, len - 0.4]) out.push(ball(`${name}k${k}${bx}`, { x: x + x0 + bx, y: y + 0.6, z: 0.3 }, 0.24, '#2F3A4D', d + 0.7 + x0 * 0.01));
+        if (front) {
+          out.push(over(box(`${name}n${k}`, x + x0 + len, y - 0.5, 0.3, 0.55, 1.0, 0.85, '#F7F7F4'), d + 0.3 + x0 * 0.01));
+          out.push(ball(`${name}h${k}`, { x: x + x0 + len + 0.55, y: y + 0.2, z: 0.75 }, 0.16, '#FDE68A', d + 0.9 + x0 * 0.01));
+        }
+      };
+      car(-2.5, 2.1, '#F7F7F4', 'rc', false);
+      car(-0.3, 2.1, '#F7F7F4', 'rl2', true);
+      // Overhead wire and a pantograph on the front car.
+      out.push({ depth: d + 1, el: <polyline key={`rw${k}`} points={pts([{ x: x - 3, y, z: 2.7 }, { x: x + 3, y, z: 2.7 }])} stroke="#8892A6" strokeWidth={1.5} vectorEffect="non-scaling-stroke" /> });
+      out.push({ depth: d + 1.1, el: <polyline key={`rp${k}`} points={pts([{ x: x + 0.3, y, z: 1.7 }, { x: x + 0.65, y, z: 2.4 }, { x: x + 1.0, y, z: 1.7 }, { x: x + 0.65, y, z: 2.4 }, { x: x + 0.65, y, z: 2.65 }])} fill="none" stroke="#2F3A4D" strokeWidth={2.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" /> });
       break;
     }
     case 'tree': {

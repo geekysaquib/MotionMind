@@ -78,3 +78,18 @@ describe('icon tiles', () => {
     expect(items.length).toBe(4); // shadow, base, tile, icon layers
   });
 });
+
+describe('label declutter', () => {
+  it('lifts a label that would sit on another one, and leaves clear labels alone', async () => {
+    const { declutter, pillWidth } = await import('../../../backend/reel-engine/src/declutter');
+    const w = pillWidth('train');
+    const shift = declutter([
+      { id: 'a', x: 500, y: 800, w },
+      { id: 'b', x: 520, y: 810, w },
+      { id: 'c', x: 100, y: 800, w },
+    ]);
+    expect(shift.get('a')).toBe(0);
+    expect(shift.get('b')).toBeGreaterThan(0);
+    expect(shift.get('c')).toBe(0);
+  });
+});

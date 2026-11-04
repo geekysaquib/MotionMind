@@ -23,7 +23,8 @@ function Highlight({ text, tone }: { text: string; tone: string }) {
   );
 }
 
-export const Header: React.FC<{ chapter: number; frame: number; fps: number; chapterStart: number; steps: string[]; brand: Brand }> = ({
+export const Header: React.FC<{ chapter: number; frame: number; fps: number; chapterStart: number; steps: string[]; brand: Brand; dark?: boolean }> = ({
+  dark = false,
   chapter,
   frame,
   fps,
@@ -54,11 +55,11 @@ export const Header: React.FC<{ chapter: number; frame: number; fps: number; cha
           >
             {brand.initials}
           </div>
-          <div style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: 28, letterSpacing: 4, color: '#5B6170' }}>
+          <div style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: 28, letterSpacing: 4, color: dark ? '#D6DBE8' : '#5B6170' }}>
             {brand.name.toUpperCase()}
           </div>
         </div>
-        <div style={{ fontFamily: 'JetBrains Mono', fontSize: 26, color: '#7A8090' }}>{brand.handle}</div>
+        <div style={{ fontFamily: 'JetBrains Mono', fontSize: 26, color: dark ? '#A9B1C6' : '#7A8090' }}>{brand.handle}</div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', marginTop: 30, gap: 14 }}>
         {steps.map((s, i) => {
@@ -76,7 +77,7 @@ export const Header: React.FC<{ chapter: number; frame: number; fps: number; cha
                     height: 18,
                     borderRadius: 99,
                     background: on ? C.teal : 'transparent',
-                    border: `3px solid ${on ? C.teal : '#C5C9D2'}`,
+                    border: `3px solid ${on ? C.teal : dark ? '#5A6483' : '#C5C9D2'}`,
                     transform: `scale(${current ? 1 + 0.25 * grow : 1})`,
                   }}
                 />
@@ -86,14 +87,14 @@ export const Header: React.FC<{ chapter: number; frame: number; fps: number; cha
                     fontWeight: 700,
                     fontSize: 22,
                     letterSpacing: 2,
-                    color: on ? C.ink : '#A3A8B4',
+                    color: on ? (dark ? '#FFFFFF' : C.ink) : dark ? '#7F89A8' : '#A3A8B4',
                   }}
                 >
                   {s.toUpperCase()}
                 </div>
               </div>
               {i < steps.length - 1 && (
-                <div style={{ flex: 1, height: 3, background: '#DCDFE5', position: 'relative' }}>
+                <div style={{ flex: 1, height: 3, background: dark ? '#3A4466' : '#DCDFE5', position: 'relative' }}>
                   <div style={{ position: 'absolute', inset: 0, width: `${lineFill * 100}%`, background: C.teal }} />
                 </div>
               )}

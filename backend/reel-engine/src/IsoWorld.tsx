@@ -3,6 +3,7 @@ import { spring } from 'remotion';
 import { Camera, Vec3, cameraTransform, clamp01, easeInOutCubic, lerp, project, pts, shade, toScreen } from './iso';
 import { EXTRA_TOP, extraItems, type ExtraKind } from './props3d';
 import { MORE_TOP, moreItems, type MoreKind } from './props3d-more';
+import { declutter, pillWidth, type LabelBox } from './declutter';
 import { GLYPH_TOP, glyphItems, hasGlyph } from './glyph';
 import { C, Pill, box, rand, shadow, tree, windowsOnHouse, type Item } from './World';
 import type { IsoScene, PropKind, PropShape, ScenePropSpec, TimedBeat, Tone, WorldTheme } from './script';
@@ -424,6 +425,37 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
     return p ? toScreen({ ...p.pos, z: propTop(p) + 0.3 }, cam) : null;
   };
 
+  // Where every label goes, with overlaps resolved (prop labels first, then the labels on links).
+  const lay = (() => {
+    const props = (scene?.props ?? []).map((sp) => {
+      const pp = placed.get(sp.id);
+      if (!pp) return null;
+      const icon = hasGlyph(pp.spec.glyph) ? undefined : pp.spec.icon;
+      const at = toScreen({ ...pp.pos, z: propTop(pp) + (icon ? 1.2 : 0.3) }, cam);
+      const cx = Math.max(150, Math.min(930, at[0]));
+      return { id: sp.id, icon, at, cx, y: at[1] - (icon ? 58 : 8), dy: 0, w: pillWidth(sp.label ?? '') };
+    });
+    const links: { index: number; x: number; y: number; dy: number; w: number }[] = [];
+    (scene?.links ?? []).forEach((l, index) => {
+      if (!l.label) return;
+      const a = placed.get(l.from);
+      const b = placed.get(l.to);
+      if (!a || !b) return;
+      const n = scene?.links?.length ?? 1;
+      const t = n > 1 ? [0.5, 0.3, 0.7, 0.4][index % 4]! : 0.5;
+      const mid = toScreen({ x: lerp(a.pos.x, b.pos.x, t), y: lerp(a.pos.y, b.pos.y, t), z: lerp(propTop(a) * 0.7, propTop(b) * 0.7, t) + Math.sin(Math.PI * t) * 2.2 + 0.9 }, cam);
+      links.push({ index, x: mid[0], y: mid[1], dy: 0, w: pillWidth(l.label) });
+    });
+    const boxes: LabelBox[] = [
+      ...props.flatMap((e) => (e && scene!.props.find((p) => p.id === e.id)?.label ? [{ id: `p${e.id}`, x: e.cx, y: e.y, w: e.w }] : [])),
+      ...links.map((e) => ({ id: `l${e.index}`, x: e.x, y: e.y, w: e.w })),
+    ];
+    const shift = declutter(boxes);
+    props.forEach((e) => e && (e.dy = shift.get(`p${e.id}`) ?? 0));
+    links.forEach((e) => (e.dy = shift.get(`l${e.index}`) ?? 0));
+    return { props: props as ({ id: string; icon: string | undefined; at: [number, number]; cx: number; y: number; dy: number; w: number } | null)[], links };
+  })();
+
   return (
     <>
       <svg width={1080} height={1920} style={{ position: 'absolute', inset: 0 }}>
@@ -491,23 +523,20 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
           );
         })}
       </svg>
-      {/* Icons and labels: constant size, above the scene's props and kept inside the frame */}
+      {/* Icons and labels: constant size, above the scene's props and kept inside the frame; labels never overlap */}
       {(scene?.props ?? []).map((sp, i) => {
-        const pp = placed.get(sp.id);
-        if (!pp) return null;
+        const e = lay.props[i];
+        if (!e) return null;
         const pop = spring({ frame: local - 10 - i * 6, fps, config: { damping: 14 } });
-        const icon = hasGlyph(pp.spec.glyph) ? undefined : pp.spec.icon;
-        const at = toScreen({ ...pp.pos, z: propTop(pp) + (icon ? 1.2 : 0.3) }, cam);
-        const cx = Math.max(150, Math.min(930, at[0]));
         const bob = Math.sin((frame + i * 9) / 14) * 6;
         return (
           <React.Fragment key={`lb${sp.id}`}>
-            {icon && (
+            {e.icon && (
               <div
                 style={{
                   position: 'absolute',
-                  left: cx,
-                  top: at[1] + bob,
+                  left: e.cx,
+                  top: e.at[1] + bob,
                   transform: `translate(-50%, -50%) scale(${pop})`,
                   fontSize: 92,
                   lineHeight: 1,
@@ -515,27 +544,17 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
                   filter: 'drop-shadow(0 8px 8px rgba(31,36,48,0.28))',
                 }}
               >
-                {icon}
+                {e.icon}
               </div>
             )}
-            {sp.label && <Pill x={cx} y={at[1] - (icon ? 58 : 8)} text={sp.label} tone={sp.id === focusId ? accent : '#B8BCC6'} scale={pop} />}
+            {sp.label && <Pill x={e.cx} y={e.y - e.dy} text={sp.label} tone={sp.id === focusId ? accent : '#B8BCC6'} scale={pop} />}
           </React.Fragment>
         );
       })}
-      {(scene?.links ?? []).map((l, i) => {
-        if (!l.label) return null;
-        const a = placed.get(l.from);
-        const b = placed.get(l.to);
-        if (!a || !b) return null;
-        // Sit on the arc itself (the same curve the packet follows); several links in a scene take different spots so labels don't pile up.
-        const n = scene?.links?.length ?? 1;
-        const t = n > 1 ? [0.5, 0.3, 0.7, 0.4][i % 4]! : 0.5;
-        const mid = toScreen(
-          { x: lerp(a.pos.x, b.pos.x, t), y: lerp(a.pos.y, b.pos.y, t), z: lerp(propTop(a) * 0.7, propTop(b) * 0.7, t) + Math.sin(Math.PI * t) * 2.2 + 0.9 },
-          cam,
-        );
+      {lay.links.map((e, i) => {
+        const l = scene!.links![e.index]!;
         const s = spring({ frame: local - 22 - i * 10, fps, config: { damping: 14 } });
-        return <Pill key={`ll${i}`} x={mid[0]} y={mid[1]} text={l.label} tone={accent} scale={s * 0.9} />;
+        return <Pill key={`ll${e.index}`} x={e.x} y={e.y - e.dy} text={l.label!} tone={accent} scale={s * 0.9} />;
       })}
     </>
   );
