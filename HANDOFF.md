@@ -91,6 +91,8 @@ Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `rese
 5. Commits are local on `main`; nothing is pushed.
 6. `supabase/test/run.sh` (database security test) needs Linux Postgres; not run on Windows.
 
+8. **Platforms** (Instagram Reels / YouTube Shorts / both): to save a reel for a single platform, run `supabase/migrations/20261105000100_project_platforms.sql` in the Supabase SQL editor (not applied yet; both-platform reels work without it). The safe zones for Shorts are estimates of the app's buttons, not measured. Cover crop guides are Instagram-only. The live preview always shows the Instagram layout.
+
 7. **Cover images** are drawn from the 3D scenes only (no uploaded photos); text is Latin and Devanagari through the reel's fonts.
 
 ## Suggested next steps

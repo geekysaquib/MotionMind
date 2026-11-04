@@ -1,4 +1,4 @@
-import type { AudioTrack, CoverSettings, Project, ReelEditor, ReelScript, ReelVoice } from '@motionmind/shared';
+import type { AudioTrack, CoverSettings, Platform, Project, ReelEditor, ReelScript, ReelVoice } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
 
@@ -96,8 +96,9 @@ export interface ClaudeService {
   /** Cover (thumbnail): save its settings with the script, and render the image (PNG or JPG) on this machine. */
   saveCover(projectId: string, cover: CoverSettings): Promise<Project>;
   renderCover(projectId: string, cover: CoverSettings, format: 'png' | 'jpeg'): Promise<{ file: string; url: string }>;
-  startExport(projectId: string): Promise<{ job: RenderJob; withVoice: boolean }>;
-  exportStatus(projectId: string): Promise<{ available: boolean; job: RenderJob | null }>;
+  startExport(projectId: string, platform?: Platform): Promise<{ job: RenderJob; withVoice: boolean }>;
+  /** `jobs` has the latest export of each platform; `job` is the first platform's (older servers send only that). */
+  exportStatus(projectId: string): Promise<{ available: boolean; job: RenderJob | null; jobs?: Partial<Record<Platform, RenderJob | null>> }>;
   /** Storyboard: save the user's edits to the script. */
   saveScript(projectId: string, script: ReelScript): Promise<Project>;
 }
@@ -141,7 +142,7 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     saveEditor: (projectId, editor) => call(`/projects/${projectId}/editor`, 'PUT', { editor }),
     saveCover: async (projectId, cover) => (await call<{ project: Project }>(`/projects/${projectId}/cover`, 'PUT', { cover })).project,
     renderCover: (projectId, cover, format) => call(`/projects/${projectId}/cover/render`, 'POST', { cover, format }),
-    startExport: (projectId) => call(`/projects/${projectId}/export`, 'POST'),
+    startExport: (projectId, platform) => call(`/projects/${projectId}/export`, 'POST', platform ? { platform } : undefined),
     exportStatus: (projectId) => call(`/projects/${projectId}/export`),
     saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,
     approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,

@@ -2,12 +2,12 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { editorSpecParts, reelWorld, type Project } from '@motionmind/shared';
+import { PLATFORM_IDS, editorSpecParts, reelWorld, type Platform, type Project } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { voicePath } from '../voice/audioStore';
 
 /** The reel as the engine renders it (same rules as the web app's specFromScript). */
-export async function reelSpecFor(deps: AppDeps, userId: string, project: Project) {
+export async function reelSpecFor(deps: AppDeps, userId: string, project: Project, platform?: Platform) {
   const script = project.script!;
   const profile = await deps.data.getProfile(userId);
   const name = profile?.channelName?.trim() || 'Motion Mind';
@@ -21,6 +21,7 @@ export async function reelSpecFor(deps: AppDeps, userId: string, project: Projec
     steps: script.steps,
     brand: { name, initials, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', tagline: '' },
     beats: script.beats,
+    ...(platform ? { platform } : {}),
   };
   // The Reel editor: uploaded voice, music, pace and caption style.
   const editor = project.editor;
@@ -57,17 +58,24 @@ export function registerExportRoutes(api: FastifyInstance, deps: AppDeps) {
     const project = await projectFor(req.userId, (req.params as { id: string }).id);
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
     if (!project.script?.beats.length) return reply.code(400).send({ error: 'no_script', message: 'Write the script first.' });
-    const { spec, withVoice } = await reelSpecFor(deps, req.userId, project);
-    const job = deps.renderer.start(req.userId, project.id, spec);
-    req.log.info({ projectId: project.id, jobId: job.id, withVoice }, 'export started');
-    return { job, withVoice };
+    // One platform per call; without one, the project's first. The web app starts each chosen platform in turn.
+    const asked = z.object({ platform: z.enum(PLATFORM_IDS).optional() }).safeParse(req.body ?? {});
+    if (!asked.success) return reply.code(400).send({ error: 'invalid_platform', message: 'Pick Instagram or YouTube Shorts.' });
+    const platform = asked.data.platform ?? project.platforms[0] ?? 'instagram';
+    if (!project.platforms.includes(platform)) return reply.code(400).send({ error: 'invalid_platform', message: 'This reel is not set up for that platform. Add it on the Topic page first.' });
+    const { spec, withVoice } = await reelSpecFor(deps, req.userId, project, platform);
+    const job = deps.renderer.start(req.userId, project.id, spec, platform);
+    req.log.info({ projectId: project.id, jobId: job.id, withVoice, platform }, 'export started');
+    return { job, withVoice, platform };
   });
 
   api.get('/projects/:id/export', async (req, reply) => {
     if (!deps.renderer) return { available: false, job: null };
     const project = await projectFor(req.userId, (req.params as { id: string }).id);
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
-    return { available: true, job: deps.renderer.latest(req.userId, project.id) };
+    // `jobs` has the latest export for each platform; `job` stays as the first platform's, for older callers.
+    const jobs = Object.fromEntries(PLATFORM_IDS.map((p) => [p, deps.renderer!.latest(req.userId, project.id, p)])) as Record<Platform, ReturnType<typeof deps.renderer.latest>>;
+    return { available: true, job: jobs[project.platforms[0] ?? 'instagram'], jobs };
   });
 }
 

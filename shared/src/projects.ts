@@ -5,6 +5,22 @@ export type Stage = (typeof STAGES)[number];
 export type ProjectStatus = 'draft' | 'in_progress' | 'completed' | 'archived';
 export type QualityTier = 'draft' | 'standard' | 'premium' | 'cinematic';
 
+/** Where a reel is going. Both are 1080x1920; they differ in safe areas, the closing call to action and the cover crop. */
+export const PLATFORM_IDS = ['instagram', 'youtube'] as const;
+export type Platform = (typeof PLATFORM_IDS)[number];
+export const PLATFORMS: Record<Platform, { label: string; short: string; cta: string; maxSec: number }> = {
+  instagram: { label: 'Instagram Reels', short: 'Instagram', cta: 'follow', maxSec: 90 },
+  youtube: { label: 'YouTube Shorts', short: 'Shorts', cta: 'subscribe', maxSec: 180 },
+};
+/** A project made before platforms existed makes both. */
+export const ALL_PLATFORMS: Platform[] = ['instagram', 'youtube'];
+/** Clean a saved list: known platforms only, in a fixed order, never empty. */
+export function normalizePlatforms(list: unknown): Platform[] {
+  const set = new Set(Array.isArray(list) ? list : []);
+  const out = PLATFORM_IDS.filter((p) => set.has(p));
+  return out.length ? [...out] : [...ALL_PLATFORMS];
+}
+
 export interface Project {
   id: string;
   ownerId: string;
@@ -13,6 +29,8 @@ export interface Project {
   stage: Stage;
   status: ProjectStatus;
   qualityTier: QualityTier;
+  /** The platforms this reel is made for. */
+  platforms: Platform[];
   durationSec: number;
   /** The reel script Claude wrote for this project, or null before the Script stage. */
   script: ReelScript | null;

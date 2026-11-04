@@ -6,6 +6,13 @@ import type { Brand, CaptionStyle, Card as CardT, CardRow, Tone, TimedBeat } fro
 const TONE: Record<Tone, string> = { red: C.red, teal: C.teal, purple: C.purple, blue: C.blue, amber: C.amber };
 const SAFE_X = 60;
 
+export type PlatformId = 'instagram' | 'youtube';
+/** Each app covers a different part of the frame with its own buttons and caption, so text sits in a different place. */
+export const PLATFORM_LAYOUT: Record<PlatformId, { headerTop: number; cardTop: number; captionBottom: number; captionMiddle: number; captionWidth: number; cta: string }> = {
+  instagram: { headerTop: 70, cardTop: 232, captionBottom: 1545, captionMiddle: 1210, captionWidth: 900, cta: 'follow' },
+  youtube: { headerTop: 130, cardTop: 292, captionBottom: 1470, captionMiddle: 1190, captionWidth: 800, cta: 'subscribe' },
+};
+
 export function Highlight({ text, tone }: { text: string; tone: string }) {
   const parts = text.split(/(\*[^*]+\*)/g);
   return (
@@ -23,8 +30,9 @@ export function Highlight({ text, tone }: { text: string; tone: string }) {
   );
 }
 
-export const Header: React.FC<{ chapter: number; frame: number; fps: number; chapterStart: number; steps: string[]; brand: Brand; dark?: boolean }> = ({
+export const Header: React.FC<{ chapter: number; frame: number; fps: number; chapterStart: number; steps: string[]; brand: Brand; dark?: boolean; platform?: PlatformId }> = ({
   dark = false,
+  platform = 'instagram',
   chapter,
   frame,
   fps,
@@ -34,7 +42,7 @@ export const Header: React.FC<{ chapter: number; frame: number; fps: number; cha
 }) => {
   const grow = spring({ frame: frame - chapterStart, fps, config: { damping: 200 } });
   return (
-    <div style={{ position: 'absolute', top: 70, left: SAFE_X, right: SAFE_X }}>
+    <div style={{ position: 'absolute', top: PLATFORM_LAYOUT[platform].headerTop, left: SAFE_X, right: SAFE_X }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div
@@ -234,7 +242,7 @@ function Row({ row, tone, appear }: { row: CardRow; tone: string; appear: number
 }
 
 /** `compact` hides the rows: the 'cards' world draws them large in the middle of the frame instead. */
-export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start: number; compact?: boolean }> = ({ card, frame, fps, start, compact }) => {
+export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start: number; compact?: boolean; platform?: PlatformId }> = ({ card, frame, fps, start, compact, platform = 'instagram' }) => {
   const local = frame - start;
   const inS = spring({ frame: local, fps, config: { damping: 18, mass: 0.7 } });
   const tone = TONE[card.tone];
@@ -242,7 +250,7 @@ export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start
     <div
       style={{
         position: 'absolute',
-        top: 232,
+        top: PLATFORM_LAYOUT[platform].cardTop,
         left: SAFE_X,
         right: SAFE_X,
         background: 'rgba(255,255,255,0.96)',
@@ -280,11 +288,11 @@ export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start
 
 /** Phrase-level karaoke captions: spoken words white, upcoming grey, keywords teal. */
 const CAPTION_SIZE: Record<CaptionStyle['size'], number> = { small: 50, medium: 62, large: 76 };
-const CAPTION_TOP: Record<CaptionStyle['position'], number> = { bottom: 1545, middle: 1210 };
 
-export const Captions: React.FC<{ beat: TimedBeat; frame: number; style?: CaptionStyle }> = ({ beat, frame, style }) => {
+export const Captions: React.FC<{ beat: TimedBeat; frame: number; style?: CaptionStyle; platform?: PlatformId }> = ({ beat, frame, style, platform = 'instagram' }) => {
+  const lay = PLATFORM_LAYOUT[platform];
   const size = CAPTION_SIZE[style?.size ?? 'medium'];
-  const top = CAPTION_TOP[style?.position ?? 'bottom'];
+  const top = (style?.position ?? 'bottom') === 'middle' ? lay.captionMiddle : lay.captionBottom;
   const plain = style?.look === 'plain';
   const groups: (typeof beat.words)[] = [];
   let cur: typeof beat.words = [];
@@ -314,7 +322,7 @@ export const Captions: React.FC<{ beat: TimedBeat; frame: number; style?: Captio
           // Plain captions have no box, so a dark outline keeps them readable on any background.
           textShadow: plain ? '0 0 6px rgba(31,36,48,0.9), 0 3px 10px rgba(31,36,48,0.8), 2px 2px 0 rgba(31,36,48,0.9), -2px -2px 0 rgba(31,36,48,0.9)' : undefined,
           transform: `scale(${pop})`,
-          maxWidth: 900,
+          maxWidth: lay.captionWidth,
           textAlign: 'center',
         }}
       >
@@ -335,7 +343,7 @@ export const Captions: React.FC<{ beat: TimedBeat; frame: number; style?: Captio
   );
 };
 
-export const EndCard: React.FC<{ frame: number; fps: number; brand: Brand }> = ({ frame, fps, brand }) => {
+export const EndCard: React.FC<{ frame: number; fps: number; brand: Brand; platform?: PlatformId }> = ({ frame, fps, brand, platform = 'instagram' }) => {
   const s = spring({ frame, fps, config: { damping: 14 } });
   const b = spring({ frame: frame - 18, fps, config: { damping: 12 } });
   return (
@@ -389,7 +397,7 @@ export const EndCard: React.FC<{ frame: number; fps: number; brand: Brand }> = (
           background: '#fff',
         }}
       >
-        follow {brand.handle}
+        {PLATFORM_LAYOUT[platform].cta} {brand.handle}
       </div>
     </div>
   );

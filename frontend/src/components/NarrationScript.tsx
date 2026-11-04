@@ -43,7 +43,7 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
   const translated = lang === 'original' ? null : saved[lang];
   const lines = lang === 'original' ? original : translated ?? null;
   // Every voice script ends by asking the viewer to follow the channel, in the language being shown.
-  const closing = closingLine(lang === 'original' ? (profile.profile?.language ?? 'hinglish') : lang, followName(profile.profile, BRAND.name));
+  const closing = closingLine(lang === 'original' ? (profile.profile?.language ?? 'hinglish') : lang, followName(profile.profile, BRAND.name), project.platforms);
   const fullText = lines ? [...lines, closing].join('\n\n') : '';
   const words = fullText.split(/\s+/).filter(Boolean).length;
 

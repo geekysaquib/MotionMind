@@ -31,7 +31,7 @@ const VOICE: ReelVoice = {
 
 async function setup(initial: { voice: ReelVoice | null; urls: string[]; stale: boolean }, aiMode: 'keys' | 'paste' = 'keys') {
   const store = await makeStore({ signedIn: true, aiMode });
-  const created = await store.projects.create({ title: 'UPI', topic: 'UPI', durationSec: 30, qualityTier: 'draft' });
+  const created = await store.projects.create({ title: 'UPI', topic: 'UPI', durationSec: 30, qualityTier: 'draft', platforms: ['instagram'] });
   store.projects.upsert({ ...created, script: SCRIPT });
   const generated: string[] = [];
   store.services.claude = () =>

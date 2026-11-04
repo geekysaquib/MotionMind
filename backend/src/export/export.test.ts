@@ -18,7 +18,9 @@ const SCRIPT = {
 class FakeRenderer implements Renderer {
   started: { userId: string; projectId: string; props: Record<string, unknown> }[] = [];
   job: RenderJob | null = null;
-  start(userId: string, projectId: string, props: Record<string, unknown>) {
+  platforms: (string | undefined)[] = [];
+  start(userId: string, projectId: string, props: Record<string, unknown>, platform?: string) {
+    this.platforms.push(platform);
     this.started.push({ userId, projectId, props });
     this.job = { id: 'j1', projectId, status: 'rendering', progress: 0.4, startedAt: 'now' };
     return this.job;
@@ -44,6 +46,39 @@ async function setup(renderer?: Renderer) {
   await data.updateProject(user.id, id, { script: SCRIPT as never });
   return { app, data, audio, id, H, uid: user.id };
 }
+
+describe('platforms', () => {
+  it('default to both, can be one, are validated, and are kept when the project is edited', async () => {
+    const { app, id, H } = await setup();
+    const get = async () => (await app.inject({ method: 'GET', url: `/api/projects/${id}`, headers: H })).json().project.platforms;
+    expect(await get()).toEqual(['instagram', 'youtube']);
+    const patch = (platforms: unknown) => app.inject({ method: 'PATCH', url: `/api/projects/${id}`, headers: H, payload: { platforms } });
+    expect((await patch(['youtube'])).json().project.platforms).toEqual(['youtube']);
+    expect((await patch([])).json().message).toBe('Pick at least one platform.');
+    expect((await patch(['tiktok'])).statusCode).toBe(400);
+    expect(await get()).toEqual(['youtube']);
+    const one = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'X', topic: 'X', durationSec: 30, qualityTier: 'draft', platforms: ['instagram'] } });
+    expect(one.json().project.platforms).toEqual(['instagram']);
+  });
+
+  it('are exported one video each, with the platform in the spec, and only for platforms the reel has', async () => {
+    const renderer = new FakeRenderer();
+    const { app, data, id, H, uid } = await setup(renderer);
+    const post = (payload?: unknown) => app.inject({ method: 'POST', url: `/api/projects/${id}/export`, headers: H, payload: payload as never });
+    expect((await post({ platform: 'youtube' })).statusCode).toBe(200);
+    expect((await post({ platform: 'instagram' })).statusCode).toBe(200);
+    expect(renderer.platforms).toEqual(['youtube', 'instagram']);
+    expect((renderer.started[0]!.props as { platform: string }).platform).toBe('youtube');
+    expect((await post({ platform: 'tiktok' })).json().error).toBe('invalid_platform');
+    await data.updateProject(uid, id, { platforms: ['instagram'] });
+    expect((await post({ platform: 'youtube' })).json().message).toMatch(/not set up for that platform/);
+    // No platform given: the reel's first one.
+    await post();
+    expect(renderer.platforms.at(-1)).toBe('instagram');
+    const status = (await app.inject({ method: 'GET', url: `/api/projects/${id}/export`, headers: H })).json();
+    expect(Object.keys(status.jobs).sort()).toEqual(['instagram', 'youtube']);
+  });
+});
 
 describe('MP4 export', () => {
   it('starts a render with the branded reel, including matching voiceover', async () => {

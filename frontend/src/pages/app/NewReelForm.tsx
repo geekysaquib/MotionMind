@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Gauge, Sparkles } from 'lucide-react';
-import type { QualityTier } from '@motionmind/shared';
+import { ALL_PLATFORMS, type Platform, type QualityTier } from '@motionmind/shared';
+import { PlatformPicker } from '../../components/PlatformPicker';
 import { useStores } from '../../stores/RootStore';
 import { Button } from '../../components/ui';
 import { errorText } from '../../lib/format';
@@ -24,6 +25,7 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
   const [topic, setTopic] = useState(initialTopic);
   const [duration, setDuration] = useState(60);
   const [tier, setTier] = useState<QualityTier>('standard');
+  const [platforms, setPlatforms] = useState<Platform[]>([...ALL_PLATFORMS]);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: FormEvent) {
@@ -32,7 +34,7 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
     if (!t) return;
     setBusy(true);
     try {
-      const p = await projects.create({ title: t.length > 80 ? `${t.slice(0, 77)}…` : t, topic: t, durationSec: duration, qualityTier: tier });
+      const p = await projects.create({ title: t.length > 80 ? `${t.slice(0, 77)}…` : t, topic: t, durationSec: duration, qualityTier: tier, platforms });
       toasts.push('success', 'Project created.');
       nav(`/app/projects/${p.id}`);
     } catch (err) {
@@ -78,6 +80,7 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
               <option value="cinematic">Cinematic</option>
             </select>
           </div>
+          <PlatformPicker compact value={platforms} onChange={setPlatforms} />
           <span className="ml-auto hidden text-xs text-ink-400 sm:inline">{topic.length}/500</span>
           <Button type="submit" loading={busy} disabled={!topic.trim()} icon={<Sparkles className="h-4 w-4" />}>
             Create reel

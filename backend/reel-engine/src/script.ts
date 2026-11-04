@@ -127,6 +127,8 @@ export type ReelSpec = {
   title: string;
   /** 'train' = the isometric railway world; 'iso' = the 3D isometric scene kit for any topic; 'cards' = flat animated graphics. */
   world: 'train' | 'iso' | 'cards';
+  /** Where the reel is going. Shorts keeps clear of its taller top bar and bottom caption area, and the end card asks to subscribe. Default: instagram. */
+  platform?: 'instagram' | 'youtube';
   /** Iso world: what the ground and background look like. */
   theme?: WorldTheme;
   /** Iso world: locked object spots by id. Objects without one are placed automatically around the locked ones. */

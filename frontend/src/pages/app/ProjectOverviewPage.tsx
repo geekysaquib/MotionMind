@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { ArrowRight, Trash2 } from 'lucide-react';
-import type { Project, ProjectStatus, QualityTier } from '@motionmind/shared';
+import { normalizePlatforms, type Platform, type Project, type ProjectStatus, type QualityTier } from '@motionmind/shared';
+import { PlatformPicker } from '../../components/PlatformPicker';
 import { useStores } from '../../stores/RootStore';
 import { Button, Card, Field, Select } from '../../components/ui';
 import { errorText } from '../../lib/format';
@@ -16,16 +17,17 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
   const [topic, setTopic] = useState(p.topic ?? '');
   const [duration, setDuration] = useState(p.durationSec);
   const [tier, setTier] = useState<QualityTier>(p.qualityTier);
+  const [platforms, setPlatforms] = useState<Platform[]>(normalizePlatforms(p.platforms));
   const [status, setStatus] = useState<ProjectStatus>(p.status);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const dirty = title !== p.title || topic !== (p.topic ?? '') || duration !== p.durationSec || tier !== p.qualityTier || status !== p.status;
+  const dirty = title !== p.title || topic !== (p.topic ?? '') || duration !== p.durationSec || tier !== p.qualityTier || platforms.join() !== normalizePlatforms(p.platforms).join() || status !== p.status;
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
-      await projects.update(p.id, { title: title.trim(), topic: topic.trim() || null, durationSec: duration, qualityTier: tier, status });
+      await projects.update(p.id, { title: title.trim(), topic: topic.trim() || null, durationSec: duration, qualityTier: tier, ...(platforms.join() !== normalizePlatforms(p.platforms).join() ? { platforms } : {}), status });
       toasts.push('success', 'Saved.');
     } catch (err) {
       toasts.push('error', errorText(err));
@@ -91,6 +93,11 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
               <option value="completed">Completed</option>
               <option value="archived">Archived</option>
             </Select>
+          </div>
+          <div>
+            <span className="label">Platforms</span>
+            <PlatformPicker value={platforms} onChange={setPlatforms} />
+            <p className="mt-1 text-xs text-ink-400">Each platform gets its own video: text sits clear of that app's buttons, and the closing line says follow or subscribe.</p>
           </div>
           <Button type="submit" loading={busy} disabled={!dirty || !title.trim()}>
             Save changes

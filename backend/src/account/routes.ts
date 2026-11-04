@@ -24,6 +24,7 @@ const projectFields = {
   topic: z.string().trim().max(500).nullable(),
   durationSec: z.union([z.literal(15), z.literal(30), z.literal(45), z.literal(60), z.literal(90)]),
   qualityTier: z.enum(['draft', 'standard', 'premium', 'cinematic']),
+  platforms: z.array(z.enum(['instagram', 'youtube'])).min(1, 'Pick at least one platform.').max(2).optional(),
 };
 const newProjectSchema = z.object(projectFields).strict();
 const projectPatchSchema = z

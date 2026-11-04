@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { Platform } from '@motionmind/shared';
 
 /**
  * MP4 export with Remotion, on the machine running the API (your PC). Rendering needs a headless Chrome and
@@ -21,8 +22,8 @@ export interface RenderJob {
 }
 
 export interface Renderer {
-  start(userId: string, projectId: string, inputProps: Record<string, unknown>): RenderJob;
-  latest(userId: string, projectId: string): RenderJob | null;
+  start(userId: string, projectId: string, inputProps: Record<string, unknown>, platform?: Platform): RenderJob;
+  latest(userId: string, projectId: string, platform?: Platform): RenderJob | null;
   /** Renders the reel's cover (a single image) and returns its file name. */
   still(inputProps: Record<string, unknown>, format: 'png' | 'jpeg'): Promise<string>;
   /** Absolute path of a finished render, by file name; null if unknown. */
@@ -38,17 +39,17 @@ export class RemotionRenderer implements Renderer {
   private serveUrl: Promise<string> | null = null;
   private stills = new Set<string>();
 
-  start(userId: string, projectId: string, inputProps: Record<string, unknown>): RenderJob {
-    const running = this.latest(userId, projectId);
+  start(userId: string, projectId: string, inputProps: Record<string, unknown>, platform: Platform = 'instagram'): RenderJob {
+    const running = this.latest(userId, projectId, platform);
     if (running && (running.status === 'bundling' || running.status === 'rendering')) return running;
     const job: RenderJob = { id: randomUUID(), projectId, status: 'bundling', progress: 0, startedAt: new Date().toISOString() };
-    this.jobs.set(`${userId}:${projectId}`, job);
+    this.jobs.set(`${userId}:${projectId}:${platform}`, job);
     void this.run(job, inputProps);
     return job;
   }
 
-  latest(userId: string, projectId: string) {
-    return this.jobs.get(`${userId}:${projectId}`) ?? null;
+  latest(userId: string, projectId: string, platform: Platform = 'instagram') {
+    return this.jobs.get(`${userId}:${projectId}:${platform}`) ?? null;
   }
 
   filePath(file: string) {

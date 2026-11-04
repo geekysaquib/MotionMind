@@ -101,10 +101,10 @@ export const Reel: React.FC<ReelSpec> = (input) => {
       ) : (
         <Backdrop frame={frame} fps={fps} tone={beat.card.tone} chapter={beat.chapter} progress={progress} />
       )}
-      <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} steps={spec.steps} brand={spec.brand} dark={spec.world === 'iso' && spec.theme === 'night'} />
+      <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} steps={spec.steps} brand={spec.brand} platform={spec.platform} dark={spec.world === 'iso' && spec.theme === 'night'} />
       {inStory && spec.world === 'cards' && <CardsScene key={`scene-${beat.id}`} beat={beat} frame={frame} fps={fps} />}
-      {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards'} />}
-      {inStory && <Captions beat={beat} frame={frame} style={spec.captions ?? DEFAULT_CAPTION_STYLE} />}
+      {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards'} platform={spec.platform} />}
+      {inStory && <Captions beat={beat} frame={frame} style={spec.captions ?? DEFAULT_CAPTION_STYLE} platform={spec.platform} />}
       {/* The voice: one clip per scene, each playing its part of the recording at the scene's speed. */}
       {timed.map((b, i) =>
         b.audio ? (
@@ -134,7 +134,7 @@ export const Reel: React.FC<ReelSpec> = (input) => {
         </Sequence>
       )}
       <Sequence from={storyFrames}>
-        <EndCardWrapper brand={spec.brand} />
+        <EndCardWrapper brand={spec.brand} platform={spec.platform} />
       </Sequence>
     </AbsoluteFill>
   );
@@ -162,8 +162,8 @@ const Music: React.FC<{ url: string; durationSec: number; volume: number; totalF
   );
 };
 
-const EndCardWrapper: React.FC<{ brand: Brand }> = ({ brand }) => {
+const EndCardWrapper: React.FC<{ brand: Brand; platform?: 'instagram' | 'youtube' }> = ({ brand, platform }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  return <EndCard frame={frame} fps={fps} brand={brand} />;
+  return <EndCard frame={frame} fps={fps} brand={brand} platform={platform} />;
 };

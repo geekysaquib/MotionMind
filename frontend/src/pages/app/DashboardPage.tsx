@@ -7,7 +7,7 @@ import { Spinner } from '../../components/ui';
 import { CountUp, ProgressRing, Reveal } from '../../components/motion';
 import { NewReelForm } from './NewReelForm';
 import { StatusBadge } from './ProjectBadges';
-import { timeAgo } from '../../lib/format';
+import { platformNames, timeAgo } from '../../lib/format';
 import { nextStage, progressOf } from '../../lib/progress';
 import { cn } from '../../lib/cn';
 
@@ -121,7 +121,7 @@ export const DashboardPage = observer(function DashboardPage() {
                         <span role="cell" className="min-w-0">
                           <span className="block truncate font-medium group-hover:text-accent">{p.title}</span>
                           <span className="mt-1 flex items-center gap-2 text-xs text-ink-400">
-                            <StatusBadge status={p.status} /> {p.durationSec}s · {p.qualityTier}
+                            <StatusBadge status={p.status} /> {p.durationSec}s · {platformNames(p.platforms)}
                           </span>
                         </span>
                         <span role="cell" className="hidden items-center gap-1 text-ink-300 md:flex">

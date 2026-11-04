@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Profile, Project, QualityTier, ReelEditor, ReelScript, ReelVoice, ResearchReport } from '@motionmind/shared';
-import { RESERVED_HANDLES, normalizeHandle } from '@motionmind/shared';
+import type { Platform, Profile, Project, QualityTier, ReelEditor, ReelScript, ReelVoice, ResearchReport } from '@motionmind/shared';
+import { ALL_PLATFORMS, RESERVED_HANDLES, normalizeHandle, normalizePlatforms } from '@motionmind/shared';
 
 export interface User {
   id: string;
@@ -22,6 +22,7 @@ export interface NewProject {
   topic: string | null;
   durationSec: number;
   qualityTier: QualityTier;
+  platforms?: Platform[];
 }
 
 export type ProjectPatch = Partial<NewProject & Pick<Project, 'status' | 'stage'>> & { script?: ReelScript | null; research?: ResearchReport | null; voice?: ReelVoice | null; editor?: ReelEditor | null };
@@ -110,7 +111,7 @@ export class MemoryDataRepository implements DataRepository {
   }
   async createProject(ownerId: string, input: NewProject) {
     const now = new Date().toISOString();
-    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, stage: 'topic', status: 'draft', script: null, research: null, voice: null, editor: null, createdAt: now, updatedAt: now };
+    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, platforms: normalizePlatforms(input.platforms), stage: 'topic', status: 'draft', script: null, research: null, voice: null, editor: null, createdAt: now, updatedAt: now };
     this.projects.push(p);
     return { ...p };
   }
@@ -148,6 +149,7 @@ const projectFromRow = (r: Row): Project => ({
   stage: r.stage as Project['stage'],
   status: r.status as Project['status'],
   qualityTier: r.quality_tier as Project['qualityTier'],
+  platforms: normalizePlatforms(r.platforms),
   durationSec: r.duration_sec as number,
   script: (r.script as ReelScript | null) ?? null,
   research: (r.research as ResearchReport | null) ?? null,
@@ -175,6 +177,7 @@ function projectRow(patch: ProjectPatch): Row {
   if (patch.topic !== undefined) row.topic = patch.topic;
   if (patch.durationSec !== undefined) row.duration_sec = patch.durationSec;
   if (patch.qualityTier !== undefined) row.quality_tier = patch.qualityTier;
+  if (patch.platforms !== undefined) row.platforms = normalizePlatforms(patch.platforms);
   if (patch.status !== undefined) row.status = patch.status;
   if (patch.stage !== undefined) row.stage = patch.stage;
   if (patch.script !== undefined) row.script = patch.script;
@@ -182,6 +185,20 @@ function projectRow(patch: ProjectPatch): Row {
   if (patch.voice !== undefined) row.voice = patch.voice;
   if (patch.editor !== undefined) row.editor = patch.editor;
   return row;
+}
+
+/** A new reel for both platforms needs no value (the column defaults to both), so a database that has not had the platforms migration yet keeps working. */
+function withoutDefaultPlatforms(row: Row): Row {
+  if (Array.isArray(row.platforms) && row.platforms.length === ALL_PLATFORMS.length) {
+    const { platforms: _both, ...rest } = row;
+    return rest;
+  }
+  return row;
+}
+
+/** Choosing a single platform needs the `platforms` column; say so plainly when the database does not have it yet. */
+function missingPlatforms(error: { message?: string }): Error {
+  return /platforms/.test(error.message ?? '') ? new Error('Choosing one platform needs a database update first. Run supabase/migrations/20261105000100_project_platforms.sql in the Supabase SQL editor.') : (error as Error);
 }
 
 /** Uses the service-role client. Every table has RLS on with no policies, so only this server can reach them. */
@@ -273,16 +290,16 @@ export class SupabaseDataRepository implements DataRepository {
   async createProject(ownerId: string, input: NewProject) {
     const { data, error } = await this.db
       .from('projects')
-      .insert({ owner_id: ownerId, ...projectRow(input) })
+      .insert({ owner_id: ownerId, ...withoutDefaultPlatforms(projectRow(input)) })
       .select('*')
       .single();
-    if (error) throw error;
+    if (error) throw missingPlatforms(error);
     return projectFromRow(data);
   }
 
   async updateProject(ownerId: string, id: string, patch: ProjectPatch) {
     const { data, error } = await this.db.from('projects').update(projectRow(patch)).eq('owner_id', ownerId).eq('id', id).select('*').maybeSingle();
-    if (error) throw error;
+    if (error) throw missingPlatforms(error);
     return data ? projectFromRow(data) : null;
   }
 

@@ -1,3 +1,10 @@
+import { PLATFORMS, normalizePlatforms, type Platform } from '@motionmind/shared';
+
+/** "Instagram", "Shorts" or "Instagram + Shorts". */
+export function platformNames(list: Platform[] | undefined): string {
+  return normalizePlatforms(list).map((p) => PLATFORMS[p].short).join(' + ');
+}
+
 export function timeAgo(iso: string, now = Date.now()): string {
   const s = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
   if (s < 60) return 'just now';
