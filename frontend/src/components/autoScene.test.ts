@@ -32,6 +32,18 @@ describe('autoScene', () => {
   });
 });
 
+describe('autoScene for objects the 3D kit has no model for', () => {
+  it('draws a custom object with a fitting emoji instead of a grey block', () => {
+    const s = autoScene(beat({ narration: 'Vaccine ka dose aapke sharir mein jaata hai.', keywords: ['vaccine'], card: { headline: '*Vaccine* ka dose', tone: 'purple' } }), undefined);
+    expect(s.props[0]).toMatchObject({ kind: 'custom', icon: '💉', shape: 'tall', tone: 'purple' });
+  });
+
+  it('still falls back to a custom object (with a generic icon) for unknown words', () => {
+    const s = autoScene(beat({ narration: 'Zxqv hota hai.', keywords: ['zxqv'], card: { eyebrow: 'Zxqv', headline: '*Zxqv* hota hai' } }), undefined);
+    expect(s.props[0]).toMatchObject({ kind: 'custom', icon: '💡' });
+  });
+});
+
 describe('withScenes', () => {
   const spec = (world: ReelSpec['world'], beats: Beat[]): ReelSpec => ({ title: 't', world, steps: [], brand: { name: 'n', initials: 'N', handle: '@n', tagline: '' }, beats });
 

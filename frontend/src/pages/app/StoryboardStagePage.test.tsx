@@ -84,4 +84,49 @@ describe('StoryboardStagePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Undo changes' }));
     expect(screen.getAllByLabelText(/Narration/)[1]).toHaveProperty('value', 'NPCI beech mein hai.');
   });
+  it('turns an automatic scene into editable objects, edits them, and saves the scene and the theme', async () => {
+    const { saved } = await setup();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Edit the 3D scene of scene 1' }));
+    });
+    expect(screen.getByLabelText('Scene 1 object 1 kind')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Scene 1 object 1 kind'), { target: { value: 'custom' } });
+    fireEvent.change(screen.getByLabelText('Scene 1 object 1 label'), { target: { value: 'My thing' } });
+    fireEvent.change(screen.getByLabelText('Scene 1 object 1 icon'), { target: { value: '🧬' } });
+    fireEvent.change(screen.getByLabelText('Scene 1 object 1 shape'), { target: { value: 'tall' } });
+    fireEvent.change(screen.getByLabelText('Add an object to scene 1'), { target: { value: 'new' } });
+    expect(screen.getByLabelText('Scene 1 object 2 kind')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a link to scene 1' }));
+    fireEvent.change(screen.getByLabelText('Scene 1 link 1 label'), { target: { value: 'data' } });
+    fireEvent.change(screen.getByLabelText('Scene 1 effect'), { target: { value: 'rings' } });
+    fireEvent.change(screen.getByLabelText('Look of the 3D world'), { target: { value: 'lab' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save storyboard' }));
+    });
+    const script = saved.at(-1)!;
+    expect(script.theme).toBe('lab');
+    const scene = script.beats[0]!.scene!;
+    expect(scene.props[0]).toMatchObject({ kind: 'custom', label: 'My thing', icon: '🧬', shape: 'tall' });
+    expect(scene.props).toHaveLength(2);
+    expect(scene.links).toEqual([{ from: scene.props[0]!.id, to: scene.props[1]!.id, label: 'data' }]);
+    expect(scene.effect).toBe('rings');
+  });
+
+  it('removing an object also removes its links and fixes the camera focus', async () => {
+    const { saved } = await setup();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Edit the 3D scene of scene 2' }));
+    });
+    fireEvent.change(screen.getByLabelText('Add an object to scene 2'), { target: { value: 'new' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add a link to scene 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove object 2 from scene 2' }));
+    expect(screen.queryByLabelText('Scene 2 link 1 label')).toBeNull();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save storyboard' }));
+    });
+    const scene = saved.at(-1)!.beats[1]!.scene!;
+    expect(scene.props).toHaveLength(1);
+    expect(scene.links).toEqual([]);
+    expect(scene.focus).toBe(scene.props[0]!.id);
+  });
 });

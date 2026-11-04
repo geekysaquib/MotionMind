@@ -2,12 +2,15 @@ import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 're
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import type { Project, ReelBeat, ReelScript, ReelTone } from '@motionmind/shared';
+import { reelWorld, WORLD_THEMES, type Project, type ReelBeat, type ReelScript, type ReelTone, type WorldTheme } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { Alert, Button, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { brandFor, specFromScript } from '../../components/reelSpec';
 import { cn } from '../../lib/cn';
+import { SceneEditor } from '../../components/SceneEditor';
+
+const THEME_LABELS: Record<WorldTheme, string> = { city: 'City (apps, payments, services)', nature: 'Nature (food, biology, outdoors)', lab: 'Lab (science, chips, AI)', plain: 'Plain (anything abstract)' };
 
 const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 
@@ -120,6 +123,18 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
               </Button>
             </div>
           </div>
+          {reelWorld(draft) === 'iso' && (
+            <label className="mt-4 block text-xs text-ink-400">
+              Look of the 3D world
+              <select className={cn(inputCls, 'mt-1 max-w-xs')} value={draft.theme ?? 'city'} onChange={(e) => setDraft({ ...draft, theme: e.target.value as WorldTheme })}>
+                {WORLD_THEMES.map((t) => (
+                  <option key={t} value={t}>
+                    {THEME_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="mt-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">Header steps</span>
             <div className="mt-1 flex flex-wrap gap-2">
@@ -186,6 +201,15 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
                 />
               ))}
             </div>
+            {reelWorld(draft) === 'iso' && (
+              <SceneEditor
+                beat={b}
+                index={i}
+                known={knownProps(draft, i)}
+                previous={draft.beats[i - 1]?.scene}
+                onChange={(scene) => update(i, (x) => ({ ...x, scene }))}
+              />
+            )}
           </Card>
         ))}
       </div>
@@ -201,6 +225,15 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
     </div>
   );
 });
+
+/** Objects the other scenes use, once each, so a scene can reuse one and the camera stays in one world. */
+function knownProps(script: ReelScript, except: number) {
+  const seen = new Map<string, NonNullable<ReelBeat['scene']>['props'][number]>();
+  script.beats.forEach((b, j) => {
+    if (j !== except) for (const p of b.scene?.props ?? []) if (!seen.has(p.id)) seen.set(p.id, p);
+  });
+  return [...seen.values()];
+}
 
 function IconButton({ label, icon, onClick, disabled }: { label: string; icon: ReactNode; onClick: () => void; disabled?: boolean }) {
   return (

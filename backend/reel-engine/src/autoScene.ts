@@ -1,4 +1,4 @@
-import type { Beat, IsoScene, PropKind, ReelSpec, TrainShot, WorldEvent } from './script';
+import type { Beat, IsoScene, PropKind, PropShape, ReelSpec, ScenePropSpec, Tone, TrainShot, WorldEvent } from './script';
 
 // Fills in 3D scenes for beats that don't describe one (older scripts, hand-added scenes), so every
 // reel plays in a 3D world. Objects are guessed from the card's words; the same word gives the same
@@ -18,15 +18,64 @@ const KIND_WORDS: [PropKind, RegExp][] = [
   ['document', /document|receipt|ticket|timetable|schedule|map|naksha|list|report|form|bill|id\b/i],
   ['factory', /factory|plant|manufactur|industry/i],
   ['car', /car\b|vehicle|bus\b|truck|delivery|uber|ola/i],
-  ['person', /person|people|user|you\b|aap|traveller|passenger|customer|driver|doctor|friend/i],
+  ['person', /person|people|user|you\b|\baap\b|traveller|passenger|customer|driver|doctor|friend/i],
   ['house', /house|home|ghar/i],
 ];
 
-function kindFor(text: string, fallback: PropKind = 'building'): PropKind {
-  return KIND_WORDS.find(([, re]) => re.test(text))?.[0] ?? fallback;
+function kindFor(text: string): PropKind | null {
+  return KIND_WORDS.find(([, re]) => re.test(text))?.[0] ?? null;
 }
 
-const idFor = (text: string) => text.toLowerCase().replace(/[^a-z0-9ऀ-ॿ]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'thing';
+// Words the named kinds can't draw. They become a custom object with a fitting emoji; the body shape follows the thing's size.
+const ICON_WORDS: [RegExp, string, PropShape][] = [
+  [/virus|bacteri|germ|infect/i, '🦠', 'round'],
+  [/vaccin|injection|\bdose\b|medicine|dawai|tablet/i, '💉', 'tall'],
+  [/\bdna\b|\bgene|antibod|protein|\bcells?\b|koshika/i, '🧬', 'flat'],
+  [/heart|\bdil\b|pulse|blood|khoon/i, '❤️', 'round'],
+  [/brain|dimaag|memory|neuron|yaad/i, '🧠', 'round'],
+  [/doctor|hospital|clinic|health/i, '🏥', 'block'],
+  [/\bfood\b|\beat\b|khana|recipe|cook|kitchen|\bpan\b/i, '🍳', 'round'],
+  [/water|paani|\brain\b|river|ocean|\bsea\b/i, '💧', 'round'],
+  [/plant|\btrees?\b|\bseeds?\b|\bcrops?\b|\bfarm|kheti|\bleaf|flower/i, '🌱', 'round'],
+  [/\bsun\b|solar|surya|\blight\b|bijli|electric|\bpower\b|energy|battery/i, '⚡', 'tall'],
+  [/\bfire\b|\bheat\b|garmi|temperature|\bburn/i, '🔥', 'round'],
+  [/\batoms?\b|molecule|chemical|reaction|\blab\b|science|experiment/i, '⚗️', 'round'],
+  [/planet|\bearth\b|\bspace\b|\bmoon\b|\bstars?\b|galaxy|rocket/i, '🌍', 'round'],
+  [/\btrains?\b|\brail|metro|station/i, '🚆', 'wide'],
+  [/\bplane\b|flight|airport/i, '✈️', 'wide'],
+  [/\bship\b|\bboat\b|\bport\b/i, '🚢', 'wide'],
+  [/\bbooks?\b|school|\bexam|student|padhai|\blearn|teacher/i, '📚', 'block'],
+  [/\bclock\b|\btime\b|samay|\bsecond|\bminute|\bspeed\b|jaldi|\bfast\b/i, '⏱️', 'round'],
+  [/\block\b|secure|\bsafe\b|privacy|password|\bpin\b|\bhack|security|suraksha/i, '🔒', 'block'],
+  [/\bkey\b|\bcode\b|software|program|algorithm/i, '💻', 'block'],
+  [/camera|photo|video|\bfilm\b|\breel|screenshot/i, '📷', 'block'],
+  [/music|\bsong\b|\bsound|audio|awaaz|speaker|voice|\bmic\b/i, '🔊', 'block'],
+  [/\bmail\b|email|message|\bchat\b|notification|\balert/i, '✉️', 'flat'],
+  [/\bgame|\bplay\b|\bscore\b|\bmatch\b|cricket|football/i, '🎮', 'block'],
+  [/\bgold\b|\bsona\b|\bcoin|crypto|bitcoin|invest|\bstocks?\b|\bshares?\b/i, '🪙', 'round'],
+  [/\bidea|\bthink|question|sawal|\bwhy\b|kyun|\bhow\b|kaise/i, '💡', 'round'],
+];
+
+type PropLook = Pick<ScenePropSpec, 'kind' | 'icon' | 'shape' | 'tone'>;
+
+/** The object for some words, or null when nothing fits: a named kind, otherwise a custom object with an emoji. */
+function matchFor(text: string, tone: Tone): PropLook | null {
+  const kind = kindFor(text);
+  if (kind) return { kind };
+  const hit = ICON_WORDS.find(([re]) => re.test(text));
+  return hit ? { kind: 'custom', icon: hit[1], shape: hit[2], tone } : null;
+}
+
+/** Like matchFor, trying each text in turn (most telling first), and never failing: unknown things become a generic custom object. */
+function propFor(tone: Tone, ...texts: string[]): PropLook {
+  for (const t of texts) {
+    const m = matchFor(t, tone);
+    if (m) return m;
+  }
+  return { kind: 'custom', icon: '💡', shape: 'block', tone };
+}
+
+const idFor =(text: string) => text.toLowerCase().replace(/[^a-z0-9ऀ-ॿ]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'thing';
 const starred = (headline: string) => headline.match(/\*([^*]+)\*/)?.[1];
 
 export function autoScene(beat: Beat, previous: IsoScene | undefined): IsoScene {
@@ -34,17 +83,17 @@ export function autoScene(beat: Beat, previous: IsoScene | undefined): IsoScene 
   const flow = rows.find((r) => r.kind === 'flow');
   if (flow && flow.kind === 'flow') {
     const items = flow.items.slice(0, 4);
-    const props = items.map((t) => ({ id: idFor(t), kind: kindFor(t), label: t }));
+    const props = items.map((t) => ({ id: idFor(t), ...propFor(beat.card.tone, t), label: t }));
     return { props, links: props.slice(1).map((p, i) => ({ from: props[i]!.id, to: p.id })), effect: 'pulse', focus: props.at(-1)!.id };
   }
   const chips = rows.find((r) => r.kind === 'chips');
   if (chips && chips.kind === 'chips') {
-    const props = chips.items.slice(0, 3).map((c) => ({ id: idFor(c.text), kind: kindFor(c.text, 'phone'), label: c.text }));
+    const props = chips.items.slice(0, 3).map((c) => ({ id: idFor(c.text), ...propFor(beat.card.tone, c.text), label: c.text }));
     return { props, effect: 'pulse', focus: props[0]?.id };
   }
   const kv = rows.find((r) => r.kind === 'kv');
   const word = starred(beat.card.headline) ?? beat.keywords[0] ?? beat.card.eyebrow;
-  const main = { id: idFor(word), kind: kindFor(`${word} ${beat.card.eyebrow} ${beat.narration}`), label: kv && kv.kind === 'kv' ? `${kv.k}: ${kv.v}` : word.replace(/[.,!?]+$/, '') };
+  const main = { id: idFor(word), ...propFor(beat.card.tone, word, `${beat.card.eyebrow} ${beat.card.headline}`, beat.narration), label: kv && kv.kind === 'kv' ? `${kv.k}: ${kv.v}` : word.replace(/[.,!?]+$/, '') };
   // Keep the last scene's main object in view, so consecutive beats feel connected.
   const prev = previous?.props.find((p) => p.id === previous.focus) ?? previous?.props[0];
   const props = prev && prev.id !== main.id ? [prev, main] : [main];

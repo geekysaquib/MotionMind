@@ -67,6 +67,11 @@ export type ReelRow =
 /** Objects the 3D isometric world can draw (same list as the reel engine's PROP_KINDS). */
 export type ScenePropKind = 'phone' | 'laptop' | 'tower' | 'server' | 'cloud' | 'bank' | 'shop' | 'building' | 'house' | 'factory' | 'person' | 'document' | 'money' | 'chip' | 'car' | 'satellite' | 'custom';
 
+/** Every kind the scene editor offers (the engine's PROP_KINDS). */
+export const SCENE_PROP_KINDS: ScenePropKind[] = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'custom'];
+export const SCENE_PROP_SHAPES: ScenePropShape[] = ['block', 'tall', 'wide', 'flat', 'round'];
+export const WORLD_THEMES: WorldTheme[] = ['city', 'nature', 'lab', 'plain'];
+
 /** Body of a 'custom' object. */
 export type ScenePropShape = 'block' | 'tall' | 'wide' | 'flat' | 'round';
 
