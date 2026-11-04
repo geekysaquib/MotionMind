@@ -23,7 +23,7 @@ const pace = z.number().min(PACE_MIN).max(PACE_MAX);
 export const editorSchema = z
   .object({
     voiceSource: z.enum(['upload', 'elevenlabs']),
-    upload: z.object({ track: trackSchema, cuts: z.array(z.number().min(0)).max(80) }).nullable(),
+    upload: z.object({ track: trackSchema, cuts: z.array(z.number().min(0)).max(80), closingAt: z.number().positive().nullable().optional() }).nullable(),
     pace,
     scenePace: z.array(pace).max(80),
     music: z.object({ track: trackSchema, volume: z.number().min(0).max(1) }).nullable(),
@@ -102,6 +102,13 @@ export function registerEditorRoutes(api: FastifyInstance, deps: AppDeps) {
         (c, i) => c >= MIN_SCENE_SEC - 0.01 && c <= track.durationSec - MIN_SCENE_SEC + 0.01 && (i === 0 || c - cuts[i - 1]! >= MIN_SCENE_SEC - 0.05),
       );
       if (!ordered) return reply.code(400).send({ error: 'invalid_cuts', message: 'The scene breaks must be in order, at least 0.3 s apart and inside the recording.' });
+      const { closingAt } = editor.upload;
+      if (closingAt != null) {
+        const last = cuts.length ? cuts[cuts.length - 1]! : 0;
+        if (closingAt < last + MIN_SCENE_SEC - 0.05 || closingAt > track.durationSec - 0.3) {
+          return reply.code(400).send({ error: 'invalid_closing', message: 'The follow line must start after the last scene break and before the end of the recording.' });
+        }
+      }
       const beats = project.script?.beats.length;
       if (beats && cuts.length !== beats - 1) {
         return reply.code(400).send({ error: 'invalid_cuts', message: "The scene breaks don't match the script's scenes. Open the Reel editor to refit them." });

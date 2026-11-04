@@ -104,6 +104,22 @@ describe('reel editor routes', () => {
     expect(first.statusCode).toBe(200);
   });
 
+  it('saves the follow line start, and refuses one that is out of range', async () => {
+    const { app, id } = await setup();
+    const track = (await upload(app, id, 'voice', mp3())).json().track;
+    const put = (closingAt: number | null) => {
+      const e = editorFor(track);
+      return app.inject({ method: 'PUT', url: `/api/projects/${id}/editor`, headers: H, payload: { editor: { ...e, upload: { ...e.upload, closingAt } } } });
+    };
+    // editorFor cuts at 3 and 7 in a 10 second recording
+    const ok = await put(8.5);
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().project.editor.upload.closingAt).toBe(8.5);
+    expect((await put(7.1)).statusCode).toBe(400);
+    expect((await put(9.9)).statusCode).toBe(400);
+    expect((await put(null)).statusCode).toBe(200);
+  });
+
   it('refuses audio from another project, cuts out of order, and a cut count that does not match the scenes', async () => {
     const { app, id } = await setup();
     const track = (await upload(app, id, 'voice', mp3())).json().track;

@@ -40,7 +40,7 @@ export interface ReelEditor {
    * The uploaded voiceover (one file for the whole reel) and where each scene after the first starts in it, in
    * seconds. There is one cut fewer than there are scenes.
    */
-  upload: { track: AudioTrack; cuts: number[] } | null;
+  upload: { track: AudioTrack; cuts: number[]; closingAt?: number | null } | null;
   /** Speed of the voice for the whole reel. 1 = as recorded. */
   pace: number;
   /** Extra speed for single scenes, multiplied with `pace`. Missing entries mean 1. */
@@ -88,7 +88,7 @@ export function usesUploadedVoice(editor: ReelEditor | null | undefined, beatCou
 export interface EditorSpecParts {
   pace?: number;
   scenePace?: number[];
-  voiceTrack?: { url: string; durationSec: number; cuts: number[] };
+  voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number };
   music?: { url: string; durationSec: number; volume: number };
   captions?: CaptionStyle;
 }
@@ -101,7 +101,10 @@ export function editorSpecParts(editor: ReelEditor | null | undefined, beatCount
     captions: { ...DEFAULT_CAPTIONS, ...editor.captions },
   };
   if (usesUploadedVoice(editor, beatCount) && urls.voice) {
-    out.voiceTrack = { url: urls.voice, durationSec: editor.upload!.track.durationSec, cuts: editor.upload!.cuts };
+    const up = editor.upload!;
+    out.voiceTrack = { url: urls.voice, durationSec: up.track.durationSec, cuts: up.cuts };
+    const r = closingRange(up.cuts, up.track.durationSec);
+    if (up.closingAt != null && up.closingAt >= r.lo && up.closingAt <= r.hi) out.voiceTrack.closingAt = up.closingAt;
   }
   if (editor.music && urls.music) {
     out.music = { url: urls.music, durationSec: editor.music.track.durationSec, volume: Math.min(1, Math.max(0, editor.music.volume)) };
@@ -120,6 +123,40 @@ export function moveCut(cuts: number[], k: number, t: number, durationSec: numbe
   if (hi < lo) return cuts;
   const next = Math.round(Math.min(hi, Math.max(lo, t)) * 100) / 100;
   return cuts.map((c, i) => (i === k ? next : c));
+}
+
+/** Where the "follow us" line can start: after the last scene has had at least MIN_SCENE_SEC, and with a moment left to say it. */
+export function closingRange(cuts: number[], durationSec: number): { lo: number; hi: number } {
+  return { lo: (cuts.length ? cuts[cuts.length - 1]! : 0) + MIN_SCENE_SEC, hi: durationSec - 0.4 };
+}
+
+/** Keeps a follow-line start inside the allowed range, rounded to 1/100 s. */
+export function clampClosingAt(t: number, cuts: number[], durationSec: number): number {
+  const { lo, hi } = closingRange(cuts, durationSec);
+  return Math.round(Math.min(Math.max(lo, hi), Math.max(lo, t)) * 100) / 100;
+}
+
+/** The follow-line start a recording usually has: where its last burst of speech begins (a pause of 0.5 s or more before it). */
+export function defaultClosingAt(peaks: number[], durationSec: number, cuts: number[], peaksPerSec = PEAKS_PER_SEC): number {
+  const fallback = clampClosingAt(durationSec - 4, cuts, durationSec);
+  if (!peaks.length) return fallback;
+  const loud = Math.max(...peaks);
+  const quiet = Math.max(6, loud * 0.12);
+  let end = peaks.length - 1;
+  while (end > 0 && peaks[end]! < quiet) end--;
+  let start = end;
+  let run = 0;
+  const gap = Math.round(0.5 * peaksPerSec);
+  for (let j = end; j >= 0; j--) {
+    if (peaks[j]! >= quiet) {
+      run = 0;
+      start = j;
+    } else if (++run >= gap) break;
+  }
+  const t = start / peaksPerSec;
+  // A "last burst" longer than 8 s is the last scene itself, not a follow line.
+  if (durationSec - t > 8 || t <= 0) return fallback;
+  return clampClosingAt(t - 0.1, cuts, durationSec);
 }
 
 /** Start and end of every scene in the uploaded file, in seconds. */

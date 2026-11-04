@@ -97,7 +97,7 @@ Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `rese
 
 1. Add `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` if you want API-key mode (copy and paste works without them).
 2. Run `npm run assets:usage` after 20 to 30 real reels and hand-build the most-used missing 3D models.
-3. Reel editor: SFX tracks, trim of the recording's start and end.
+3. Reel editor: SFX tracks, trim of the recording's start and end. (Done: marking where the follow line starts, so the end card plays it.)
 4. Real trending topics for Discover.
 5. Push the branch.
 

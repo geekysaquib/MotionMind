@@ -85,7 +85,7 @@ export const Reel: React.FC<ReelSpec> = (input) => {
   const spec = useMemo(() => withScenes(input), [input]);
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const { timed, storyFrames, totalFrames } = useMemo(() => reelTiming(spec), [spec]);
+  const { timed, storyFrames, endFrames, totalFrames, closing } = useMemo(() => reelTiming(spec), [spec]);
   const placed = useMemo(() => layoutProps(timed), [timed]);
   const inStory = frame < storyFrames;
   const beat = timed.find((b) => frame >= b.start && frame < b.start + b.frames) ?? timed[timed.length - 1]!;
@@ -119,6 +119,11 @@ export const Reel: React.FC<ReelSpec> = (input) => {
         ) : null,
       )}
       {spec.music && <Music url={spec.music.url} durationSec={spec.music.durationSec} volume={spec.music.volume} totalFrames={totalFrames} />}
+      {closing && spec.voiceTrack && (
+        <Sequence from={storyFrames} durationInFrames={Math.max(1, endFrames)}>
+          <Audio src={spec.voiceTrack.url} trimBefore={Math.round(closing.srcStartSec * fps)} playbackRate={closing.rate} preservePitch />
+        </Sequence>
+      )}
       <Sequence from={storyFrames}>
         <EndCardWrapper brand={spec.brand} />
       </Sequence>

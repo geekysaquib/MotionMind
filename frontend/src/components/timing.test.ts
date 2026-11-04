@@ -96,3 +96,34 @@ describe('sceneRates', () => {
     expect(sceneRates({ beats, pace: NaN })).toEqual([1, 1, 1]);
   });
 });
+
+describe('a follow line at the end of the recording', () => {
+  const spec = (closingAt?: number): Pick<ReelSpec, 'beats' | 'voice' | 'pace' | 'scenePace' | 'voiceTrack'> => ({
+    beats,
+    voice: [],
+    pace: 1,
+    scenePace: [],
+    voiceTrack: { url: 'u', durationSec: 30, cuts: [10, 20], closingAt },
+  });
+
+  it('ends the last scene where the line starts, and keeps the end card until the line has been said', () => {
+    const t = reelTiming(spec(26));
+    expect(t.timed.map((b) => b.frames)).toEqual([300, 300, 180]);
+    expect(t.endFrames).toBe(Math.round(4 * 30) + 15); // 4 s of line + half a second
+    expect(t.totalFrames).toBe(t.storyFrames + t.endFrames);
+    expect(t.closing).toEqual({ srcStartSec: 26, rate: 1 });
+  });
+
+  it('is the usual 3 second end card without one, or when the point is not usable', () => {
+    expect(reelTiming(spec()).endFrames).toBe(90);
+    expect(reelTiming(spec()).closing).toBeNull();
+    expect(reelTiming(spec(20.1)).closing).toBeNull();
+    expect(reelTiming(spec(20.1)).timed.map((b) => b.frames)).toEqual([300, 300, 300]);
+  });
+
+  it('follows the reel pace', () => {
+    const t = reelTiming({ ...spec(26), pace: 2 });
+    expect(t.closing?.rate).toBe(2);
+    expect(t.endFrames).toBe(Math.max(90, Math.round(2 * 30) + 15));
+  });
+});

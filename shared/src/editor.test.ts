@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { DEFAULT_CAPTIONS, clampPace, editorSpecParts, moveCut, normalizeEditor, sceneBounds, usesUploadedVoice, type ReelEditor } from './editor';
+import { DEFAULT_CAPTIONS, clampClosingAt, clampPace, closingRange, defaultClosingAt, editorSpecParts, moveCut, normalizeEditor, sceneBounds, usesUploadedVoice, type ReelEditor } from './editor';
 
 const track = { path: 'u/p/voice-1.mp3', fileName: 'voice.mp3', mime: 'audio/mpeg', durationSec: 30 };
 const upload: ReelEditor = { ...normalizeEditor(null), upload: { track, cuts: [10, 20] } };
@@ -76,5 +76,37 @@ describe('usesUploadedVoice', () => {
     expect(usesUploadedVoice(upload, 2)).toBe(false);
     expect(usesUploadedVoice({ ...upload, upload: null }, 3)).toBe(false);
     expect(usesUploadedVoice(null, 3)).toBe(false);
+  });
+});
+
+describe('the follow line at the end of a recording', () => {
+  // 14 s at 20 peaks/s: speech to 10 s, a 0.7 s pause, then a 3 s line, then silence.
+  const peaks = Array.from({ length: 280 }, (_, i) => (i < 200 ? 60 : i < 214 ? 2 : i < 274 ? 55 : 1));
+
+  it('finds where the last burst of speech starts, just before it', () => {
+    const t = defaultClosingAt(peaks, 14, [4, 8]);
+    expect(t).toBeGreaterThan(10.4);
+    expect(t).toBeLessThan(10.8);
+  });
+
+  it('falls back to the last 4 seconds when the last burst is really the last scene, or there is nothing to listen to', () => {
+    expect(defaultClosingAt([], 20, [5, 10])).toBe(16);
+    expect(defaultClosingAt(Array.from({ length: 400 }, () => 60), 20, [5, 10])).toBe(16);
+  });
+
+  it('keeps the start after the last break and before the end', () => {
+    const r = closingRange([10, 20], 30);
+    expect(r.lo).toBeCloseTo(20.3);
+    expect(r.hi).toBeCloseTo(29.6);
+    expect(clampClosingAt(5, [10, 20], 30)).toBeCloseTo(20.3);
+    expect(clampClosingAt(99, [10, 20], 30)).toBeCloseTo(29.6);
+  });
+
+  it('reaches the reel engine only when it is a usable point', () => {
+    const e = (closingAt: number | null): ReelEditor => ({ ...upload, upload: { track, cuts: [10, 20], closingAt } });
+    expect(editorSpecParts(e(26), 3, { voice: 'u' }).voiceTrack?.closingAt).toBe(26);
+    expect(editorSpecParts(e(null), 3, { voice: 'u' }).voiceTrack?.closingAt).toBeUndefined();
+    expect(editorSpecParts(e(20.1), 3, { voice: 'u' }).voiceTrack?.closingAt).toBeUndefined();
+    expect(editorSpecParts(e(29.9), 3, { voice: 'u' }).voiceTrack?.closingAt).toBeUndefined();
   });
 });

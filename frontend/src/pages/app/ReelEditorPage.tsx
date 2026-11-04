@@ -6,9 +6,11 @@ import {
   autoCuts,
   clampPace,
   DEFAULT_CAPTIONS,
+  defaultClosingAt,
   normalizeEditor,
   PACE_MAX,
   PACE_MIN,
+  PEAKS_PER_SEC,
   sceneBounds,
   type CaptionStyle,
   type Project,
@@ -132,7 +134,10 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
 
   function refit() {
     if (!upload || !script) return;
-    const cuts = autoCuts(upload.track.peaks ?? [], upload.track.durationSec, script.beats.map((b) => b.narration));
+    // With a follow line at the end, only the part before it is split into scenes.
+    const end = upload.closingAt ?? upload.track.durationSec;
+    const peaks = (upload.track.peaks ?? []).slice(0, Math.round(end * PEAKS_PER_SEC));
+    const cuts = autoCuts(peaks, end, script.beats.map((b) => b.narration));
     patch({ upload: { ...upload, cuts } });
     log.info('editor', 'Scene breaks refitted', { projectId: project.id, scenes: beats.length });
   }
@@ -209,7 +214,31 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
               ) : (
                 <>
                   <p className="text-xs text-ink-400">Drag a pink line to move where a scene starts. With a line selected, arrow keys nudge it (Shift for bigger steps).</p>
-                  <Timeline peaks={upload.track.peaks ?? []} durationSec={upload.track.durationSec} cuts={upload.cuts} onChange={(cuts) => patch({ upload: { ...upload, cuts } })} selected={sceneIdx} onSelect={setScene} />
+                  <Timeline
+                    peaks={upload.track.peaks ?? []}
+                    durationSec={upload.track.durationSec}
+                    cuts={upload.cuts}
+                    onChange={(cuts) => patch({ upload: { ...upload, cuts } })}
+                    selected={sceneIdx}
+                    onSelect={setScene}
+                    closingAt={upload.closingAt}
+                    onClosingChange={(closingAt) => patch({ upload: { ...upload, closingAt } })}
+                  />
+                  <label className="flex items-start gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      aria-label="My recording ends with the follow line"
+                      checked={upload.closingAt != null}
+                      onChange={(e) => patch({ upload: { ...upload, closingAt: e.target.checked ? defaultClosingAt(upload.track.peaks ?? [], upload.track.durationSec, upload.cuts) : null } })}
+                    />
+                    <span>
+                      My recording ends with the "follow us" line
+                      <span className="block text-xs text-ink-400">
+                        Drag the purple line to where that line starts. The last scene ends there and the end card appears as the line begins, so it plays over your brand.
+                      </span>
+                    </span>
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     <Button variant="ghost" onClick={refit}>
                       Guess the breaks again

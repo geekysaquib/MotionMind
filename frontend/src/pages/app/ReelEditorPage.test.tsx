@@ -125,6 +125,24 @@ describe('ReelEditorPage', () => {
     expect(store.projects.byId(id)!.script!.beats[0]!.narration).toBe('Ek second.');
   });
 
+  it('marks where the follow line starts and saves it', async () => {
+    const { calls } = await setup('editor', EDITOR);
+    expect(screen.queryByRole('slider', { name: 'Start of the follow line' })).toBeNull();
+    fireEvent.click(screen.getByLabelText('My recording ends with the follow line'));
+    const marker = screen.getByRole('slider', { name: 'Start of the follow line' });
+    const at = Number(marker.getAttribute('aria-valuenow'));
+    expect(at).toBeGreaterThanOrEqual(7.3);
+    expect(at).toBeLessThanOrEqual(9.6);
+    fireEvent.keyDown(marker, { key: 'ArrowRight', shiftKey: true });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    });
+    expect(calls.saved[0]!.upload!.closingAt).toBeCloseTo(Math.min(9.6, at + 0.25), 1);
+    // Unticking removes it again.
+    fireEvent.click(screen.getByLabelText('My recording ends with the follow line'));
+    expect(screen.queryByRole('slider', { name: 'Start of the follow line' })).toBeNull();
+  });
+
   it('offers to refit the scene breaks when the scene count changed', async () => {
     await setup('editor', { ...EDITOR, upload: { ...EDITOR.upload!, cuts: [5] } });
     expect(screen.getByRole('button', { name: 'Refit scene breaks' })).toBeTruthy();

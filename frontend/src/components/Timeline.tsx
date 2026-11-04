@@ -1,5 +1,5 @@
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
-import { MIN_SCENE_SEC, moveCut, sceneBounds, PEAKS_PER_SEC } from '@motionmind/shared';
+import { clampClosingAt, MIN_SCENE_SEC, moveCut, sceneBounds, PEAKS_PER_SEC } from '@motionmind/shared';
 import { cn } from '../lib/cn';
 
 interface Props {
@@ -13,6 +13,9 @@ interface Props {
   onSelect?: (scene: number) => void;
   /** Playhead position in seconds, if the preview reports one. */
   playheadSec?: number;
+  /** Where the "follow us" line starts, when the recording ends with one. The last scene ends there. */
+  closingAt?: number | null;
+  onClosingChange?: (t: number) => void;
 }
 
 const H = 104;
@@ -20,10 +23,11 @@ const H = 104;
 const CLIP = ['#E8734A', '#0D9488', '#7C3AED', '#0EA5E9'];
 
 /** The recording as a waveform, with one draggable break per scene. Arrow keys nudge a focused break by 0.05 s. */
-export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelect, playheadSec }: Props) {
+export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelect, playheadSec, closingAt, onClosingChange }: Props) {
   const box = useRef<HTMLDivElement>(null);
-  const [drag, setDrag] = useState<number | null>(null);
-  const bounds = sceneBounds(cuts, durationSec);
+  const [drag, setDrag] = useState<number | 'closing' | null>(null);
+  const sceneEnd = closingAt ?? durationSec;
+  const bounds = sceneBounds(cuts, sceneEnd);
   const pct = (t: number) => `${(t / durationSec) * 100}%`;
 
   const timeAt = (clientX: number) => {
@@ -31,20 +35,28 @@ export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelec
     return Math.min(durationSec, Math.max(0, ((clientX - r.left) / Math.max(1, r.width)) * durationSec));
   };
 
-  const down = (k: number) => (e: PointerEvent) => {
+  const down = (k: number | 'closing') => (e: PointerEvent) => {
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
     setDrag(k);
   };
   const move = (e: PointerEvent) => {
     if (drag === null) return;
-    onChange(moveCut(cuts, drag, timeAt(e.clientX), durationSec, MIN_SCENE_SEC));
+    if (drag === 'closing') onClosingChange?.(clampClosingAt(timeAt(e.clientX), cuts, durationSec));
+    else onChange(moveCut(cuts, drag, timeAt(e.clientX), sceneEnd, MIN_SCENE_SEC));
   };
   const key = (k: number) => (e: KeyboardEvent) => {
     const step = e.shiftKey ? 0.25 : 0.05;
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
-      onChange(moveCut(cuts, k, cuts[k]! + (e.key === 'ArrowLeft' ? -step : step), durationSec, MIN_SCENE_SEC));
+      onChange(moveCut(cuts, k, cuts[k]! + (e.key === 'ArrowLeft' ? -step : step), sceneEnd, MIN_SCENE_SEC));
+    }
+  };
+  const closingKey = (e: KeyboardEvent) => {
+    const step = e.shiftKey ? 0.25 : 0.05;
+    if (closingAt != null && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      e.preventDefault();
+      onClosingChange?.(clampClosingAt(closingAt + (e.key === 'ArrowLeft' ? -step : step), cuts, durationSec));
     }
   };
 
@@ -100,6 +112,29 @@ export function Timeline({ peaks, durationSec, cuts, onChange, selected, onSelec
           <div className={cn('mx-auto h-full w-0.5 bg-coral group-focus:w-1', drag === k && 'w-1')} />
         </div>
       ))}
+      {closingAt != null && (
+        <>
+          <div className="pointer-events-none absolute bottom-0 top-0 bg-violet-500/10" style={{ left: pct(closingAt), right: 0 }} aria-hidden />
+          <span className="pointer-events-none absolute bottom-1 truncate px-1.5 text-[10px] font-semibold text-violet-600" style={{ left: pct(closingAt) }}>
+            Follow line
+          </span>
+          <div
+            role="slider"
+            tabIndex={0}
+            aria-label="Start of the follow line"
+            aria-valuemin={0}
+            aria-valuemax={durationSec}
+            aria-valuenow={Number(closingAt.toFixed(2))}
+            aria-valuetext={`${closingAt.toFixed(2)} seconds`}
+            onPointerDown={down('closing')}
+            onKeyDown={closingKey}
+            className="group absolute bottom-0 top-0 -ml-2 w-4 cursor-ew-resize focus:outline-none"
+            style={{ left: pct(closingAt) }}
+          >
+            <div className={cn('mx-auto h-full w-0.5 bg-violet-600 group-focus:w-1', drag === 'closing' && 'w-1')} />
+          </div>
+        </>
+      )}
       {playheadSec !== undefined && <div className="pointer-events-none absolute top-0 bottom-0 w-px bg-ink-100" style={{ left: pct(Math.min(playheadSec, durationSec)) }} />}
     </div>
   );
