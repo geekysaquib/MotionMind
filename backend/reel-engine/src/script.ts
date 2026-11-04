@@ -146,7 +146,7 @@ export type ReelSpec = {
    * (seconds), so there is one cut fewer than beats. It replaces `voice` and `audioUrls`.
    */
   /** One recording for the whole reel. `closingAt` = where its follow line starts: the last scene ends there and the end card plays the line. */
-  voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number };
+  voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number; peaks?: number[] };
   /** Speed of the voice for the whole reel (1 = as recorded). */
   pace?: number;
   /** Extra speed per scene, multiplied with `pace`. */
@@ -373,10 +373,60 @@ export interface TimingOptions {
   /** Playback speed per scene (1 = as recorded). Missing entries mean 1. */
   rates?: number[];
   /** One recording for the whole reel, cut into scenes. */
-  track?: { durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number };
+  track?: { durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number; peaks?: number[] };
 }
 
 const MIN_SCENE_FRAMES = Math.round(0.3 * FPS);
+const PEAKS_PER_SEC = 20;
+
+/**
+ * Where each caption word falls, using the loudness of the recording: the words are spread over the time the
+ * speaker is actually talking, so a pause or silence at the start or end of a scene no longer drags the captions
+ * away from the voice. Returns null when there is no usable loudness (then the words are spread evenly).
+ * `srcStart`/`srcEnd` are seconds in the recording; the result is in frames from `cursor`, at playback speed `rate`.
+ */
+export function wordsFromPeaks(words: string[], peaks: number[] | undefined, srcStart: number, srcEnd: number, rate: number, cursor: number): TimedBeat['words'] | null {
+  if (!peaks || peaks.length < 4 || !words.length || srcEnd <= srcStart) return null;
+  const a = Math.max(0, Math.floor(srcStart * PEAKS_PER_SEC));
+  const b = Math.min(peaks.length, Math.ceil(srcEnd * PEAKS_PER_SEC));
+  if (b - a < 3) return null;
+  const slice = peaks.slice(a, b);
+  const loud = Math.max(...slice);
+  if (loud < 8) return null;
+  const thr = Math.max(6, loud * 0.14);
+  // Voiced bins, with short dips (a breath, a hard consonant) bridged so one sentence stays one stretch.
+  const voiced = slice.map((v) => v >= thr);
+  const bridge = Math.round(0.25 * PEAKS_PER_SEC);
+  let last = -1;
+  for (let i = 0; i < voiced.length; i++) {
+    if (voiced[i]) {
+      if (last >= 0 && i - last > 1 && i - last <= bridge) for (let j = last + 1; j < i; j++) voiced[j] = true;
+      last = i;
+    }
+  }
+  const total = voiced.filter(Boolean).length;
+  if (total < Math.min(words.length, 4)) return null;
+  // Cumulative voiced time: position p (0..total) -> the bin where that much speech has been heard.
+  const binAt = (p: number, isStart: boolean) => {
+    let acc = 0;
+    for (let i = 0; i < voiced.length; i++) {
+      if (!voiced[i]) continue;
+      // A word that begins exactly where speech ran out waits for the next stretch of speech.
+      if (isStart ? acc + 1 > p : acc + 1 >= p) return i + (p - acc);
+      acc += 1;
+    }
+    return voiced.length;
+  };
+  const weights = words.map((w) => Math.max(2, w.length) + (/[.?!]$/.test(w) ? 3 : /[,;:]$/.test(w) ? 1 : 0));
+  const sum = weights.reduce((x, y) => x + y, 0) || 1;
+  const frameOf = (bin: number) => cursor + Math.round(((a + bin) / PEAKS_PER_SEC - srcStart) / rate * FPS);
+  let acc = 0;
+  return words.map((text, k) => {
+    const start = frameOf(binAt((acc / sum) * total, true));
+    acc += weights[k]!;
+    return { text, start, end: frameOf(binAt((acc / sum) * total, false)) };
+  });
+}
 
 /** Spreads words over a stretch of frames in proportion to how long each takes to say. */
 function spreadWords(words: string[], from: number, to: number): TimedBeat['words'] {
@@ -426,7 +476,7 @@ export function timeBeats(beats: Beat[], voiceBeats: VoiceBeat[] = [], opts: Tim
       const srcEnd = edges[idx + 1]!;
       frames = Math.max(MIN_SCENE_FRAMES, Math.round(((srcEnd - srcStart) / rate) * FPS));
       const edge = Math.min(6, Math.round(frames * 0.05));
-      timedWords = spreadWords(words, cursor + edge, cursor + frames - Math.min(8, Math.round(frames * 0.1)));
+      timedWords = wordsFromPeaks(words, track.peaks, srcStart, srcEnd, rate, cursor) ?? spreadWords(words, cursor + edge, cursor + frames - Math.min(8, Math.round(frames * 0.1)));
       audio = { from: cursor, frames, srcStartSec: srcStart, rate, source: 'track' };
     } else if (v && v.words.length) {
       // Real TTS timings. Caption words (Hinglish) are mapped onto spoken words (Devanagari) by position.
@@ -457,7 +507,7 @@ export function timeBeats(beats: Beat[], voiceBeats: VoiceBeat[] = [], opts: Tim
 
 /** Frame layout of a reel: the timed beats, then a 3-second end card. */
 export function reelTiming(spec: Pick<ReelSpec, 'beats' | 'voice' | 'pace' | 'scenePace' | 'voiceTrack'>) {
-  const track = spec.voiceTrack ? { durationSec: spec.voiceTrack.durationSec, cuts: spec.voiceTrack.cuts, closingAt: spec.voiceTrack.closingAt, trimStart: spec.voiceTrack.trimStart, trimEnd: spec.voiceTrack.trimEnd } : undefined;
+  const track = spec.voiceTrack ? { durationSec: spec.voiceTrack.durationSec, cuts: spec.voiceTrack.cuts, closingAt: spec.voiceTrack.closingAt, trimStart: spec.voiceTrack.trimStart, trimEnd: spec.voiceTrack.trimEnd, peaks: spec.voiceTrack.peaks } : undefined;
   const timed = timeBeats(spec.beats, hasVoice(spec) && !track ? spec.voice : [], { rates: sceneRates(spec), track });
   const storyFrames = timed.reduce((n, b) => n + b.frames, 0);
   // With a follow line in the recording, the end card appears as the line starts and stays until it has been said.

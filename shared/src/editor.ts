@@ -104,7 +104,7 @@ export function usesUploadedVoice(editor: ReelEditor | null | undefined, beatCou
 export interface EditorSpecParts {
   pace?: number;
   scenePace?: number[];
-  voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number };
+  voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number; peaks?: number[] };
   music?: { url: string; durationSec: number; volume: number };
   sfx?: { url: string; durationSec: number; at: number; volume: number }[];
   captions?: CaptionStyle;
@@ -119,7 +119,7 @@ export function editorSpecParts(editor: ReelEditor | null | undefined, beatCount
   };
   if (usesUploadedVoice(editor, beatCount) && urls.voice) {
     const up = editor.upload!;
-    out.voiceTrack = { url: urls.voice, durationSec: up.track.durationSec, cuts: up.cuts };
+    out.voiceTrack = { url: urls.voice, durationSec: up.track.durationSec, cuts: up.cuts, ...(up.track.peaks?.length ? { peaks: up.track.peaks } : {}) };
     const w = trimWindow(up);
     if (w.start > 0.01) out.voiceTrack.trimStart = w.start;
     if (w.end < up.track.durationSec - 0.01) out.voiceTrack.trimEnd = w.end;

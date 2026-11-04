@@ -512,7 +512,14 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
   items.sort((a, b) => a.depth - b.depth);
 
   // Ground slab with a soft road along the path.
-  const slab = { x: -10, y: -10, w: maxX + 14, d: 20 };
+  // The ground always reaches past every object (with its footprint and a margin), so nothing hangs over the edge,
+  // however many objects a scene has or wherever the user dragged them.
+  const reach = props.map((p) => ({ p, f: footprint(p.kind, p.spec) }));
+  const x0 = Math.min(-10, ...reach.map(({ p, f }) => p.pos.x - f[0] - 6));
+  const x1 = Math.max(maxX + 4, ...reach.map(({ p, f }) => p.pos.x + f[0] + 6));
+  const y0 = Math.min(-10, ...reach.map(({ p, f }) => p.pos.y - f[1] - 6));
+  const y1 = Math.max(10, ...reach.map(({ p, f }) => p.pos.y + f[1] + 6));
+  const slab = { x: x0, y: y0, w: x1 - x0, d: y1 - y0 };
   const ground = [
     { x: slab.x, y: slab.y, z: 0 },
     { x: slab.x + slab.w, y: slab.y, z: 0 },
