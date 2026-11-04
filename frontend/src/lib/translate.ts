@@ -23,6 +23,18 @@ export function translatePrompt(lines: string[], lang: 'en' | 'hi'): string {
   ].join('\n');
 }
 
+/** Who the viewer is told to follow: the channel name, else the handle, else the studio name. */
+export function followName(profile: { channelName: string | null; handle: string | null } | null | undefined, fallback: string): string {
+  return profile?.channelName?.trim() || (profile?.handle ? `@${profile.handle}` : '') || fallback;
+}
+
+/** The last thing the voice says: a follow message with the brand or handle, in the language of the script. */
+export function closingLine(language: 'en' | 'hi' | 'hinglish', name: string): string {
+  if (language === 'en') return `Follow ${name} for more explainers like this.`;
+  if (language === 'hi') return `ऐसे और वीडियो के लिए ${name} को फ़ॉलो करें।`;
+  return `Aise aur videos ke liye ${name} ko follow karo.`;
+}
+
 export class TranslationError extends Error {}
 
 /** Reads Claude's answer: a JSON array of strings, with or without a code fence, one per scene. */

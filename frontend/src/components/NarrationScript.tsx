@@ -7,7 +7,8 @@ import { useStores } from '../stores/RootStore';
 import { Alert, Button, Card } from './ui';
 import { errorText } from '../lib/format';
 import { log } from '../lib/logger';
-import { LANGUAGE_LABELS, parseTranslation, translatePrompt, TranslationError, type ScriptLanguage } from '../lib/translate';
+import { BRAND } from '@motionmind/shared';
+import { closingLine, followName, LANGUAGE_LABELS, parseTranslation, translatePrompt, TranslationError, type ScriptLanguage } from '../lib/translate';
 
 type Lang = 'en' | 'hi';
 type Saved = Partial<Record<Lang, string[]>>;
@@ -30,7 +31,7 @@ function load(projectId: string, count: number): Saved {
  * Claude translates it with the server key, or you copy a prompt into claude.ai and paste the answer back.
  */
 export const NarrationScript = observer(function NarrationScript({ project }: { project: Project }) {
-  const { aiMode, projects, services, auth, toasts } = useStores();
+  const { aiMode, projects, services, auth, toasts, profile } = useStores();
   const script = project.script!;
   const original = script.beats.map((b) => b.narration.trim());
   const [lang, setLang] = useState<ScriptLanguage>('original');
@@ -41,7 +42,9 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
 
   const translated = lang === 'original' ? null : saved[lang];
   const lines = lang === 'original' ? original : translated ?? null;
-  const fullText = lines?.join('\n\n') ?? '';
+  // Every voice script ends by asking the viewer to follow the channel, in the language being shown.
+  const closing = closingLine(lang === 'original' ? (profile.profile?.language ?? 'hinglish') : lang, followName(profile.profile, BRAND.name));
+  const fullText = lines ? [...lines, closing].join('\n\n') : '';
   const words = fullText.split(/\s+/).filter(Boolean).length;
 
   function keep(l: Lang, result: string[]) {
@@ -162,6 +165,15 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
                 <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed">{line}</p>
               </li>
             ))}
+            <li className="rounded-xl border border-mint-400/40 bg-mint-400/[0.06] p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-accent">Closing line · always last</span>
+                <Button variant="ghost" aria-label="Copy the closing line" onClick={() => void copy(closing, 'Closing line')}>
+                  Copy
+                </Button>
+              </div>
+              <p className="mt-1 text-sm leading-relaxed">{closing}</p>
+            </li>
           </ol>
           {translated ? (
             <p className="mt-3 text-xs text-ink-400">This translation is only for copying until you press "Use in the reel", which replaces the narration and captions with it.</p>

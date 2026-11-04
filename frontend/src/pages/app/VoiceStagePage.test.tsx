@@ -84,7 +84,10 @@ describe('VoiceStagePage', () => {
   it('shows the narration script and copies it for text-to-speech', async () => {
     const writes: string[] = [];
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t: string) => void writes.push(t) } });
-    await setup({ voice: null, urls: [], stale: false });
+    const { store } = await setup({ voice: null, urls: [], stale: false });
+    await act(async () => {
+      store.profile.profile = { ...store.profile.profile!, channelName: 'Decodifyx', handle: 'decodify_x', language: 'en' };
+    });
     expect(screen.getByText('Your narration script')).toBeTruthy();
     expect(screen.getByText('NPCI.')).toBeTruthy();
     await act(async () => {
@@ -93,7 +96,31 @@ describe('VoiceStagePage', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy scene 2' }));
     });
-    expect(writes).toEqual(['Ek second.\n\nNPCI.', 'NPCI.']);
+    // The script always ends with the follow message, after the last scene.
+    expect(writes).toEqual(['Ek second.\n\nNPCI.\n\nFollow Decodifyx for more explainers like this.', 'NPCI.']);
+    expect(screen.getByText('Closing line · always last')).toBeTruthy();
+  });
+
+  it('ends the voice script with the handle when there is no channel name, in Hindi when Hindi is shown', async () => {
+    const writes: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t: string) => void writes.push(t) } });
+    const { store } = await setup({ voice: null, urls: [], stale: false }, 'paste');
+    await act(async () => {
+      store.profile.profile = { ...store.profile.profile!, channelName: null, handle: 'decodify_x', language: 'hinglish' };
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy the whole script' }));
+    });
+    expect(writes.at(-1)).toMatch(/Aise aur videos ke liye @decodify_x ko follow karo\.$/);
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'hi' } });
+    fireEvent.change(screen.getByLabelText('Translated lines'), { target: { value: '["एक सेकंड।", "एनपीसीआई।"]' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use this translation' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy the whole script' }));
+    });
+    expect(writes.at(-1)).toBe('एक सेकंड।\n\nएनपीसीआई।\n\nऐसे और वीडियो के लिए @decodify_x को फ़ॉलो करें।');
   });
 
   it('translates the script with Claude in key mode, then uses it in the reel', async () => {
