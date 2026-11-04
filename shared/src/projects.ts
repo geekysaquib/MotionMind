@@ -66,6 +66,8 @@ export interface ReelScript {
   /** Which Claude model wrote it, and when. */
   model?: string;
   writtenAt?: string;
+  /** Set when the user changes it in the Storyboard. */
+  editedAt?: string;
 }
 
 export interface Profile {

@@ -1,4 +1,4 @@
-import type { Project } from '@motionmind/shared';
+import type { Project, ReelScript } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
 
@@ -42,6 +42,8 @@ export interface ClaudeService {
   researchPrompt(projectId: string): Promise<string>;
   importResearch(projectId: string, text: string): Promise<Project>;
   approveResearch(projectId: string): Promise<Project>;
+  /** Storyboard: save the user's edits to the script. */
+  saveScript(projectId: string, script: ReelScript): Promise<Project>;
 }
 
 /** Claude always runs on the API, on the server's Anthropic key. */
@@ -62,6 +64,7 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     research: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research`, 'POST')).project,
     researchPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt`)).prompt,
     importResearch: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/research/import`, 'POST', { text })).project,
+    saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,
     approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,
   };
 }

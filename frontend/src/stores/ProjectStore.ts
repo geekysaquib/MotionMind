@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import type { Project } from '@motionmind/shared';
+import type { Project, ReelScript } from '@motionmind/shared';
 import type { RootStore } from './RootStore';
 import type { NewProject } from '../services/types';
 import { log } from '../lib/logger';
@@ -110,6 +110,12 @@ export class ProjectStore {
   async importResearch(id: string, text: string) {
     const p = await this.claude.importResearch(id, text);
     log.info('claude', 'Pasted research imported', { projectId: id, facts: p.research?.facts.length });
+    return this.replace(p);
+  }
+
+  async saveScript(id: string, script: ReelScript) {
+    const p = await this.claude.saveScript(id, script);
+    log.info('storyboard', 'Storyboard saved', { projectId: id, beats: script.beats.length });
     return this.replace(p);
   }
 

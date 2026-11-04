@@ -5,10 +5,11 @@ import { makeStore, renderWithStore } from '../../test-utils';
 import { ConnectorsSettings } from './ConnectorsSettings';
 
 function fakeService(connectors: Connector[]): ClaudeService {
+  // Only what this page uses; the rest of the service is not called here.
   return {
     connectors: async () => connectors,
     status: async () => ({ connected: true, model: 'claude-opus-5-5' }),
-    ask: async (prompt) => ({ reply: { text: `You asked: ${prompt.slice(0, 20)}`, model: 'claude-opus-5-5', inputTokens: 9, outputTokens: 4 }, ms: 1200 }),
+    ask: async (prompt: string) => ({ reply: { text: `You asked: ${prompt.slice(0, 20)}`, model: 'claude-opus-5-5', inputTokens: 9, outputTokens: 4 }, ms: 1200 }),
     writeScript: async () => {
       throw new Error('not used');
     },
@@ -27,7 +28,7 @@ function fakeService(connectors: Connector[]): ClaudeService {
       throw new Error('not used');
     },
     testElevenLabs: async () => ({ ok: true, detail: 'Connected. 2 voices available.', voices: [{ id: 'v1', name: 'Aarav' }, { id: 'v2', name: 'Diya' }] }),
-  };
+  } as unknown as ClaudeService;
 }
 
 const CLAUDE: Connector = { id: 'claude', name: 'Claude', purpose: 'Writes and researches your reel scripts', connected: true, detail: 'claude-opus-5-5' };

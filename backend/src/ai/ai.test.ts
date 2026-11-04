@@ -290,3 +290,27 @@ describe('claudeClient.research (real SDK, fake network)', () => {
     expect((bodies[1]!.messages as unknown[]).length).toBe(2);
   });
 });
+
+describe('storyboard edits', () => {
+  it('saves an edited script, keeps who wrote it, marks it edited and moves to Storyboard', async () => {
+    const { app } = await setup();
+    const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'How UPI works', durationSec: 60, qualityTier: 'standard' } });
+    const id = created.json().project.id;
+    await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
+    const edited = { ...SCRIPT, title: 'UPI in 1 second', beats: [SCRIPT.beats[1], SCRIPT.beats[0]] };
+    const res = await app.inject({ method: 'PUT', url: `/api/projects/${id}/script`, headers: H, payload: { script: edited } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().project).toMatchObject({ stage: 'storyboard', script: { title: 'UPI in 1 second', model: CLAUDE_MODEL, editedAt: expect.any(String) } });
+    expect(res.json().project.script.beats[0].id).toBe('npci');
+  });
+
+  it('rejects a broken or empty storyboard and other people\'s projects', async () => {
+    const { app } = await setup();
+    const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'x', durationSec: 60, qualityTier: 'standard' } });
+    const id = created.json().project.id;
+    const put = (script: unknown, headers = H) => app.inject({ method: 'PUT', url: `/api/projects/${id}/script`, headers, payload: { script } });
+    expect((await put({ ...SCRIPT, beats: [{ ...SCRIPT.beats[0], card: { ...SCRIPT.beats[0]!.card, tone: 'pink' } }] })).json().message).toMatch(/storyboard has a problem/);
+    expect((await put({ ...SCRIPT, beats: [] })).json().message).toBe('Keep at least one beat.');
+    expect((await put(SCRIPT, { authorization: 'Bearer dev:u2' })).statusCode).toBe(404);
+  });
+});

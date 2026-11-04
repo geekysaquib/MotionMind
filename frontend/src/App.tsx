@@ -16,6 +16,7 @@ import { DiagnosticsSettings } from './pages/app/DiagnosticsSettings';
 import { ConnectorsSettings } from './pages/app/ConnectorsSettings';
 import { ScriptStagePage } from './pages/app/ScriptStagePage';
 import { ResearchStagePage } from './pages/app/ResearchStagePage';
+import { StoryboardStagePage } from './pages/app/StoryboardStagePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LandingPage } from './pages/LandingPage';
 import { Toasts } from './components/Toasts';
@@ -50,7 +51,7 @@ export const routes = [
           { index: true, element: <ProjectOverviewPage /> },
           { path: 'research', element: <ResearchStagePage /> },
           { path: 'script', element: <ScriptStagePage /> },
-          stage('storyboard'),
+          { path: 'storyboard', element: <StoryboardStagePage /> },
           stage('graphics'),
           stage('voice'),
           stage('editor'),
