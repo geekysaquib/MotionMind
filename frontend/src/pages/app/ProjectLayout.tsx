@@ -32,8 +32,8 @@ export const ProjectLayout = observer(function ProjectLayout() {
   const href = (path: string) => (path ? `/app/projects/${p.id}/${path}` : `/app/projects/${p.id}`);
 
   return (
-    <div className="mx-auto grid max-w-[1400px] gap-5 p-4 md:p-6 lg:grid-cols-[216px_minmax(0,1fr)]">
-      <aside className="lg:sticky lg:top-6 lg:self-start">
+    <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-5 p-4 md:p-6 lg:grid-cols-[216px_minmax(0,1fr)]">
+      <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
         <div className="card p-4">
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
@@ -50,17 +50,17 @@ export const ProjectLayout = observer(function ProjectLayout() {
             </ProgressRing>
           </div>
 
-          <ol className="mt-4 space-y-0.5" aria-label="Project steps">
+          <ol className="-mx-1 mt-3 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:mx-0 lg:mt-4 lg:block lg:space-y-0.5 lg:overflow-visible lg:px-0 lg:pb-0" aria-label="Project steps">
             {STAGE_INFO.map((t, i) => {
               const isCurrent = i === current;
               return (
-                <li key={t.path} className="relative">
-                  {i < STAGE_INFO.length - 1 && <span className={cn('absolute left-[19px] top-9 h-[calc(100%-1.5rem)] w-px', done[i] ? 'bg-mint-500/50' : 'bg-line/10')} aria-hidden />}
+                <li key={t.path} ref={isCurrent ? (el) => el?.scrollIntoView?.({ inline: 'center', block: 'nearest' }) : undefined} className="relative shrink-0 lg:shrink">
+                  {i < STAGE_INFO.length - 1 && <span className={cn('absolute left-[19px] hidden lg:block top-9 h-[calc(100%-1.5rem)] w-px', done[i] ? 'bg-mint-500/50' : 'bg-line/10')} aria-hidden />}
                   <NavLink
                     to={href(t.path)}
                     end
                     aria-current={isCurrent ? 'step' : undefined}
-                    className={cn('group relative flex items-center gap-3 rounded-lg px-2 py-2 transition', isCurrent ? 'bg-mint-500/[0.08]' : 'hover:bg-ink-800')}
+                    className={cn('group relative flex items-center gap-2 rounded-full border px-2.5 py-1.5 transition lg:gap-3 lg:rounded-lg lg:border-0 lg:px-2 lg:py-2', isCurrent ? 'border-mint-500/40 bg-mint-500/[0.08]' : 'border-line/[0.12] hover:bg-ink-800')}
                   >
                     <span
                       className={cn(
@@ -73,7 +73,7 @@ export const ProjectLayout = observer(function ProjectLayout() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={cn('block truncate text-sm', isCurrent ? 'font-semibold' : done[i] ? 'text-ink-100' : 'text-ink-300')}>{t.label}</span>
-                      {isCurrent && <span className="block truncate text-xs text-ink-400">{t.title}</span>}
+                      {isCurrent && <span className="hidden truncate text-xs text-ink-400 lg:block">{t.title}</span>}
                     </span>
                   </NavLink>
                 </li>
@@ -81,7 +81,7 @@ export const ProjectLayout = observer(function ProjectLayout() {
             })}
           </ol>
 
-          <div className="mt-4 flex flex-col gap-1 border-t border-line/[0.08] pt-3 text-xs text-ink-400">
+          <div className="mt-3 flex flex-col gap-1 border-t border-line/[0.08] pt-3 text-xs text-ink-400 lg:mt-4">
             <span>
               {doneCount} of {STAGE_INFO.length} steps done
             </span>
