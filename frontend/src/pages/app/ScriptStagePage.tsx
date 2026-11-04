@@ -35,9 +35,19 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-6">
-        {aiMode.paste ? (
+        {aiMode.paste && script ? (
+          <details className="group card overflow-hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-semibold">
+              <span>Replace the script with a new answer from claude.ai</span>
+              <span className="text-lg text-ink-400 transition group-open:rotate-45">+</span>
+            </summary>
+            <div className="border-t border-line/[0.08] p-4">
+              <PasteScriptPanel project={project} />
+            </div>
+          </details>
+        ) : aiMode.paste ? (
           <PasteScriptPanel project={project} />
         ) : (
         <Card>
@@ -98,7 +108,7 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
         )}
       </div>
 
-      <div className="lg:sticky lg:top-6 lg:self-start">
+      <div className="xl:sticky xl:top-6 xl:self-start">
         <h3 className="mb-3 text-sm font-semibold text-ink-400">Preview</h3>
         {spec || showSample ? (
           <Suspense fallback={<Spinner label="Loading the reel engine" />}>

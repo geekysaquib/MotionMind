@@ -17,7 +17,7 @@ export const AccountSettings = observer(function AccountSettings() {
       </Card>
       <Card>
         <h2 className="font-semibold">Appearance</h2>
-        <div className="mt-4 inline-flex rounded-xl border border-line/15 p-1 text-sm">
+        <div className="mt-4 inline-flex rounded-lg bg-ink-700/70 p-1 text-sm">
           {(['light', 'dark'] as const).map((t) => (
             <button
               key={t}
@@ -26,7 +26,7 @@ export const AccountSettings = observer(function AccountSettings() {
                 setTheme(t);
                 setThemeState(t);
               }}
-              className={cn('rounded-lg px-4 py-1.5 font-medium capitalize', theme === t ? 'bg-line/[0.08] text-ink-100' : 'text-ink-400 hover:text-ink-100')}
+              className={cn('rounded-md px-4 py-1.5 font-medium capitalize transition', theme === t ? 'bg-ink-900 text-ink-100 shadow-sm' : 'text-ink-400 hover:text-ink-100')}
             >
               {t}
             </button>

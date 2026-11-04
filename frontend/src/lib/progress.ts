@@ -20,7 +20,7 @@ export function stageDone(p: Project): boolean[] {
     Boolean(p.research),
     hasScript,
     Boolean(p.script?.editedAt),
-    hasScript,
+    Boolean(p.script && (p.script.editedAt || p.voice || p.editor?.upload)),
     Boolean(p.voice || p.editor?.upload),
     Boolean(p.editor?.updatedAt),
     p.status === 'completed' || p.stage === 'final',

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
-import { Download, Film } from 'lucide-react';
+import { Download, Film, Clapperboard } from 'lucide-react';
 import type { Project } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
+import { EmptyState } from '../../components/EmptyState';
 import { config } from '../../config';
 import { Alert, Button, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
@@ -67,22 +68,14 @@ export const ExportStagePage = observer(function ExportStagePage() {
 
   if (!project.script) {
     return (
-      <Card>
-        <h2 className="font-semibold">Export</h2>
-        <p className="mt-2 text-sm text-ink-400">
-          Write the script first.{' '}
-          <Link to={`/app/projects/${project.id}/script`} className="text-accent hover:underline">
-            Go to Script
-          </Link>
-        </p>
-      </Card>
+      <EmptyState icon={<Clapperboard className="h-6 w-6" />} title="No script yet" text="Write the script and give it a voice first. Then you can render the video here." to={`/app/projects/${project.id}/script`} action="Go to Script" />
     );
   }
 
   const videoUrl = job?.status === 'done' && job.file ? `${config.apiUrl}/api/renders/${job.file}` : null;
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
       <Card>
         <h2 className="flex items-center gap-2 font-semibold">
           <Film className="h-4 w-4 text-accent" /> Export the reel

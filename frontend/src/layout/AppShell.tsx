@@ -46,7 +46,7 @@ export const AppShell = observer(function AppShell() {
     <div className="flex h-full flex-col bg-ink-900">
       <DemoBanner />
       <div className="flex min-h-0 flex-1">
-        <aside className="hidden w-60 shrink-0 flex-col border-r border-line/[0.08] bg-ink-900 p-3 md:flex">
+        <aside className="hidden w-56 shrink-0 flex-col border-r border-line/[0.08] bg-ink-900 p-3 md:flex">
           <div className="flex items-center justify-between px-2 py-2">
             <Link to="/app" aria-label="Home">
               <Logo size="sm" animated />

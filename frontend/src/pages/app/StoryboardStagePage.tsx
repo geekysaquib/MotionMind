@@ -1,9 +1,10 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { observer } from 'mobx-react-lite';
-import { Link, useOutletContext } from 'react-router-dom';
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import { ArrowDown, ArrowUp, Plus, Trash2, Layers3 } from 'lucide-react';
 import { reelWorld, WORLD_THEMES, type Project, type ReelBeat, type ReelScript, type ReelTone, type WorldTheme } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
+import { EmptyState } from '../../components/EmptyState';
 import { Alert, Button, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { brandFor, specFromScript } from '../../components/reelSpec';
@@ -47,15 +48,7 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
 
   if (!draft) {
     return (
-      <Card>
-        <h2 className="font-semibold">Storyboard</h2>
-        <p className="mt-2 text-sm text-ink-400">
-          Write the script first, then edit it scene by scene here.{' '}
-          <Link to={`/app/projects/${project.id}/script`} className="text-accent hover:underline">
-            Go to Script
-          </Link>
-        </p>
-      </Card>
+      <EmptyState icon={<Layers3 className="h-6 w-6" />} title="No script yet" text="Write the script first, then shape it scene by scene here." to={`/app/projects/${project.id}/script`} action="Go to Script" />
     );
   }
 
@@ -104,7 +97,7 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-4">
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -137,12 +130,12 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
           )}
           <div className="mt-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">Header steps</span>
-            <div className="mt-1 flex flex-wrap gap-2">
+            <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {draft.steps.map((s, i) => (
                 <input
                   key={i}
                   aria-label={`Step ${i + 1}`}
-                  className={cn(inputCls, 'w-32')}
+                  className={inputCls}
                   value={s}
                   onChange={(e) => setDraft({ ...draft, steps: draft.steps.map((x, j) => (j === i ? e.target.value : x)) })}
                 />
@@ -214,7 +207,7 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
         ))}
       </div>
 
-      <div className="lg:sticky lg:top-6 lg:self-start">
+      <div className="xl:sticky xl:top-6 xl:self-start">
         <h3 className="mb-3 text-sm font-semibold text-ink-400">Preview {dirty && <span className="text-amber-600">(unsaved changes)</span>}</h3>
         {spec && (
           <Suspense fallback={<Spinner label="Loading the reel engine" />}>

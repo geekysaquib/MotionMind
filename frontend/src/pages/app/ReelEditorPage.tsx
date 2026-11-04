@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
-import { Clapperboard, Music2, Type, Upload } from 'lucide-react';
+import { Clapperboard, Music2, Type, Upload, SlidersHorizontal } from 'lucide-react';
 import {
   autoCuts,
   clampPace,
@@ -16,6 +16,7 @@ import {
   type ReelScript,
 } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
+import { EmptyState } from '../../components/EmptyState';
 import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
 import { Timeline } from '../../components/Timeline';
 import { errorText } from '../../lib/format';
@@ -97,15 +98,7 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
 
   if (!script) {
     return (
-      <Card>
-        <h2 className="font-semibold">Reel editor</h2>
-        <p className="mt-2 text-sm text-ink-400">
-          Write the script first.{' '}
-          <Link to={`/app/projects/${project.id}/script`} className="text-accent hover:underline">
-            Go to Script
-          </Link>
-        </p>
-      </Card>
+      <EmptyState icon={<SlidersHorizontal className="h-6 w-6" />} title="No script yet" text="The editor times your voiceover to the scenes, so it needs a script to work with." to={`/app/projects/${project.id}/script`} action="Go to Script" />
     );
   }
 
@@ -170,7 +163,7 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
   const sceneIdx = Math.min(scene, beats.length - 1);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-6">
         {error && <Alert>{error}</Alert>}
 
@@ -324,7 +317,7 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
         </div>
       </div>
 
-      <div className="lg:sticky lg:top-6 lg:self-start">
+      <div className="xl:sticky xl:top-6 xl:self-start">
         <h3 className="mb-3 text-sm font-semibold text-ink-400">Live preview</h3>
         {!spec ? (
           <Spinner label="Loading" />

@@ -32,7 +32,7 @@ export const ProjectLayout = observer(function ProjectLayout() {
   const href = (path: string) => (path ? `/app/projects/${p.id}/${path}` : `/app/projects/${p.id}`);
 
   return (
-    <div className="mx-auto grid max-w-[1400px] gap-5 p-4 md:p-6 lg:grid-cols-[272px_minmax(0,1fr)]">
+    <div className="mx-auto grid max-w-[1400px] gap-5 p-4 md:p-6 lg:grid-cols-[216px_minmax(0,1fr)]">
       <aside className="lg:sticky lg:top-6 lg:self-start">
         <div className="card p-4">
           <div className="flex items-start gap-3">
@@ -81,7 +81,7 @@ export const ProjectLayout = observer(function ProjectLayout() {
             })}
           </ol>
 
-          <div className="mt-4 flex items-center justify-between border-t border-line/[0.08] pt-3 text-xs text-ink-400">
+          <div className="mt-4 flex flex-col gap-1 border-t border-line/[0.08] pt-3 text-xs text-ink-400">
             <span>
               {doneCount} of {STAGE_INFO.length} steps done
             </span>

@@ -1,8 +1,10 @@
+import { Boxes } from 'lucide-react';
 import { lazy, Suspense, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
 import type { Project } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
+import { EmptyState } from '../../components/EmptyState';
 import { Card, Spinner } from '../../components/ui';
 import { brandFor, specFromScript } from '../../components/reelSpec';
 
@@ -19,15 +21,7 @@ export const GraphicsStagePage = observer(function GraphicsStagePage() {
 
   if (!spec) {
     return (
-      <Card>
-        <h2 className="font-semibold">Graphics</h2>
-        <p className="mt-2 text-sm text-ink-400">
-          Write the script first.{' '}
-          <Link to={`/app/projects/${project.id}/script`} className="text-accent hover:underline">
-            Go to Script
-          </Link>
-        </p>
-      </Card>
+      <EmptyState icon={<Boxes className="h-6 w-6" />} title="No script yet" text="The 3D scenes are built from the script. Write it first and every scene shows up here." to={`/app/projects/${project.id}/script`} action="Go to Script" />
     );
   }
 
@@ -36,7 +30,7 @@ export const GraphicsStagePage = observer(function GraphicsStagePage() {
       <Card>
         <h2 className="font-semibold">Scene graphics</h2>
         <p className="mt-1 text-sm text-ink-400">
-          Every scene plays in a 3D isometric world: the original railway world for train topics, or a town of phones, towers, banks, servers and more for everything else. Claude picks each scene's objects, the signals moving between them and the camera. Older scripts without scenes use flat animated cards. To change a scene, edit it in the{' '}
+          Every scene plays in a 3D world built from what you are explaining: the railway world for train topics, and objects of your topic (with their own icons) for everything else. The camera glides between the scenes. To change a scene's objects, links or look, edit it in the{' '}
           <Link to={`/app/projects/${project.id}/storyboard`} className="text-accent hover:underline">
             Storyboard
           </Link>
