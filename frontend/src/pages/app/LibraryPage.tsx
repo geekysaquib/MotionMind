@@ -11,6 +11,7 @@ import { PlatformIcons } from '../../components/BrandIcons';
 import { timeAgo } from '../../lib/format';
 import { cn } from '../../lib/cn';
 import { ProgressRing, Reveal } from '../../components/motion';
+import { ProjectCover } from '../../components/ProjectCover';
 import { nextStage, progressOf } from '../../lib/progress';
 
 /** A stable pair of hues per project, so every cover looks different but never changes. */
@@ -61,22 +62,22 @@ export const LibraryPage = observer(function LibraryPage() {
       ) : list.length === 0 ? (
         <p className="card p-10 text-center text-sm text-ink-400">{projects.items.length ? 'Nothing matches this filter.' : 'No projects yet. Use "New reel" to start one.'}</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((p, i) => {
             const [h1] = hues(p.id);
             return (
               <Reveal key={p.id} delay={(i % 3) * 70}>
                 <Link to={`/app/projects/${p.id}`} className="card card-hover group block overflow-hidden">
-                  <div
-                    className="relative flex aspect-[16/9] items-end justify-between overflow-hidden p-4"
-                    style={{ backgroundColor: `hsl(${h1} 70% 90%)` }}
-                  >
-                    <div className="absolute -right-6 -top-6 h-28 w-28 rotate-12 rounded-3xl border border-white/30 bg-white/20 transition duration-500 group-hover:rotate-[24deg] group-hover:scale-110" aria-hidden />
-                    <span className="relative inline-flex items-center gap-1.5 rounded-md bg-white/85 px-2 py-0.5 text-xs font-semibold text-ink-100">{p.durationSec}s <PlatformIcons list={p.platforms} /></span>
-                    <ProgressRing value={progressOf(p)} size={40} stroke={5} className="relative rounded-full bg-white/85 text-ink-100">
-                      <span className="text-[9px]">{Math.round(progressOf(p) * 100)}%</span>
-                    </ProgressRing>
-                  </div>
+                  <ProjectCover project={p} tint={`hsl(${h1} 70% 92%)`}>
+                    <div className="absolute inset-x-3 top-3 flex items-start justify-between">
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-0.5 text-xs font-semibold text-ink-100 shadow-sm">
+                        {p.durationSec}s <PlatformIcons list={p.platforms} />
+                      </span>
+                      <ProgressRing value={progressOf(p)} size={40} stroke={5} className="rounded-full bg-white/90 text-ink-100 shadow-sm">
+                        <span className="text-[9px]">{Math.round(progressOf(p) * 100)}%</span>
+                      </ProgressRing>
+                    </div>
+                  </ProjectCover>
                   <div className="p-4">
                     <div className="line-clamp-2 font-medium transition group-hover:text-accent">{p.title}</div>
                     <div className="mt-1 flex items-center gap-1 text-xs text-ink-400">
