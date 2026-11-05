@@ -63,13 +63,13 @@ export const LibraryPage = observer(function LibraryPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((p, i) => {
-            const [h1, h2] = hues(p.id);
+            const [h1] = hues(p.id);
             return (
               <Reveal key={p.id} delay={(i % 3) * 70}>
                 <Link to={`/app/projects/${p.id}`} className="card card-hover group block overflow-hidden">
                   <div
                     className="relative flex aspect-[16/9] items-end justify-between overflow-hidden p-4"
-                    style={{ backgroundImage: `radial-gradient(circle at 25% 20%, hsl(${h1} 80% 70% / .55), transparent 60%), radial-gradient(circle at 85% 85%, hsl(${h2} 75% 65% / .5), transparent 60%)` }}
+                    style={{ backgroundColor: `hsl(${h1} 70% 90%)` }}
                   >
                     <div className="absolute -right-6 -top-6 h-28 w-28 rotate-12 rounded-3xl border border-white/30 bg-white/20 transition duration-500 group-hover:rotate-[24deg] group-hover:scale-110" aria-hidden />
                     <span className="relative inline-flex items-center gap-1.5 rounded-md bg-white/85 px-2 py-0.5 text-xs font-semibold text-ink-100">{p.durationSec}s <PlatformIcons list={p.platforms} /></span>

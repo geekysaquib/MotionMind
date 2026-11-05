@@ -78,7 +78,7 @@ export const DashboardPage = observer(function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
           <Reveal>
-            <section aria-label="Start a new reel" className={cn('rounded-2xl p-5 md:p-6', params.get('new') ? 'bg-mint-500/[0.07] ring-1 ring-mint-500/30' : 'bg-gradient-to-br from-mint-500/[0.06] via-transparent to-sky-500/[0.06]')}>
+            <section aria-label="Start a new reel" className={cn('rounded-2xl p-5 md:p-6', params.get('new') ? 'bg-mint-500/[0.07] ring-1 ring-mint-500/30' : 'bg-mint-500/[0.05]')}>
               <h2 className="font-display text-lg font-bold">What should your next reel explain?</h2>
               <p className="mb-4 mt-1 text-sm text-ink-400">Type a question. Research, the script and the 3D scenes follow, and you approve each step.</p>
               <NewReelForm autoFocus={Boolean(params.get('new'))} initialTopic={params.get('topic') ?? ''} />
@@ -132,7 +132,7 @@ export const DashboardPage = observer(function DashboardPage() {
                         </span>
                         <span role="cell" className="flex items-center gap-2">
                           <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-line/10">
-                            <span className="block h-full rounded-full bg-gradient-to-r from-mint-500 to-sky-500 transition-[width] duration-700" style={{ width: `${Math.round(pr * 100)}%` }} />
+                            <span className="block h-full rounded-full bg-mint-500 transition-[width] duration-700" style={{ width: `${Math.round(pr * 100)}%` }} />
                           </span>
                           <span className="w-8 text-right text-xs font-semibold text-ink-300">{Math.round(pr * 100)}%</span>
                         </span>
@@ -180,7 +180,7 @@ export const DashboardPage = observer(function DashboardPage() {
                 </span>
               </div>
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line/10">
-                <div className="h-full rounded-full bg-gradient-to-r from-mint-500 to-sky-500 transition-[width] duration-1000 ease-out" style={{ width: `${(doneCount / setup.length) * 100}%` }} />
+                <div className="h-full rounded-full bg-mint-500 transition-[width] duration-1000 ease-out" style={{ width: `${(doneCount / setup.length) * 100}%` }} />
               </div>
               <ul className="mt-3 space-y-0.5">
                 {setup.map((it) => (

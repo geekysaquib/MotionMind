@@ -38,12 +38,12 @@ const STEPS = [
 ];
 
 const FEATURES = [
-  { icon: Boxes, tone: 'from-mint-400 to-mint-600', title: 'Graphics that follow your topic', text: 'Vaccines, payments, trains, chips: each scene draws the objects the narration talks about, on a world that fits the subject.' },
-  { icon: BadgeCheck, tone: 'from-violet-400 to-violet-600', title: 'Facts you can trust', text: 'Research keeps its sources. You approve it before the script is written from it.' },
-  { icon: Languages, tone: 'from-coral-300 to-coral-500', title: 'Made for Indian audiences', text: 'Hindi, Hinglish or English narration. Translate the voice script in one click.' },
-  { icon: ShieldCheck, tone: 'from-mint-300 to-violet-500', title: 'You approve every stage', text: 'Go back and change any step without starting over. Nothing is locked in.' },
-  { icon: Captions, tone: 'from-violet-400 to-coral-500', title: 'Captions with timing', text: 'Words highlight as they are spoken. Choose size, position and style.' },
-  { icon: AudioLines, tone: 'from-mint-400 to-violet-500', title: 'A real reel editor', text: 'Drag scene breaks on the waveform, set the pace for the whole reel or one scene, add music.' },
+  { icon: Boxes, tone: 'bg-mint-600', title: 'Graphics that follow your topic', text: 'Vaccines, payments, trains, chips: each scene draws the objects the narration talks about, on a world that fits the subject.' },
+  { icon: BadgeCheck, tone: 'bg-violet-600', title: 'Facts you can trust', text: 'Research keeps its sources. You approve it before the script is written from it.' },
+  { icon: Languages, tone: 'bg-coral-500', title: 'Made for Indian audiences', text: 'Hindi, Hinglish or English narration. Translate the voice script in one click.' },
+  { icon: ShieldCheck, tone: 'bg-mint-500', title: 'You approve every stage', text: 'Go back and change any step without starting over. Nothing is locked in.' },
+  { icon: Captions, tone: 'bg-violet-500', title: 'Captions with timing', text: 'Words highlight as they are spoken. Choose size, position and style.' },
+  { icon: AudioLines, tone: 'bg-mint-600', title: 'A real reel editor', text: 'Drag scene breaks on the waveform, set the pace for the whole reel or one scene, add music.' },
 ];
 
 const TOPICS = [
@@ -62,8 +62,6 @@ const FAQ = [
 function PhoneMock() {
   return (
     <div className="relative mx-auto w-[260px] sm:w-[300px]">
-      <div className="orb -left-10 -top-6 h-52 w-52 bg-mint-400/60" />
-      <div className="orb -bottom-8 -right-8 h-56 w-56 bg-violet-500/50" style={{ animationDelay: '-6s' }} />
       <div className="relative animate-float rounded-[2.6rem] border border-white/10 bg-[#0F1424] p-2.5 shadow-2xl">
         <div className="overflow-hidden rounded-[2.1rem] bg-ink-900">
           <video
@@ -129,16 +127,13 @@ export const LandingPage = observer(function LandingPage() {
 
       <section className="relative overflow-hidden">
         <FloatingIcons tone="text-ink-100/[0.18]" />
-        <div className="dot-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_50%_30%,black,transparent_75%)]" />
-        <div className="orb -right-24 top-0 h-96 w-96 bg-mint-400/40" />
-        <div className="orb -left-24 top-72 h-80 w-80 bg-violet-500/30" style={{ animationDelay: '-7s' }} />
         <div className="relative mx-auto grid max-w-6xl items-center gap-16 px-5 pb-24 pt-14 md:grid-cols-[1.15fr_1fr] md:pt-24">
           <div>
             <span className="inline-flex animate-rise items-center gap-2 rounded-full border border-line/10 bg-ink-900 px-3 py-1.5 text-xs font-semibold text-ink-300 shadow-soft">
               <InstagramIcon className="h-4 w-4" /> <YouTubeIcon className="h-4 w-4" /> AI studio for Reels &amp; Shorts
             </span>
             <h1 className="mt-6 animate-rise font-display text-5xl font-bold leading-[1.05] tracking-tight [animation-delay:80ms] md:text-6xl">
-              Turn any question into a <span className="text-gradient">cinematic</span> Reel or Short.
+              Turn any question into a <span className="text-accent">cinematic</span> Reel or Short.
             </h1>
             <p className="mt-5 h-8 animate-rise text-xl font-medium text-ink-300 [animation-delay:160ms]">
               Today: <Typewriter className="text-accent" phrases={['how UPI Soundbox speaks', 'how a vaccine trains your body', 'where my train is, offline', 'why 5G needs so many towers']} />
@@ -200,7 +195,7 @@ export const LandingPage = observer(function LandingPage() {
             { n: 0, label: 'API keys needed in copy-paste mode' },
           ].map((s, i) => (
             <Reveal key={s.label} delay={i * 90}>
-              <div className="font-display text-5xl font-bold tracking-tight text-gradient">
+              <div className="font-display text-5xl font-bold tracking-tight text-accent">
                 <CountUp to={s.n} />
                 {s.suffix}
               </div>
@@ -220,7 +215,7 @@ export const LandingPage = observer(function LandingPage() {
             {STEPS.map(({ icon: Icon, title, text, sample }, i) => (
               <Reveal as="li" key={title} delay={(i % 4) * 90} className="group relative rounded-2xl border border-line/[0.07] bg-ink-950 p-5 transition duration-300 hover:-translate-y-1 hover:border-mint-500/40 hover:shadow-[0_20px_44px_-22px_rgba(13,148,136,0.5)]">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-mint-400/25 to-violet-500/25 text-accent transition group-hover:scale-110 group-hover:rotate-[-6deg]">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-mint-400/15 text-accent transition group-hover:scale-110 group-hover:rotate-[-6deg]">
                     <Icon className="h-5 w-5" />
                   </span>
                   <span className="font-display text-3xl font-bold text-line/[0.14]">{String(i + 1).padStart(2, '0')}</span>
@@ -230,7 +225,7 @@ export const LandingPage = observer(function LandingPage() {
                 <div className="mt-4 rounded-lg bg-line/[0.05] px-3 py-2 font-mono text-[11px] text-ink-300">{sample}</div>
               </Reveal>
             ))}
-            <Reveal as="li" delay={270} className="flex flex-col items-start justify-center rounded-2xl bg-gradient-to-br from-mint-600 to-violet-600 p-6 text-white">
+            <Reveal as="li" delay={270} className="flex flex-col items-start justify-center rounded-2xl bg-mint-600 p-6 text-white">
               <Wand2 className="h-7 w-7" />
               <p className="mt-3 font-display text-xl font-bold">All of it in one place.</p>
               <Link to={primary.to} className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold underline-offset-4 hover:underline">
@@ -250,7 +245,7 @@ export const LandingPage = observer(function LandingPage() {
           <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, tone, title, text }, i) => (
               <Reveal key={title} delay={(i % 3) * 90} className="card card-hover p-6">
-                <span className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${tone} text-white shadow-soft`}>
+                <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${tone} text-white shadow-soft`}>
                   <Icon className="h-5 w-5" />
                 </span>
                 <h3 className="mt-5 text-lg font-semibold">{title}</h3>
@@ -359,8 +354,6 @@ export const LandingPage = observer(function LandingPage() {
         <div className="mx-auto max-w-4xl px-5">
           <Reveal className="relative overflow-hidden rounded-3xl bg-ink-100 px-8 py-16 text-center text-ink-950">
             <FloatingIcons count={7} tone="text-ink-950/[0.14]" />
-            <div className="orb -right-10 -top-10 h-72 w-72 bg-mint-400/60" />
-            <div className="orb -bottom-16 -left-10 h-72 w-72 bg-violet-500/50" style={{ animationDelay: '-7s' }} />
             <div className="relative">
               <LogoMark animated className="mx-auto h-16 w-16" />
               <h2 className="mt-6 font-display text-4xl font-bold tracking-tight">Your next reel starts with a question.</h2>

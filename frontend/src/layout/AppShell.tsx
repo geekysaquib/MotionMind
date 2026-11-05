@@ -115,7 +115,7 @@ export const AppShell = observer(function AppShell() {
           </NavLink>
 
           <div className="mt-3 flex items-center gap-2.5 border-t border-line/[0.08] px-1 pt-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-violet-600 text-[11px] font-bold text-white">{initials}</div>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-[11px] font-bold text-white">{initials}</div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold leading-tight">{p?.displayName ?? 'Creator'}</div>
               <div className="truncate text-xs text-ink-400">{auth.session?.email ?? (p?.handle ? `@${p.handle}` : '')}</div>
@@ -161,7 +161,7 @@ export const AppShell = observer(function AppShell() {
               </button>
             </div>
           </header>
-          <div className="app-wash relative flex min-h-0 flex-1 flex-col bg-ink-800/70">
+          <div className="relative flex min-h-0 flex-1 flex-col bg-ink-800/70">
           <FloatingIcons />
           <main className="relative min-h-0 flex-1 overflow-y-auto">
             <div key={pathname.split("/").slice(0, 3).join("/")} className="animate-fade-up">

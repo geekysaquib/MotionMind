@@ -15,7 +15,7 @@ const CoverPreview = lazy(() => import('./CoverPreview'));
 
 const STYLE_LABELS: Record<CoverStyle, string> = { bold: 'Bold text', center: 'Card', split: 'Top panel' };
 const TONES: { id: ReelTone | null; label: string; swatch: string }[] = [
-  { id: null, label: 'Scene colour', swatch: 'bg-gradient-to-br from-mint-400 to-sky-400' },
+  { id: null, label: 'Scene colour', swatch: 'bg-mint-400' },
   { id: 'teal', label: 'Teal', swatch: 'bg-[#14B8A6]' },
   { id: 'blue', label: 'Blue', swatch: 'bg-[#3B82F6]' },
   { id: 'purple', label: 'Purple', swatch: 'bg-[#8B5CF6]' },

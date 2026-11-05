@@ -64,19 +64,13 @@ export function ProgressRing({ value, size = 56, stroke = 6, children, className
   return (
     <div className={cn('relative inline-flex items-center justify-center', className)} style={{ width: size, height: size }} role="img" aria-label={`${Math.round(value * 100)} percent done`}>
       <svg width={size} height={size} className="-rotate-90">
-        <defs>
-          <linearGradient id={`pr-${size}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#2DD4BF" />
-            <stop offset="1" stopColor="#8B5CF6" />
-          </linearGradient>
-        </defs>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeOpacity={0.1} strokeWidth={stroke} />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill="none"
-          stroke={`url(#pr-${size})`}
+          stroke="#7C3AED"
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={c}

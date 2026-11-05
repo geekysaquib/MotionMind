@@ -104,7 +104,7 @@ export const ProjectLayout = observer(function ProjectLayout() {
       <div className="min-w-0">
         <div key={info.path} className="mb-5 flex animate-fade-up flex-wrap items-start justify-between gap-4 rounded-xl border border-line/[0.09] bg-ink-900 p-5 shadow-soft">
           <div className="flex min-w-[240px] flex-1 items-start gap-4">
-            <span className="flex h-11 w-11 shrink-0 animate-pop items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500 text-white shadow-glow">
+            <span className="flex h-11 w-11 shrink-0 animate-pop items-center justify-center rounded-xl bg-mint-600 text-white shadow-glow">
               {(() => {
                 const HeroIcon = STAGE_ICONS[info.path] ?? PenLine;
                 return <HeroIcon className="h-5 w-5" aria-hidden />;

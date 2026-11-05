@@ -22,14 +22,11 @@ export function AuthLayout({ title, subtitle, children, footer }: { title: strin
           </div>
         </div>
         <div className="relative hidden overflow-hidden bg-ink-900 lg:block">
-          <div className="absolute inset-0 bg-[radial-gradient(600px_400px_at_70%_30%,rgba(94,234,212,0.18),transparent),radial-gradient(500px_400px_at_20%_80%,rgba(139,92,246,0.2),transparent)]" />
           <div className="relative flex h-full flex-col items-center justify-center p-12 text-center">
             <FloatingIcons tone="text-ink-100/[0.16]" />
-            <div className="orb left-10 top-16 h-60 w-60 bg-mint-400/40" aria-hidden />
-            <div className="orb bottom-10 right-10 h-64 w-64 bg-violet-500/40" style={{ animationDelay: '-7s' }} aria-hidden />
-            <LogoMark animated className="relative h-40 w-40 animate-float drop-shadow-[0_20px_60px_rgba(45,212,191,0.35)]" />
+            <LogoMark animated className="relative h-40 w-40 animate-float" />
             <h2 className="mt-10 max-w-md font-display text-4xl font-bold leading-tight tracking-tight">
-              Turn any topic into a <span className="text-gradient">cinematic</span> explainer reel.
+              Turn any topic into a <span className="text-accent">cinematic</span> explainer reel.
             </h2>
             <p className="mt-4 max-w-sm text-sm text-ink-400">{BRAND.tagline}: research, script, storyboard, motion graphics, voice and captions in one studio.</p>
             <ul className="relative mt-8 flex max-w-md flex-wrap justify-center gap-2" aria-label="Steps">
