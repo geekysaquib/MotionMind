@@ -175,7 +175,20 @@ export type ReelSpec = {
  * captions: box = the dark box, pill = a slim pill with a progress line under it.
  * ink: 'dark' when the world behind is light (the text turns dark).
  */
-export type ReelLook = { card: 'box' | 'dark' | 'headline'; header: 'steps' | 'bar'; captions: 'box' | 'pill'; accent?: string; ink?: 'light' | 'dark'; tag?: string };
+export type DiagramStyle = 'neon' | 'minimal' | 'paper' | 'sticker';
+export type ReelLook = {
+  card: 'box' | 'dark' | 'headline';
+  header: 'steps' | 'bar';
+  captions: 'box' | 'pill';
+  accent?: string;
+  ink?: 'light' | 'dark';
+  tag?: string;
+  /** How the scene is drawn: 'iso' = the 3D world (default), 'diagram' = flat cards joined by arrows, in the `diagram` style. */
+  scene?: 'iso' | 'diagram';
+  diagram?: DiagramStyle;
+  /** 3D world only: 'arc' = the travelling arcs (default), 'dotted' = thin dotted lines with chip labels. */
+  links?: 'arc' | 'dotted';
+};
 
 /** Same shape as CaptionStyle in the shared package (the engine doesn't import it). */
 export type CaptionStyle = { size: 'small' | 'medium' | 'large'; position: 'bottom' | 'middle'; look: 'box' | 'plain' };

@@ -4,6 +4,7 @@ import { reelTiming, type ReelSpec, type Tone } from './script';
 import { C, World } from './World';
 import { Backdrop } from './Backdrop';
 import { IsoWorld, frameScene, layoutProps, themeFade } from './IsoWorld';
+import { DiagramWorld } from './DiagramWorld';
 import { withScenes } from './autoScene';
 import { cameraAt, fxAt, logoUrlsOf, pinProgressAt, useLogosLoaded } from './Reel';
 import { Highlight } from './Ui';
@@ -103,8 +104,10 @@ export const Cover: React.FC<CoverSpec> = (input) => {
   const region = worldRegion(cover.style, W, H);
 
   const world =
-    spec.world === 'iso' ? (
-      <IsoWorld frame={frame} fps={fps} cam={frameScene(beat.scene, placed, region)} beat={beat} placed={placed} theme={spec.theme} fade={false} logoBase={spec.logoBase} />
+    spec.world === 'iso' && spec.look?.scene === 'diagram' ? (
+      <DiagramWorld frame={frame} fps={fps} beat={beat} look={spec.look} region={{ l: region.left, r: region.right, t: region.top, b: region.bottom }} logoBase={spec.logoBase} />
+    ) : spec.world === 'iso' ? (
+      <IsoWorld frame={frame} fps={fps} cam={frameScene(beat.scene, placed, region)} beat={beat} placed={placed} theme={spec.theme} fade={false} logoBase={spec.logoBase} linkStyle={spec.look?.links} />
     ) : spec.world === 'train' ? (
       <World frame={frame} fps={fps} cam={cameraAt(timed, storyFrames, frame, fps)} fx={fxAt(timed, frame)} pinProgress={pinProgressAt(timed, frame, fps)} />
     ) : (

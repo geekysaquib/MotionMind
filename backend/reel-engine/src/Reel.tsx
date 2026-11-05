@@ -5,6 +5,7 @@ import { World, phonePos, type WorldProps } from './World';
 import { Backdrop } from './Backdrop';
 import { CardsScene } from './CardsScene';
 import { IsoWorld, isoCamera, layoutProps } from './IsoWorld';
+import { DiagramWorld, DEFAULT_REGION, type Region } from './DiagramWorld';
 import { withScenes } from './autoScene';
 import { Header, InfoCard, Captions, EndCard } from './Ui';
 import { brandsFor, logoUrl, termsFor } from './terms';
@@ -108,6 +109,9 @@ export function useLogosLoaded(urls: string[]) {
   }, [key]);
 }
 
+/** The part of the frame the flat diagram may use: below the card, above the captions (and clear of each app's buttons). */
+const diagramRegion = (platform?: string): Region => (platform === 'youtube' ? { ...DEFAULT_REGION, t: 680, b: 1400 } : DEFAULT_REGION);
+
 /** One reel, driven entirely by its spec. Used by the CLI renderer and by the in-app preview player. */
 export const Reel: React.FC<ReelSpec> = (input) => {
   // Every beat gets a 3D scene (or train shot), even when the script didn't describe one.
@@ -127,8 +131,10 @@ export const Reel: React.FC<ReelSpec> = (input) => {
     <AbsoluteFill style={{ background: '#F6F2E9', overflow: 'hidden' }}>
       {spec.world === 'train' ? (
         <World frame={frame} fps={fps} cam={cameraAt(timed, storyFrames, frame, fps)} fx={fxAt(timed, frame)} pinProgress={pinProgressAt(timed, frame, fps)} />
+      ) : spec.world === 'iso' && spec.look?.scene === 'diagram' ? (
+        <DiagramWorld frame={frame} fps={fps} beat={beat} look={spec.look} region={diagramRegion(spec.platform)} logoBase={spec.logoBase} />
       ) : spec.world === 'iso' ? (
-        <IsoWorld frame={frame} fps={fps} cam={isoCamera(timed, placed, storyFrames, frame)} beat={beat} placed={placed} theme={spec.theme} logoBase={spec.logoBase} />
+        <IsoWorld frame={frame} fps={fps} cam={isoCamera(timed, placed, storyFrames, frame)} beat={beat} placed={placed} theme={spec.theme} logoBase={spec.logoBase} linkStyle={spec.look?.links} />
       ) : (
         <Backdrop frame={frame} fps={fps} tone={beat.card.tone} chapter={beat.chapter} progress={progress} />
       )}

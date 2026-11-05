@@ -18,6 +18,10 @@ export interface TemplateLook {
   accent?: string;
   ink?: 'light' | 'dark';
   tag?: string;
+  /** 'diagram' draws the scene as flat cards joined by arrows instead of the 3D world. */
+  scene?: 'iso' | 'diagram';
+  diagram?: 'neon' | 'minimal' | 'paper' | 'sticker';
+  links?: 'arc' | 'dotted';
 }
 
 export interface ReelTemplate {
@@ -55,9 +59,9 @@ export const TEMPLATES: Record<TemplateId, ReelTemplate> = {
     id: 'paper-interview',
     name: 'Paper Interview',
     tagline: 'Editorial type on warm paper',
-    description: 'A calm paper-coloured page: one big headline per scene with a red highlight word, a small "// 01 — the question" label above it, and the scene below. Modelled on an interview-prep reel.',
+    description: 'A calm paper-coloured page: one big headline with a red highlight word, and the scene drawn as flat white cards with hard black outlines and offset shadows, joined by red marker arrows. Modelled on an interview-prep reel.',
     theme: 'plain',
-    look: { card: 'headline', header: 'bar', captions: 'pill', accent: '#E5484D', ink: 'dark', tag: 'Interview' },
+    look: { card: 'headline', header: 'bar', captions: 'pill', accent: '#E5484D', ink: 'dark', tag: 'Interview', scene: 'diagram', diagram: 'paper' },
     captions: { size: 'small', position: 'bottom', look: 'box' },
     sample: { video: '/templates/paper-interview.mp4', poster: '/templates/paper-interview.jpg' },
     preview: { ground: '#F3EFE9', accent: '#E5484D', ink: '#1F2430' },
@@ -67,9 +71,9 @@ export const TEMPLATES: Record<TemplateId, ReelTemplate> = {
     id: 'conversation',
     name: 'Conversation',
     tagline: 'Two voices, dark room, neon labels',
-    description: 'A dark late-night room with lime highlights, big sticker-style cards and pill captions. Fits scripts written as a back-and-forth. Modelled on a two-character chat reel.',
+    description: 'A dark late-night room with lime highlights: slightly tilted cards with lime outlines, dotted curved arrows and sticker-style labels. Fits scripts written as a back-and-forth. Modelled on a two-character chat reel.',
     theme: 'night',
-    look: { card: 'dark', header: 'bar', captions: 'pill', accent: '#D6F23A', tag: 'Live chat' },
+    look: { card: 'dark', header: 'bar', captions: 'pill', accent: '#D6F23A', tag: 'Live chat', scene: 'diagram', diagram: 'sticker' },
     captions: { size: 'medium', position: 'bottom', look: 'box' },
     sample: { video: '/templates/conversation.mp4', poster: '/templates/conversation.jpg' },
     preview: { ground: '#171B33', accent: '#D6F23A', ink: '#F4F6FB' },
@@ -79,21 +83,21 @@ export const TEMPLATES: Record<TemplateId, ReelTemplate> = {
     id: 'dark-diagram',
     name: 'Dark Diagram',
     tagline: 'Blue-on-navy diagrams, big titles',
-    description: 'Deep navy with a faint grid, a centred title per scene with a blue highlight word, and a slim caption pill with a progress line. For algorithms, security and "how does the code get made" topics.',
+    description: 'Deep navy with a faint grid: a centred title with a blue highlight word, quiet tiles with thin blue arrows and solid labels, and a slim caption pill with a progress line. For algorithms, security and "how does the code get made" topics.',
     theme: 'night',
-    look: { card: 'headline', header: 'bar', captions: 'pill', accent: '#3B82F6', tag: '@handle' },
+    look: { card: 'headline', header: 'bar', captions: 'pill', accent: '#3B82F6', tag: '@handle', scene: 'diagram', diagram: 'minimal' },
     captions: { size: 'small', position: 'bottom', look: 'box' },
     sample: { video: '/templates/dark-diagram.mp4', poster: '/templates/dark-diagram.jpg' },
     preview: { ground: '#10142A', accent: '#3B82F6', ink: '#F4F6FB' },
-    limits: 'Flat 2D number tiles and counters are drawn with the nearest 3D objects.',
+    limits: 'Big number tiles and counters (like the rolling 6-digit code) are not drawn; those scenes show the matching icon cards instead.',
   },
   'night-3d': {
     id: 'night-3d',
     name: 'Night 3D World',
     tagline: 'Dark 3D scenery, bold headlines',
-    description: 'A night-time 3D world with a thin orange-and-white progress bar, a large headline with a yellow highlight word and no card. Modelled on a tech-story reel that follows a journey.',
+    description: 'A night-time 3D world (the objects stay 3D), links drawn as thin dotted lines with a small travelling dot, a thin progress bar, and a large headline with a yellow highlight word and no card. Modelled on a tech-story reel that follows a journey.',
     theme: 'night',
-    look: { card: 'headline', header: 'bar', captions: 'pill', accent: '#FACC15', tag: 'Ep 1 · Tech' },
+    look: { card: 'headline', header: 'bar', captions: 'pill', accent: '#FACC15', tag: 'Ep 1 · Tech', scene: 'iso', links: 'dotted' },
     captions: { size: 'small', position: 'bottom', look: 'box' },
     sample: { video: '/templates/night-3d.mp4', poster: '/templates/night-3d.jpg' },
     preview: { ground: '#0F1730', accent: '#FACC15', ink: '#F4F6FB' },
@@ -102,9 +106,9 @@ export const TEMPLATES: Record<TemplateId, ReelTemplate> = {
     id: 'neon-system',
     name: 'Neon System Design',
     tagline: 'Glowing nodes, labelled requests',
-    description: 'A dark board with neon-green outlined cards, data-centre nodes, a segmented progress bar and a "SYSTEM DESIGN" tag. Modelled on a system-design interview reel.',
+    description: 'A dark board: neon-green glowing node cards (server, database, bank, company logos) joined by labelled arrows with a travelling packet, a segmented progress bar and a "SYSTEM DESIGN" tag. Modelled on a system-design interview reel.',
     theme: 'night',
-    look: { card: 'dark', header: 'bar', captions: 'pill', accent: '#34D399', tag: 'System design' },
+    look: { card: 'dark', header: 'bar', captions: 'pill', accent: '#34D399', tag: 'System design', scene: 'diagram', diagram: 'neon' },
     captions: { size: 'small', position: 'bottom', look: 'box' },
     sample: { video: '/templates/neon-system.mp4', poster: '/templates/neon-system.jpg' },
     preview: { ground: '#0B1220', accent: '#34D399', ink: '#F4F6FB' },

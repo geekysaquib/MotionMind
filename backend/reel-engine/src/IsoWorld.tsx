@@ -451,6 +451,8 @@ export interface IsoWorldProps {
   theme?: WorldTheme;
   /** Where company logos are served from (see `logoUrl`). */
   logoBase?: string;
+  /** How links are drawn: the travelling arcs (default) or thin dotted lines. */
+  linkStyle?: 'arc' | 'dotted';
   /** Fade the top and bottom of the picture into the sky colour (the reel does, to make room for the card and captions). Default true. */
   fade?: boolean;
 }
@@ -470,8 +472,9 @@ const THEMES: Record<WorldTheme, Look> = {
   desert: { ground: '#F3DFB5', water: '#F4E6C6', waterDeep: '#E2C791', road: '#E8CE9B', fade: '#FBF1DA', scenery: 'rocks' },
 };
 
-export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, placed, theme = 'city', fade = true, logoBase }) => {
+export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, placed, theme = 'city', fade = true, logoBase, linkStyle }) => {
   const look = THEMES[theme] ?? THEMES.city;
+  const dotted = linkStyle === 'dotted';
   const accent = TONE[beat.card.tone] ?? C.teal;
   const scene = beat.scene;
   const inScene = new Set((scene?.props ?? []).map((p) => p.id));
@@ -643,8 +646,8 @@ export const IsoWorld: React.FC<IsoWorldProps> = ({ frame, fps, cam, beat, place
           const pk = pt(((local + i * 13) % loop) / loop);
           return (
             <g key={`ln${i}`}>
-              <polyline points={path.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke={accent} strokeWidth={6} strokeDasharray="14 10" strokeDashoffset={-frame * 2} strokeLinecap="round" />
-              {grow > 0.98 && <circle cx={pk[0]} cy={pk[1]} r={11} fill={accent} stroke="#fff" strokeWidth={4} />}
+              <polyline points={path.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke={accent} strokeWidth={dotted ? 5 : 6} strokeDasharray={dotted ? '1 15' : '14 10'} strokeDashoffset={-frame * (dotted ? 1 : 2)} strokeLinecap="round" />
+              {grow > 0.98 && <circle cx={pk[0]} cy={pk[1]} r={dotted ? 8 : 11} fill={dotted ? '#FFFFFF' : accent} stroke={dotted ? accent : '#fff'} strokeWidth={dotted ? 5 : 4} />}
             </g>
           );
         })}
