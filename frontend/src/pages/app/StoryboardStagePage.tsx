@@ -11,6 +11,8 @@ import { brandFor, specFromScript } from '../../components/reelSpec';
 import { cn } from '../../lib/cn';
 import { SceneEditor } from '../../components/SceneEditor';
 import { TemplatePicker } from '../../components/TemplatePicker';
+import { GraphicsDesigner, ScoreBadge } from '../../components/GraphicsDesigner';
+import { scoreScene } from '@motionmind/reel-engine';
 import { TermsEditor } from '../../components/TermsEditor';
 
 const THEME_LABELS: Record<WorldTheme, string> = { city: 'City (apps, payments, services)', nature: 'Nature (food, biology, outdoors)', lab: 'Lab (science, chips, AI)', plain: 'Plain (anything abstract)', night: 'Night (security, space, late-night tech)', sunset: 'Sunset (stories, culture, travel)', ocean: 'Ocean (water, ships, climate)', desert: 'Desert (energy, mining, history)' };
@@ -111,6 +113,7 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
             onChange={(id) => setDraft({ ...draft, template: id, ...(reelWorld(draft) === 'iso' ? { theme: TEMPLATES[id].theme } : {}) })}
           />
         </Card>
+        <GraphicsDesigner script={draft} onChange={setDraft} />
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-[220px] flex-1">
@@ -161,7 +164,10 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
         {draft.beats.map((b, i) => (
           <Card key={b.id}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-sm font-semibold">Scene {i + 1}</span>
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                Scene {i + 1}
+                {reelWorld(draft) === 'iso' && <ScoreBadge score={scoreScene(b as never, b.scene as never, { glossary: draft.glossary, brands: draft.brands })} />}
+              </span>
               <div className="flex items-center gap-1">
                 <IconButton label={`Move scene ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)} icon={<ArrowUp className="h-4 w-4" />} />
                 <IconButton label={`Move scene ${i + 1} down`} disabled={i === draft.beats.length - 1} onClick={() => move(i, 1)} icon={<ArrowDown className="h-4 w-4" />} />

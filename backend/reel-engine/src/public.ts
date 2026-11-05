@@ -2,6 +2,7 @@
 import './fonts';
 export { Reel } from './Reel';
 export { autoScene, computeLayout } from './autoScene';
+export { planGraphics, planScene, scoreScene, themeFor, findBrands, type GraphicsPlan, type PlanMode, type SceneReport } from './planner';
 export { Cover, type CoverSpec } from './Cover';
 export { COVER_DIMS, fitHeadline, countLines, worldRegion, type CoverProps } from './coverLayout';
 export { layoutProps } from './IsoWorld';

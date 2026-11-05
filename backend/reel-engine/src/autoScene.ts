@@ -1,112 +1,14 @@
 import { hasGlyph } from './glyph';
+import { ICON_WORDS, kindFor } from './lexicon';
+import { findBrands, planScene } from './planner';
+import { bareDomain, textOf } from './terms';
 import { reelTiming } from './script';
-import type { Beat, IsoScene, PropKind, PropShape, ReelSpec, ScenePropSpec, Tone, TrainShot, WorldEvent } from './script';
+import type { Beat, IsoScene, ReelSpec, ScenePropSpec, Tone, TrainShot, WorldEvent } from './script';
 
 // Fills in 3D scenes for beats that don't describe one (older scripts, hand-added scenes), so every
 // reel plays in a 3D world. Objects are guessed from the card's words; the same word gives the same
 // object id, so the camera still travels around one persistent world.
 
-const KIND_WORDS: [PropKind, RegExp][] = [
-  ['qr', /\bqr\b|scanner|barcode/i],
-  ['speaker', /speaker|soundbox|awaaz|\baudio\b|loudspeaker/i],
-  ['lock', /\block\b|password|\bpin\b|encrypt|secur|privacy|\bsafe\b/i],
-  ['database', /database|datastore|\bsql\b/i],
-  ['router', /router|wi-?fi|modem|hotspot/i],
-  ['battery', /batter|charg|power bank/i],
-  ['heart', /heart|\bdil\b|pulse|cardio|blood/i],
-  ['syringe', /vaccin|injection|syringe|\bdose\b/i],
-  ['hospital', /hospital|clinic|doctor|medical/i],
-  ['gear', /\bgear\b|engine|machine|mechanism|process|setting/i],
-  ['truck', /truck|lorry|cargo|logistic|shipping|delivery/i],
-  ['plane', /\bplane\b|flight|airport|aircraft/i],
-  ['train', /\btrains?\b|railway|metro|locomotive/i],
-  ['tree', /\btrees?\b|forest|plant|\bfarm|crop|garden/i],
-  ['school', /school|college|student|exam|classroom|teacher/i],
-  ['cart', /\bcart\b|shopping|checkout|e-?commerce/i],
-  ['camera', /camera|photo|video|\bfilm\b|reel/i],
-  ['bulb', /bulb|\bidea\b|electric|bijli|light/i],
-  ['globe', /globe|world|global|earth|internet\b/i],
-  ['envelope', /e-?mail|\bmail\b|message|inbox|\bsms\b/i],
-  ['clock', /clock|\btime\b|second|minute|speed|deadline|timer/i],
-  ['rocket', /rocket|launch|isro|startup|space/i],
-  ['chart', /chart|graph|growth|stats|analytics|percent/i],
-  ['atm', /\batm\b|cash machine|withdraw/i],
-  ['brain', /\bbrain\b|dimaag|neuron|memory|mind\b/i],
-  ['virus', /\bvirus|bacteri|\bgerm|infect|pathogen/i],
-  ['dna', /\bdna\b|\bgenes?\b|genetic|chromosome/i],
-  ['flask', /\bflask\b|chemical|chemistry|reaction|experiment|\blab\b|laboratory/i],
-  ['microscope', /microscope|specimen|microbe/i],
-  ['sun', /\bsun\b|surya|sunlight|daylight/i],
-  ['flame', /\bfire\b|flame|burn|combustion|\bheat\b/i],
-  ['solar', /solar|photovoltaic/i],
-  ['windmill', /windmill|wind turbine|\bwind\b|turbine/i],
-  ['bus', /\bbus\b|\bbuses\b|commute/i],
-  ['ship', /\bships?\b|\bboat\b|vessel|cruise|\bport\b/i],
-  ['shield', /shield|protect|antivirus|firewall|defen[cs]e/i],
-  ['book', /\bbooks?\b|notebook|library|textbook|\bread/i],
-  ['key', /\bkey\b|keys\b|secret|token|credential|private key/i],
-  ['receipt', /\breceipt\b|invoice|\bbill\b|payslip|ticket booked/i],
-  ['pin', /\blocation\b|\bgps\b|map pin|where are you/i],
-  ['terminal', /\bterminal\b|\bcommand\b|\bcode\b|\bscript\b|\bcli\b/i],
-  ['loadbalancer', /load balanc|\bgateway\b|reverse proxy|traffic split/i],
-  ['cache', /\bcache\b|redis|memcache|in-memory/i],
-  ['queue', /\bqueue\b|\bkafka\b|waiting list|backlog|\bline\b of requests/i],
-  ['datacenter', /data ?cent(er|re)|\bnode\b|\bregion\b|server farm/i],
-  ['toggle', /\btoggle\b|\bswitch\b|turn(ed)? (on|off)|data off/i],
-  ['gauge', /\bgauge\b|\bspeed\b|\bmeter\b|\bload\b|throughput/i],
-  ['cable', /\bcable\b|fibre|fiber|wire cut|network cut|partition/i],
-  ['chat', /\bchat\b|\bcomment\b|\bmessage\b|whatsapp|\bdm\b/i],
-  ['bell', /\bbell\b|alert|notification|alarm|reminder/i],
-  ['satellite', /satellite|gps|isro|orbit/i],
-  ['tower', /tower|signal|network|cell|antenna|5g|4g|wifi|wi-fi|broadcast/i],
-  ['phone', /phone|mobile|app\b|apps\b|whatsapp|sms|otp|smartphone/i],
-  ['laptop', /laptop|computer|website|browser|pc\b|screen/i],
-  ['bank', /bank|upi|npci|rbi|account|loan|emi/i],
-  ['server', /server|database|data ?cent|backend|api|switch|storage|record/i],
-  ['cloud', /cloud|internet|online/i],
-  ['money', /money|₹|rs\.?|rupee|paisa|paise|payment|pay\b|price|cost|cash|salary|fee/i],
-  ['shop', /shop|store|merchant|dukaan|seller|market|restaurant/i],
-  ['chip', /chip|processor|cpu|gpu|\bai\b|model|algorithm|sensor/i],
-  ['document', /document|receipt|ticket|timetable|schedule|map|naksha|list|report|form|bill|id\b/i],
-  ['factory', /factory|plant|manufactur|industry/i],
-  ['car', /car\b|vehicle|bus\b|truck|delivery|uber|ola/i],
-  ['person', /person|people|user|you\b|\baap\b|traveller|passenger|customer|driver|doctor|friend/i],
-  ['house', /house|home|ghar/i],
-];
-
-function kindFor(text: string): PropKind | null {
-  return KIND_WORDS.find(([, re]) => re.test(text))?.[0] ?? null;
-}
-
-// Words the named kinds can't draw. They become a custom object with a fitting emoji; the body shape follows the thing's size.
-const ICON_WORDS: [RegExp, string, PropShape, string][] = [
-  [/virus|bacteri|germ|infect/i, '🦠', 'round', 'bug'],
-  [/vaccin|injection|\bdose\b|medicine|dawai|tablet/i, '💉', 'tall', 'syringe'],
-  [/\bdna\b|\bgene|antibod|protein|\bcells?\b|koshika/i, '🧬', 'flat', 'dna'],
-  [/heart|\bdil\b|pulse|blood|khoon/i, '❤️', 'round', 'heart-pulse'],
-  [/brain|dimaag|memory|neuron|yaad/i, '🧠', 'round', 'brain'],
-  [/doctor|hospital|clinic|health/i, '🏥', 'block', 'hospital'],
-  [/\bfood\b|\beat\b|khana|recipe|cook|kitchen|\bpan\b/i, '🍳', 'round', 'utensils'],
-  [/water|paani|\brain\b|river|ocean|\bsea\b/i, '💧', 'round', 'droplets'],
-  [/plant|\btrees?\b|\bseeds?\b|\bcrops?\b|\bfarm|kheti|\bleaf|flower/i, '🌱', 'round', 'sprout'],
-  [/\bsun\b|solar|surya|\blight\b|bijli|electric|\bpower\b|energy|battery/i, '⚡', 'tall', 'zap'],
-  [/\bfire\b|\bheat\b|garmi|temperature|\bburn/i, '🔥', 'round', 'flame'],
-  [/\batoms?\b|molecule|chemical|reaction|\blab\b|science|experiment/i, '⚗️', 'round', 'flask-conical'],
-  [/planet|\bearth\b|\bspace\b|\bmoon\b|\bstars?\b|galaxy|rocket/i, '🌍', 'round', 'globe'],
-  [/\btrains?\b|\brail|metro|station/i, '🚆', 'wide', 'train-front'],
-  [/\bplane\b|flight|airport/i, '✈️', 'wide', 'plane'],
-  [/\bship\b|\bboat\b|\bport\b/i, '🚢', 'wide', 'ship'],
-  [/\bbooks?\b|school|\bexam|student|padhai|\blearn|teacher/i, '📚', 'block', 'book-open'],
-  [/\bclock\b|\btime\b|samay|\bsecond|\bminute|\bspeed\b|jaldi|\bfast\b/i, '⏱️', 'round', 'timer'],
-  [/\block\b|secure|\bsafe\b|privacy|password|\bpin\b|\bhack|security|suraksha/i, '🔒', 'block', 'shield-check'],
-  [/\bkey\b|\bcode\b|software|program|algorithm/i, '💻', 'block', 'code'],
-  [/camera|photo|video|\bfilm\b|\breel|screenshot/i, '📷', 'block', 'camera'],
-  [/music|\bsong\b|\bsound|audio|awaaz|speaker|voice|\bmic\b/i, '🔊', 'block', 'volume-2'],
-  [/\bmail\b|email|message|\bchat\b|notification|\balert/i, '✉️', 'flat', 'mail'],
-  [/\bgame|\bplay\b|\bscore\b|\bmatch\b|cricket|football/i, '🎮', 'block', 'gamepad-2'],
-  [/\bgold\b|\bsona\b|\bcoin|crypto|bitcoin|invest|\bstocks?\b|\bshares?\b/i, '🪙', 'round', 'coins'],
-  [/\bidea|\bthink|question|sawal|\bwhy\b|kyun|\bhow\b|kaise/i, '💡', 'round', 'lightbulb'],
-];
 
 type PropLook = Pick<ScenePropSpec, 'kind' | 'icon' | 'glyph' | 'shape' | 'tone'>;
 
@@ -172,13 +74,22 @@ function autoTrain(beat: Beat, index: number, total: number): { shot: TrainShot;
 /** Returns the spec with every beat ready for its 3D world. Beats that already say what to show are untouched. */
 export function withScenes(spec: ReelSpec): ReelSpec {
   if (spec.world === 'iso') {
-    let prev: IsoScene | undefined;
+    // Beats that did not say what to show get a scene designed from their words (see planner.ts); the rest are untouched.
+    const world = new Map<string, Parameters<typeof planScene>[2] extends Map<string, infer L> | undefined ? L : never>();
+    const ctx = { glossary: spec.glossary, brands: spec.brands };
     const beats = spec.beats.map((b) => {
-      const scene = b.scene?.props.length ? b.scene : autoScene(b, prev);
-      prev = scene;
-      return scene === b.scene ? b : { ...b, scene };
+      if (b.scene?.props.length) {
+        for (const p of b.scene.props) world.set(p.id, p as never);
+        return b;
+      }
+      const { scene } = planScene(b, ctx, world);
+      for (const p of scene.props) world.set(p.id, p as never);
+      return { ...b, scene };
     });
-    return { ...spec, beats };
+    // Companies named in the words get their logo chips even when the script did not list them.
+    const brands = [...(spec.brands ?? [])];
+    for (const f of findBrands(spec.beats.map((b) => textOf(b)).join(' '), spec.brands)) if (!brands.some((x) => bareDomain(x.domain) === bareDomain(f.domain))) brands.push(f);
+    return { ...spec, beats, brands };
   }
   if (spec.world === 'train') {
     const beats = spec.beats.map((b, i) => {
