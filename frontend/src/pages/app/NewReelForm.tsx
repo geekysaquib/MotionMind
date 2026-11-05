@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Gauge, Sparkles } from 'lucide-react';
-import { ALL_PLATFORMS, type Platform, type QualityTier } from '@motionmind/shared';
+import { ALL_PLATFORMS, DEFAULT_TEMPLATE, TEMPLATES, type Platform, type QualityTier, type TemplateId } from '@motionmind/shared';
+import { TemplatePicker } from '../../components/TemplatePicker';
 import { PlatformPicker } from '../../components/PlatformPicker';
 import { useStores } from '../../stores/RootStore';
 import { Button } from '../../components/ui';
@@ -25,6 +26,7 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
   const [topic, setTopic] = useState(initialTopic);
   const [duration, setDuration] = useState(60);
   const [tier, setTier] = useState<QualityTier>('standard');
+  const [template, setTemplate] = useState<TemplateId>(DEFAULT_TEMPLATE);
   const [platforms, setPlatforms] = useState<Platform[]>([...ALL_PLATFORMS]);
   const [busy, setBusy] = useState(false);
 
@@ -34,7 +36,7 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
     if (!t) return;
     setBusy(true);
     try {
-      const p = await projects.create({ title: t.length > 80 ? `${t.slice(0, 77)}…` : t, topic: t, durationSec: duration, qualityTier: tier, platforms });
+      const p = await projects.create({ title: t.length > 80 ? `${t.slice(0, 77)}…` : t, topic: t, durationSec: duration, qualityTier: tier, platforms, ...(template !== DEFAULT_TEMPLATE ? { template } : {}) });
       toasts.push('success', 'Project created.');
       nav(`/app/projects/${p.id}`);
     } catch (err) {
@@ -46,6 +48,12 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
 
   return (
     <form onSubmit={submit} className="space-y-3">
+      <div>
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-400">1 · Choose a template</div>
+        <TemplatePicker compact value={template} onChange={setTemplate} />
+        <p className="mt-2 text-xs text-ink-400">{TEMPLATES[template].description}</p>
+      </div>
+      <div className="pt-1 text-xs font-semibold uppercase tracking-wider text-ink-400">2 · What should it explain?</div>
       <div className="rounded-2xl border border-line/[0.14] bg-ink-900 shadow-soft transition focus-within:border-mint-500/60 focus-within:shadow-[0_0_0_4px_rgba(124,58,237,0.10)]">
         <label htmlFor="new-topic" className="sr-only">
           What should the reel explain?
@@ -57,7 +65,7 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
           maxLength={500}
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          placeholder="What should the reel explain? Try “How does a Soundbox know the money arrived?”"
+          placeholder={`What should the reel explain? Try “${TEMPLATES[template].example}”`}
           className="block w-full resize-none rounded-t-2xl bg-transparent px-5 pt-4 text-base text-ink-100 outline-none placeholder:text-ink-400/70"
         />
         <div className="flex flex-wrap items-center gap-2 px-3 pb-3 pt-1">

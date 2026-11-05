@@ -20,7 +20,7 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
   const [error, setError] = useState<string | null>(null);
   const [showSample, setShowSample] = useState(false);
   const script = project.script;
-  const spec = useMemo(() => (script ? specFromScript(script, brandFor(profile.profile)) : null), [script, profile.profile]);
+  const spec = useMemo(() => (script ? specFromScript(script, brandFor(profile.profile), undefined, undefined, undefined, project.template) : null), [script, profile.profile, project.template]);
 
   async function write() {
     setBusy(true);

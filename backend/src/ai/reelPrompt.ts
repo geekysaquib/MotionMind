@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import type { ResearchReport } from '@motionmind/shared';
+import { templateOf, type ResearchReport } from '@motionmind/shared';
 import { researchSchema, reelScriptSchema, type ReelScript, type Research } from './reelSchema';
 
 // One prompt for both ways of getting a script: the API call ("Write with Claude") and the
@@ -11,6 +11,8 @@ export interface ReelBrief {
   language: 'en' | 'hi' | 'hinglish';
   niche: string | null;
   channelName: string | null;
+  /** The template the reel started from: how to stage and write it. */
+  template?: string | null;
   /** Approved research to write from, if any. */
   research?: ResearchReport | null;
 }
@@ -44,6 +46,7 @@ export function reelRequest(brief: ReelBrief): string {
     `Language for narration, card text and step names: ${LANGUAGE[brief.language]}.`,
     brief.niche ? `Channel niche: ${brief.niche}.` : '',
     brief.channelName ? `Channel name: ${brief.channelName}.` : '',
+    templateOf(brief.template).guidance,
     brief.research ? researchNotes(brief.research) : '',
   ]
     .filter(Boolean)

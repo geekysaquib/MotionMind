@@ -177,6 +177,19 @@ describe('script from claude.ai (no API key)', () => {
     return created.json().project.id as string;
   }
 
+  it('puts the chosen template into the prompt, and applies its theme to a script that did not pick one', async () => {
+    const { app } = await setup({}, null);
+    const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'CAP', topic: 'CAP theorem', durationSec: 45, qualityTier: 'standard', template: 'system-design' } });
+    const project = created.json().project;
+    expect(project.template).toBe('system-design');
+    const prompt = (await app.inject({ method: 'GET', url: `/api/projects/${project.id}/script/prompt`, headers: H })).json().prompt as string;
+    expect(prompt).toContain('Template "System Design"');
+    const noTheme = JSON.stringify({ title: 'CAP', steps: ['A'], beats: [{ id: 'a', narration: 'Ek.', keywords: [], chapter: 0, card: { eyebrow: 'x', headline: 'h', tone: 'teal', rows: [] } }] });
+    const imported = await app.inject({ method: 'POST', url: `/api/projects/${project.id}/script/import`, headers: H, payload: { text: noTheme } });
+    expect(imported.json().project.script.theme).toBe('lab');
+    expect((await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'X', topic: 'X', durationSec: 30, qualityTier: 'draft', template: 'nope' } })).statusCode).toBe(400);
+  });
+
   it('gives a ready-to-copy prompt with the topic, length and JSON format, even without a server key', async () => {
     const { app } = await setup({}, null);
     const id = await projectId(app);

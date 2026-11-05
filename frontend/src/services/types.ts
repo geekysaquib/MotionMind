@@ -1,4 +1,4 @@
-import type { Platform, Profile, Project, QualityTier } from '@motionmind/shared';
+import type { Platform, Profile, TemplateId, Project, QualityTier } from '@motionmind/shared';
 import type { ClaudeService } from './claudeHttp';
 
 export interface Session {
@@ -36,6 +36,7 @@ export interface NewProject {
   durationSec: number;
   qualityTier: QualityTier;
   platforms?: Platform[];
+  template?: TemplateId;
 }
 
 export interface ProjectService {

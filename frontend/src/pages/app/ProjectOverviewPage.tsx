@@ -2,8 +2,9 @@ import { useState, type FormEvent } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { ArrowRight, Trash2 } from 'lucide-react';
-import { normalizePlatforms, type Platform, type Project, type ProjectStatus, type QualityTier } from '@motionmind/shared';
+import { DEFAULT_TEMPLATE, TEMPLATES, normalizePlatforms, type Platform, type TemplateId, type Project, type ProjectStatus, type QualityTier } from '@motionmind/shared';
 import { PlatformPicker } from '../../components/PlatformPicker';
+import { TemplatePicker } from '../../components/TemplatePicker';
 import { useStores } from '../../stores/RootStore';
 import { Button, Card, Field, Select } from '../../components/ui';
 import { errorText } from '../../lib/format';
@@ -18,16 +19,17 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
   const [duration, setDuration] = useState(p.durationSec);
   const [tier, setTier] = useState<QualityTier>(p.qualityTier);
   const [platforms, setPlatforms] = useState<Platform[]>(normalizePlatforms(p.platforms));
+  const [template, setTemplate] = useState<TemplateId>(p.template ?? DEFAULT_TEMPLATE);
   const [status, setStatus] = useState<ProjectStatus>(p.status);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const dirty = title !== p.title || topic !== (p.topic ?? '') || duration !== p.durationSec || tier !== p.qualityTier || platforms.join() !== normalizePlatforms(p.platforms).join() || status !== p.status;
+  const dirty = title !== p.title || topic !== (p.topic ?? '') || duration !== p.durationSec || tier !== p.qualityTier || template !== (p.template ?? DEFAULT_TEMPLATE) || platforms.join() !== normalizePlatforms(p.platforms).join() || status !== p.status;
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
-      await projects.update(p.id, { title: title.trim(), topic: topic.trim() || null, durationSec: duration, qualityTier: tier, ...(platforms.join() !== normalizePlatforms(p.platforms).join() ? { platforms } : {}), status });
+      await projects.update(p.id, { title: title.trim(), topic: topic.trim() || null, durationSec: duration, qualityTier: tier, ...(template !== (p.template ?? DEFAULT_TEMPLATE) ? { template } : {}), ...(platforms.join() !== normalizePlatforms(p.platforms).join() ? { platforms } : {}), status });
       toasts.push('success', 'Saved.');
     } catch (err) {
       toasts.push('error', errorText(err));
@@ -93,6 +95,11 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
               <option value="completed">Completed</option>
               <option value="archived">Archived</option>
             </Select>
+          </div>
+          <div>
+            <span className="label">Template</span>
+            <TemplatePicker value={template} onChange={setTemplate} />
+            <p className="mt-1 text-xs text-ink-400">{TEMPLATES[template].description} A new template applies to the next script you write and to captions you have not edited.</p>
           </div>
           <div>
             <span className="label">Platforms</span>

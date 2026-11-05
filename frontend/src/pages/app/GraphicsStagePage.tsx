@@ -21,7 +21,7 @@ export const GraphicsStagePage = observer(function GraphicsStagePage() {
   const { profile, projects } = useStores();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const spec = useMemo(() => (project.script ? specFromScript(project.script, brandFor(profile.profile)) : null), [project.script, profile.profile]);
+  const spec = useMemo(() => (project.script ? specFromScript(project.script, brandFor(profile.profile), undefined, undefined, undefined, project.template) : null), [project.script, profile.profile, project.template]);
 
   if (!spec) {
     return (

@@ -31,6 +31,8 @@ export interface Project {
   qualityTier: QualityTier;
   /** The platforms this reel is made for. */
   platforms: Platform[];
+  /** The template the reel started from (look, caption style and how the script is written). Missing means the default. */
+  template?: import('./templates').TemplateId | null;
   durationSec: number;
   /** The reel script Claude wrote for this project, or null before the Script stage. */
   script: ReelScript | null;
