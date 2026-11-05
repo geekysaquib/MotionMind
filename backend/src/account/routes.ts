@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { STAGES, TEMPLATE_IDS, handleSchema } from '@motionmind/shared';
+import { STAGES, handleSchema } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { HandleTakenError } from '../data/repository';
 import { firstIssue } from '../http';
@@ -25,7 +25,6 @@ const projectFields = {
   durationSec: z.union([z.literal(15), z.literal(30), z.literal(45), z.literal(60), z.literal(90)]),
   qualityTier: z.enum(['draft', 'standard', 'premium', 'cinematic']),
   platforms: z.array(z.enum(['instagram', 'youtube'])).min(1, 'Pick at least one platform.').max(2).optional(),
-  template: z.enum(TEMPLATE_IDS).optional(),
 };
 const newProjectSchema = z.object(projectFields).strict();
 const projectPatchSchema = z

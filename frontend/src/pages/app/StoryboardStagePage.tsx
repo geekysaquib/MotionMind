@@ -45,7 +45,7 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
   useEffect(() => setDraft(project.script), [project.script]);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(project.script);
-  const spec = useMemo(() => (draft && draft.beats.length ? specFromScript(draft, brandFor(profile.profile), undefined, undefined, undefined, project.template) : null), [draft, profile.profile, project.template]);
+  const spec = useMemo(() => (draft && draft.beats.length ? specFromScript(draft, brandFor(profile.profile)) : null), [draft, profile.profile]);
 
   if (!draft) {
     return (

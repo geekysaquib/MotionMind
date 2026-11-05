@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Platform, Profile, TemplateId, Project, QualityTier, ReelEditor, ReelScript, ReelVoice, ResearchReport } from '@motionmind/shared';
+import type { Platform, Profile, Project, QualityTier, ReelEditor, ReelScript, ReelVoice, ResearchReport } from '@motionmind/shared';
 import { ALL_PLATFORMS, RESERVED_HANDLES, normalizeHandle, normalizePlatforms } from '@motionmind/shared';
 
 export interface User {
@@ -23,7 +23,6 @@ export interface NewProject {
   durationSec: number;
   qualityTier: QualityTier;
   platforms?: Platform[];
-  template?: TemplateId | null;
 }
 
 export type ProjectPatch = Partial<NewProject & Pick<Project, 'status' | 'stage'>> & { script?: ReelScript | null; research?: ResearchReport | null; voice?: ReelVoice | null; editor?: ReelEditor | null };
@@ -112,7 +111,7 @@ export class MemoryDataRepository implements DataRepository {
   }
   async createProject(ownerId: string, input: NewProject) {
     const now = new Date().toISOString();
-    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, platforms: normalizePlatforms(input.platforms), template: input.template ?? null, stage: 'topic', status: 'draft', script: null, research: null, voice: null, editor: null, createdAt: now, updatedAt: now };
+    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, platforms: normalizePlatforms(input.platforms), stage: 'topic', status: 'draft', script: null, research: null, voice: null, editor: null, createdAt: now, updatedAt: now };
     this.projects.push(p);
     return { ...p };
   }
@@ -151,7 +150,6 @@ const projectFromRow = (r: Row): Project => ({
   status: r.status as Project['status'],
   qualityTier: r.quality_tier as Project['qualityTier'],
   platforms: normalizePlatforms(r.platforms),
-  template: (r.template as TemplateId | null) ?? null,
   durationSec: r.duration_sec as number,
   script: (r.script as ReelScript | null) ?? null,
   research: (r.research as ResearchReport | null) ?? null,
@@ -180,8 +178,6 @@ function projectRow(patch: ProjectPatch): Row {
   if (patch.durationSec !== undefined) row.duration_sec = patch.durationSec;
   if (patch.qualityTier !== undefined) row.quality_tier = patch.qualityTier;
   if (patch.platforms !== undefined) row.platforms = normalizePlatforms(patch.platforms);
-  // Only sent when one is chosen, so a database without the column keeps working until someone picks a template.
-  if (patch.template) row.template = patch.template;
   if (patch.status !== undefined) row.status = patch.status;
   if (patch.stage !== undefined) row.stage = patch.stage;
   if (patch.script !== undefined) row.script = patch.script;
@@ -202,7 +198,7 @@ function withoutDefaultPlatforms(row: Row): Row {
 
 /** Choosing a single platform needs the `platforms` column; say so plainly when the database does not have it yet. */
 function missingPlatforms(error: { message?: string }): Error {
-  return /platforms|template/.test(error.message ?? '') ? new Error('Choosing one platform or a template needs a database update first. Run supabase/migrations/20261105000100_project_platforms.sql and 20261106000000_project_template.sql in the Supabase SQL editor.') : (error as Error);
+  return /platforms/.test(error.message ?? '') ? new Error('Choosing one platform needs a database update first. Run supabase/migrations/20261105000100_project_platforms.sql in the Supabase SQL editor.') : (error as Error);
 }
 
 /** Uses the service-role client. Every table has RLS on with no policies, so only this server can reach them. */

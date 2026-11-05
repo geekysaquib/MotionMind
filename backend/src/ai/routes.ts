@@ -6,7 +6,7 @@ import { firstIssue } from '../http';
 import { ClaudeError, claudeClient, CLAUDE_MODEL, type ClaudeClient } from './claude';
 import { manualReelPrompt, manualResearchPrompt, parsePastedScript, parseResearch, PastedScriptError, type ReelBrief } from './reelPrompt';
 import { reelScriptSchema as scriptSchemaV4, type Research } from './reelSchema';
-import { templateOf, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
+import type { Project, ReelScript, ResearchReport } from '@motionmind/shared';
 
 const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude something.').max(12000) });
 const editSchema = z.object({ script: z.unknown() });
@@ -87,16 +87,13 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
       language: profile?.language ?? 'hinglish',
       niche: profile?.niche ?? null,
       channelName: profile?.channelName ?? null,
-      template: project.template ?? null,
       // Only research the user approved feeds the script.
       research: project.research?.approvedAt ? project.research : null,
     };
   }
 
   function saveScript(userId: string, project: Project, script: Omit<ReelScript, 'model' | 'writtenAt'>, model: string) {
-    // The template sets the world's look unless the script chose one itself.
-    const tpl = templateOf(project.template);
-    const saved: ReelScript = { ...script, world: script.world ?? 'iso', theme: script.theme ?? ((script.world ?? 'iso') === 'iso' ? tpl.theme : undefined), model, writtenAt: new Date().toISOString() };
+    const saved: ReelScript = { ...script, model, writtenAt: new Date().toISOString() };
     return deps.data.updateProject(userId, project.id, {
       script: saved,
       stage: 'script',

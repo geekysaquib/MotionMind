@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { PLATFORM_IDS, editorSpecParts, reelWorld, templateOf, type Platform, type Project } from '@motionmind/shared';
+import { PLATFORM_IDS, editorSpecParts, reelWorld, type Platform, type Project } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { voicePath } from '../voice/audioStore';
 
@@ -38,7 +38,6 @@ export async function reelSpecFor(deps: AppDeps, userId: string, project: Projec
     sfx: Object.fromEntries(sfxPaths.flatMap((p) => (urls[paths.indexOf(p)] ? [[p, urls[paths.indexOf(p)]!]] : []))),
   });
   Object.assign(spec, parts);
-  if (!spec.captions) spec.captions = templateOf(project.template).captions;
 
   // ElevenLabs voice is used only when no uploaded recording drives the reel.
   const voice = project.voice;
