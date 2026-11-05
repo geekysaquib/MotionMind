@@ -7,7 +7,7 @@ import { CardsScene } from './CardsScene';
 import { IsoWorld, isoCamera, layoutProps } from './IsoWorld';
 import { DiagramWorld, DEFAULT_REGION, type Region } from './DiagramWorld';
 import { withScenes } from './autoScene';
-import { Header, InfoCard, Captions, EndCard } from './Ui';
+import { Header, InfoCard, Captions, EndCard, cardLayout } from './Ui';
 import { brandsFor, logoUrl, termsFor } from './terms';
 import { Camera, clamp01, easeInOutCubic, lerp } from './iso';
 
@@ -110,7 +110,12 @@ export function useLogosLoaded(urls: string[]) {
 }
 
 /** The part of the frame the flat diagram may use: below the card, above the captions (and clear of each app's buttons). */
-const diagramRegion = (platform?: string): Region => (platform === 'youtube' ? { ...DEFAULT_REGION, t: 680, b: 1400 } : DEFAULT_REGION);
+const diagramRegion = (platform: string | undefined, cardEnd = 0): Region => {
+  const base = platform === 'youtube' ? { ...DEFAULT_REGION, t: 680, b: 1400 } : DEFAULT_REGION;
+  // Never start above the end of the card (plus a margin), but keep at least 560 tall.
+  const t = Math.min(base.b - 560, Math.max(base.t, cardEnd + 36));
+  return { ...base, t };
+};
 
 /** One reel, driven entirely by its spec. Used by the CLI renderer and by the in-app preview player. */
 export const Reel: React.FC<ReelSpec> = (input) => {
@@ -126,13 +131,15 @@ export const Reel: React.FC<ReelSpec> = (input) => {
   const beat = timed.find((b) => frame >= b.start && frame < b.start + b.frames) ?? timed[timed.length - 1]!;
   const chapterStart = timed.find((b) => b.chapter === beat.chapter)?.start ?? 0;
   const progress = storyFrames ? Math.min(1, frame / storyFrames) : 0;
+  const flat = spec.world === 'iso' && spec.look?.scene === 'diagram';
+  const cardEnd = flat ? cardLayout(beat.card, termsFor(beat, spec.glossary), brandsFor(beat, spec.brands), spec.look, spec.platform ?? 'instagram', 820).end : 0;
 
   return (
     <AbsoluteFill style={{ background: '#F6F2E9', overflow: 'hidden' }}>
       {spec.world === 'train' ? (
         <World frame={frame} fps={fps} cam={cameraAt(timed, storyFrames, frame, fps)} fx={fxAt(timed, frame)} pinProgress={pinProgressAt(timed, frame, fps)} />
       ) : spec.world === 'iso' && spec.look?.scene === 'diagram' ? (
-        <DiagramWorld frame={frame} fps={fps} beat={beat} look={spec.look} region={diagramRegion(spec.platform)} logoBase={spec.logoBase} />
+        <DiagramWorld frame={frame} fps={fps} beat={beat} look={spec.look} region={diagramRegion(spec.platform, cardEnd)} logoBase={spec.logoBase} />
       ) : spec.world === 'iso' ? (
         <IsoWorld frame={frame} fps={fps} cam={isoCamera(timed, placed, storyFrames, frame)} beat={beat} placed={placed} theme={spec.theme} logoBase={spec.logoBase} linkStyle={spec.look?.links} />
       ) : (
@@ -140,7 +147,13 @@ export const Reel: React.FC<ReelSpec> = (input) => {
       )}
       <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} steps={spec.steps} brand={spec.brand} platform={spec.platform} look={spec.look} dark={spec.world === 'iso' && spec.theme === 'night'} />
       {inStory && spec.world === 'cards' && <CardsScene key={`scene-${beat.id}`} beat={beat} frame={frame} fps={fps} />}
-      {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards'} platform={spec.platform} look={spec.look} terms={termsFor(beat, spec.glossary)} logos={brandsFor(beat, spec.brands).map((b) => ({ name: b.name, url: logoUrl(spec.logoBase, b.domain, b.name) }))} />}
+      {inStory && (() => {
+        const terms = termsFor(beat, spec.glossary);
+        const logos = brandsFor(beat, spec.brands).map((b) => ({ name: b.name, url: logoUrl(spec.logoBase, b.domain, b.name) }));
+        // In a flat diagram the card must stop above the scene: it leaves out its rows when they would not fit.
+        const fit = cardLayout(beat.card, terms, logos, spec.look, spec.platform ?? 'instagram', flat ? 820 : 9999);
+        return <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards' || !fit.showRows} platform={spec.platform} look={spec.look} terms={terms} logos={logos} />;
+      })()}
       {inStory && <Captions beat={beat} frame={frame} style={spec.captions ?? DEFAULT_CAPTION_STYLE} platform={spec.platform} look={spec.look} progress={progress} />}
       {/* The voice: one clip per scene, each playing its part of the recording at the scene's speed. */}
       {timed.map((b, i) =>

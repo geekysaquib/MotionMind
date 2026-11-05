@@ -269,6 +269,49 @@ function Row({ row, tone, appear }: { row: CardRow; tone: string; appear: number
 }
 
 /** `compact` hides the rows: the 'cards' world draws them large in the middle of the frame instead. */
+/**
+ * How tall the info card will be, estimated from its words (the browser decides the real height, so this is a careful
+ * guess that errs a little tall). `end` is the y where it stops. When the card would crowd the scene under it, `showRows`
+ * says to leave out its chips and flows (the scene shows that information itself), so the card never covers an object.
+ */
+export function cardLayout(card: CardT, terms: { short: string; full: string }[], logos: { name: string }[], look: ReelLook | undefined, platform: PlatformId = 'instagram', maxEnd = 840): { height: number; end: number; showRows: boolean } {
+  const kind = look?.card ?? 'box';
+  const headline = kind === 'headline';
+  const fs = headline ? 84 : 60;
+  const inner = 960 - (headline ? 40 : 86);
+  const perLine = Math.max(8, Math.floor(inner / (fs * 0.55)));
+  const plain = card.headline.replace(/\*/g, '');
+  let lines = 1;
+  let cur = 0;
+  for (const w of plain.split(/\s+/).filter(Boolean)) {
+    if (cur && cur + 1 + w.length > perLine) {
+      lines++;
+      cur = w.length;
+    } else cur += (cur ? 1 : 0) + w.length;
+  }
+  const padding = headline ? 20 : 72;
+  const base = padding + 40 + lines * fs * 1.12 + 12;
+  const footer = (terms.length || logos.length ? 42 : 0) + terms.reduce((n, t) => n + 10 + Math.ceil((t.short.length + 3 + t.full.length) / 52) * 37, 0) + (logos.length ? 66 : 0);
+  const rowsH = headline ? 0 : (card.rows ?? []).reduce((n, r) => {
+    const row = r as unknown as Record<string, unknown>;
+    switch (row.kind) {
+      case 'chips':
+        return n + 22 + 60 * Math.ceil(((row.items as unknown[]) ?? []).length / 3);
+      case 'flow':
+        return n + 22 + 70 * Math.ceil(((row.items as unknown[]) ?? []).length / 3);
+      case 'kv':
+        return n + 22 + 56;
+      default:
+        return n + 22 + 38 * Math.ceil(String(row.text ?? '').length / 52);
+    }
+  }, 0);
+  const top = PLATFORM_LAYOUT[platform].cardTop;
+  const withRows = top + base + footer + rowsH;
+  const showRows = rowsH === 0 || withRows <= maxEnd;
+  const height = base + footer + (showRows ? rowsH : 0);
+  return { height, end: top + height, showRows };
+}
+
 export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start: number; compact?: boolean; platform?: PlatformId; terms?: { short: string; full: string }[]; logos?: { name: string; url: string }[]; look?: ReelLook }> = ({ card, frame, fps, start, compact, platform = 'instagram', terms = [], logos = [], look }) => {
   const local = frame - start;
   const inS = spring({ frame: local, fps, config: { damping: 18, mass: 0.7 } });

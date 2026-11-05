@@ -157,7 +157,7 @@ export function layoutNodes(n: number, R: Region): NodeBox[] {
   }
   if (n === 3) {
     // Tall gaps, so every arrow has room for its arrowhead and label.
-    const h = Math.min(190, (H - 300) / 3);
+    const h = Math.max(110, Math.min(190, (H - 260) / 3));
     const gap = (H - 40 - h * 3) / 2;
     return [0, 1, 2].map((i) => ({ x: cx - 370, y: R.t + 20 + i * (h + gap), w: 740, h }));
   }
@@ -281,7 +281,9 @@ export const DiagramWorld: React.FC<{ frame: number; fps: number; beat: TimedBea
         const isFocus = p.id === focusId;
         const tone = p.tone ? TONES[p.tone] : pal.accent;
         const glyph = p.glyph && ICONS[p.glyph] ? p.glyph : GLYPH_FOR[p.kind] ?? 'box';
-        const iconSize = wide ? 118 : props.length === 1 ? 250 : 130;
+        // Everything inside a card is sized from the card, so a short card (a crowded scene) never clips its label.
+        const iconSize = wide ? Math.max(64, Math.min(118, b.h * 0.56)) : props.length === 1 ? 250 : Math.max(56, Math.min(130, b.h * 0.4));
+        const labelSize = props.length === 1 ? 64 : wide ? Math.min(54, b.h * 0.26) : Math.min(44, b.h * 0.16);
         const rot = pal.tilt ? (i % 2 ? 2.2 : -2.2) : 0;
         const pulse = isFocus ? 0.5 + 0.5 * Math.sin(local / 9) : 0;
         const art = HAS_ART.has(p.kind) ? <Art spec={p} size={iconSize} pal={pal} frame={frame} /> : null;
@@ -298,8 +300,9 @@ export const DiagramWorld: React.FC<{ frame: number; fps: number; beat: TimedBea
               flexDirection: wide ? 'row' : 'column',
               alignItems: 'center',
               justifyContent: wide ? 'flex-start' : 'center',
-              gap: wide ? 32 : 18,
-              padding: wide ? '0 36px' : '24px',
+              gap: wide ? 28 : Math.max(6, b.h * 0.05),
+              padding: wide ? '0 32px' : `${Math.max(10, b.h * 0.06)}px 16px`,
+              overflow: 'hidden',
               boxSizing: 'border-box',
               background: pal.card,
               border: `${pal.strokeW}px solid ${isFocus && pal.glow ? pal.accent : pal.stroke}`,
@@ -322,8 +325,8 @@ export const DiagramWorld: React.FC<{ frame: number; fps: number; beat: TimedBea
               )}
             </div>
             <div style={{ minWidth: 0, textAlign: wide ? 'left' : 'center' }}>
-              <div style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: 22, letterSpacing: 3, color: pal.sub }}>{(KIND_NAME[p.kind] ?? (p.logo ? bareDomain(p.logo) : p.kind)).toString().toUpperCase()}</div>
-              <div style={{ fontWeight: 700, fontSize: props.length === 1 ? 64 : wide ? 54 : 44, lineHeight: 1.08, color: pal.ink, marginTop: 6, letterSpacing: -1, overflowWrap: 'anywhere' }}>{p.label ?? p.kind}</div>
+              <div style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: props.length > 3 || b.h < 200 ? 18 : 22, letterSpacing: 3, color: pal.sub }}>{(KIND_NAME[p.kind] ?? (p.logo ? bareDomain(p.logo) : p.kind)).toString().toUpperCase()}</div>
+              <div style={{ fontWeight: 700, fontSize: labelSize, lineHeight: 1.08, color: pal.ink, marginTop: 6, letterSpacing: -1, overflowWrap: 'anywhere' }}>{p.label ?? p.kind}</div>
             </div>
           </div>
         );

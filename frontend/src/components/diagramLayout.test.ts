@@ -40,3 +40,36 @@ describe('template looks', () => {
     expect(TEMPLATES['explainer-3d'].look.scene).toBeUndefined();
   });
 });
+
+// The info card must stop above the diagram under it.
+import { cardLayout } from '../../../backend/reel-engine/src/Ui';
+
+describe('cardLayout', () => {
+  const card = (headline: string, rows: unknown[] = []) => ({ eyebrow: 'Step 2', headline, tone: 'teal' as const, rows }) as never;
+  const rows = [
+    { kind: 'chips', items: [{ text: 'a' }, { text: 'b' }, { text: 'c' }] },
+    { kind: 'flow', items: ['x', 'y', 'z'] },
+    { kind: 'note', text: 'A long note that goes on for a good while so it needs two lines or more of room' },
+  ];
+  const terms = [{ short: 'IRCTC', full: 'Indian Railway Catering and Tourism Corporation' }, { short: 'OTP', full: 'One Time Password' }];
+
+  it('leaves out the rows when the card would reach into the scene, and keeps the headline, short forms and logos', () => {
+    const tight = cardLayout(card('Sirf *Aadhaar*-verified users', rows), terms, [{ name: 'IRCTC' }], { card: 'dark', header: 'bar', captions: 'pill' }, 'instagram', 820);
+    expect(tight.showRows).toBe(false);
+    expect(tight.end).toBeLessThanOrEqual(820);
+  });
+
+  it('keeps the rows on a short card, and a longer headline makes a taller card', () => {
+    const short = cardLayout(card('Fast', [{ kind: 'kv', k: 'a', v: 'b' }]), [], [], { card: 'dark', header: 'bar', captions: 'pill' }, 'instagram', 820);
+    expect(short.showRows).toBe(true);
+    const longer = cardLayout(card('A much longer headline that needs to wrap over several lines of text here'), [], [], { card: 'dark', header: 'bar', captions: 'pill' }, 'instagram', 820);
+    const plain = cardLayout(card('Short'), [], [], { card: 'dark', header: 'bar', captions: 'pill' }, 'instagram', 820);
+    expect(longer.height).toBeGreaterThan(plain.height);
+  });
+
+  it('starts lower on YouTube Shorts, whose title area is taller', () => {
+    const ig = cardLayout(card('Hello'), [], [], undefined, 'instagram');
+    const yt = cardLayout(card('Hello'), [], [], undefined, 'youtube');
+    expect(yt.end).toBeGreaterThan(ig.end);
+  });
+});
