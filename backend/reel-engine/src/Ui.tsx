@@ -1,7 +1,7 @@
 import React from 'react';
 import { spring, interpolate } from 'remotion';
 import { C } from './World';
-import type { Brand, CaptionStyle, Card as CardT, CardRow, Tone, TimedBeat } from './script';
+import type { Brand, CaptionStyle, ReelLook, Card as CardT, CardRow, Tone, TimedBeat } from './script';
 
 const TONE: Record<Tone, string> = { red: C.red, teal: C.teal, purple: C.purple, blue: C.blue, amber: C.amber };
 const SAFE_X = 60;
@@ -30,7 +30,8 @@ export function Highlight({ text, tone }: { text: string; tone: string }) {
   );
 }
 
-export const Header: React.FC<{ chapter: number; frame: number; fps: number; chapterStart: number; steps: string[]; brand: Brand; dark?: boolean; platform?: PlatformId }> = ({
+export const Header: React.FC<{ chapter: number; frame: number; fps: number; chapterStart: number; steps: string[]; brand: Brand; dark?: boolean; platform?: PlatformId; look?: ReelLook }> = ({
+  look,
   dark = false,
   platform = 'instagram',
   chapter,
@@ -41,6 +42,32 @@ export const Header: React.FC<{ chapter: number; frame: number; fps: number; cha
   brand,
 }) => {
   const grow = spring({ frame: frame - chapterStart, fps, config: { damping: 200 } });
+  if (look?.header === 'bar') {
+    const light = look.ink !== 'dark';
+    const accent = look.accent ?? C.teal;
+    return (
+      <div style={{ position: 'absolute', top: PLATFORM_LAYOUT[platform].headerTop, left: SAFE_X, right: SAFE_X }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: 24, letterSpacing: 4, color: light ? '#C9D0E4' : '#4B5262' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ width: 14, height: 14, background: accent, display: 'inline-block' }} />
+            {brand.name.toUpperCase()}
+          </span>
+          <span style={{ opacity: 0.85 }}>{(look.tag ?? brand.handle).toUpperCase()}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
+          {steps.map((s, i) => {
+            const n = i + 1;
+            const fill = chapter > n ? 1 : chapter === n ? grow : 0;
+            return (
+              <div key={s} style={{ flex: 1, height: 6, borderRadius: 3, background: light ? 'rgba(255,255,255,0.18)' : 'rgba(31,36,48,0.14)', overflow: 'hidden' }}>
+                <div style={{ width: `${fill * 100}%`, height: '100%', background: accent }} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ position: 'absolute', top: PLATFORM_LAYOUT[platform].headerTop, left: SAFE_X, right: SAFE_X }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -242,10 +269,15 @@ function Row({ row, tone, appear }: { row: CardRow; tone: string; appear: number
 }
 
 /** `compact` hides the rows: the 'cards' world draws them large in the middle of the frame instead. */
-export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start: number; compact?: boolean; platform?: PlatformId; terms?: { short: string; full: string }[]; logos?: { name: string; url: string }[] }> = ({ card, frame, fps, start, compact, platform = 'instagram', terms = [], logos = [] }) => {
+export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start: number; compact?: boolean; platform?: PlatformId; terms?: { short: string; full: string }[]; logos?: { name: string; url: string }[]; look?: ReelLook }> = ({ card, frame, fps, start, compact, platform = 'instagram', terms = [], logos = [], look }) => {
   const local = frame - start;
   const inS = spring({ frame: local, fps, config: { damping: 18, mass: 0.7 } });
-  const tone = TONE[card.tone];
+  const kind = look?.card ?? 'box';
+  const tone = look?.accent ?? TONE[card.tone];
+  const lightWorld = look?.ink === 'dark';
+  // Text colour: dark card and headline text are light unless the world behind is light.
+  const ink = kind === 'box' ? C.ink : kind === 'dark' ? '#F4F6FB' : lightWorld ? C.ink : '#FFFFFF';
+  const headline = kind === 'headline';
   return (
     <div
       style={{
@@ -253,39 +285,41 @@ export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start
         top: PLATFORM_LAYOUT[platform].cardTop,
         left: SAFE_X,
         right: SAFE_X,
-        background: 'rgba(255,255,255,0.96)',
-        borderRadius: 34,
-        border: `3px solid ${tone}55`,
-        padding: '34px 40px 38px',
-        boxShadow: '0 18px 50px rgba(31,36,48,0.10)',
+        background: headline ? 'transparent' : kind === 'dark' ? 'rgba(9,14,28,0.9)' : 'rgba(255,255,255,0.96)',
+        borderRadius: kind === 'dark' ? 26 : 34,
+        border: headline ? 'none' : `3px solid ${tone}${kind === 'dark' ? '' : '55'}`,
+        padding: headline ? '10px 20px' : '34px 40px 38px',
+        textAlign: headline ? 'center' : 'left',
+        boxShadow: headline ? 'none' : kind === 'dark' ? `0 0 44px ${tone}44` : '0 18px 50px rgba(31,36,48,0.10)',
         opacity: interpolate(inS, [0, 1], [0, 1]),
         transform: `translateY(${(1 - inS) * -30}px) scale(${0.96 + 0.04 * inS})`,
       }}
     >
-      <div style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: 24, letterSpacing: 4, color: tone }}>
-        {card.eyebrow.toUpperCase()}
+      <div style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, fontSize: headline ? 22 : 24, letterSpacing: 4, color: tone }}>
+        {headline ? `// ${card.eyebrow}` : card.eyebrow.toUpperCase()}
       </div>
       <div
         style={{
           fontFamily: 'Space Grotesk',
           fontWeight: 700,
-          fontSize: 60,
-          lineHeight: 1.12,
-          color: C.ink,
-          marginTop: 12,
+          fontSize: headline ? 84 : 60,
+          lineHeight: headline ? 1.05 : 1.12,
+          color: ink,
+          marginTop: headline ? 18 : 12,
           letterSpacing: -1,
+          textShadow: headline && !lightWorld ? '0 4px 24px rgba(0,0,0,0.55)' : undefined,
         }}
       >
         <Highlight text={card.headline} tone={tone} />
       </div>
-      {!compact && card.rows?.map((r, i) => {
+      {!compact && !headline && card.rows?.map((r, i) => {
         const appear = spring({ frame: local - 14 - i * 10, fps, config: { damping: 200 } });
         return <Row key={i} row={r} tone={tone} appear={appear} />;
       })}
       {(terms.length > 0 || logos.length > 0) && (
         <div style={{ marginTop: 22, paddingTop: 18, borderTop: `2px dashed ${tone}44`, display: 'flex', flexDirection: 'column', gap: 10, opacity: interpolate(frame - start, [8, 20], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
           {terms.map((t) => (
-            <div key={t.short} style={{ fontFamily: 'Space Grotesk', fontSize: 30, lineHeight: 1.2, color: C.ink }}>
+            <div key={t.short} style={{ fontFamily: 'Space Grotesk', fontSize: 30, lineHeight: 1.2, color: ink, textShadow: headline && !lightWorld ? '0 2px 14px rgba(0,0,0,0.6)' : undefined }}>
               <span style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, color: tone, marginRight: 12 }}>{t.short}</span>
               <span style={{ opacity: 0.8 }}>= {t.full}</span>
             </div>
@@ -309,9 +343,11 @@ export const InfoCard: React.FC<{ card: CardT; frame: number; fps: number; start
 /** Phrase-level karaoke captions: spoken words white, upcoming grey, keywords teal. */
 const CAPTION_SIZE: Record<CaptionStyle['size'], number> = { small: 50, medium: 62, large: 76 };
 
-export const Captions: React.FC<{ beat: TimedBeat; frame: number; style?: CaptionStyle; platform?: PlatformId }> = ({ beat, frame, style, platform = 'instagram' }) => {
+export const Captions: React.FC<{ beat: TimedBeat; frame: number; style?: CaptionStyle; platform?: PlatformId; look?: ReelLook; progress?: number }> = ({ beat, frame, style, platform = 'instagram', look, progress = 0 }) => {
   const lay = PLATFORM_LAYOUT[platform];
-  const size = CAPTION_SIZE[style?.size ?? 'medium'];
+  const pill = look?.captions === 'pill';
+  const lightWorld = look?.ink === 'dark';
+  const size = pill ? Math.min(52, CAPTION_SIZE[style?.size ?? 'medium']) : CAPTION_SIZE[style?.size ?? 'medium'];
   const top = (style?.position ?? 'bottom') === 'middle' ? lay.captionMiddle : lay.captionBottom;
   const plain = style?.look === 'plain';
   const groups: (typeof beat.words)[] = [];
@@ -332,9 +368,10 @@ export const Captions: React.FC<{ beat: TimedBeat; frame: number; style?: Captio
     <div style={{ position: 'absolute', left: 0, right: 0, top, display: 'flex', justifyContent: 'center' }}>
       <div
         style={{
-          background: plain ? 'transparent' : 'rgba(31,36,48,0.92)',
-          padding: plain ? '8px 20px' : '16px 30px',
-          borderRadius: 22,
+          background: pill ? (lightWorld ? 'rgba(255,255,255,0.94)' : 'rgba(8,12,26,0.8)') : plain ? 'transparent' : 'rgba(31,36,48,0.92)',
+          border: pill ? `2px solid ${lightWorld ? 'rgba(31,36,48,0.12)' : 'rgba(255,255,255,0.22)'}` : undefined,
+          padding: pill ? '12px 34px' : plain ? '8px 20px' : '16px 30px',
+          borderRadius: pill ? 999 : 22,
           fontFamily: 'Space Grotesk',
           fontWeight: 700,
           fontSize: size,
@@ -350,7 +387,7 @@ export const Captions: React.FC<{ beat: TimedBeat; frame: number; style?: Captio
           const spoken = frame >= w.start;
           const bare = w.text.toLowerCase().replace(/[.,?!]/g, '');
           const key = beat.keywords.some((k) => k.replace(/[.,?!]/g, '') === bare);
-          const color = !spoken ? 'rgba(255,255,255,0.38)' : key ? '#5EEAD4' : '#FFFFFF';
+          const color = pill && lightWorld ? (!spoken ? 'rgba(31,36,48,0.35)' : key ? (look?.accent ?? '#0D9488') : C.ink) : !spoken ? 'rgba(255,255,255,0.38)' : key ? (look?.accent ?? '#5EEAD4') : '#FFFFFF';
           return (
             <span key={i} style={{ color }}>
               {w.text}
@@ -359,6 +396,14 @@ export const Captions: React.FC<{ beat: TimedBeat; frame: number; style?: Captio
           );
         })}
       </div>
+      {pill && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 18px)', left: '50%', transform: 'translateX(-50%)', width: 520, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ flex: 1, height: 4, borderRadius: 2, background: lightWorld ? 'rgba(31,36,48,0.14)' : 'rgba(255,255,255,0.2)', overflow: 'hidden' }}>
+            <div style={{ width: `${Math.round(progress * 100)}%`, height: '100%', background: look?.accent ?? '#5EEAD4' }} />
+          </div>
+          <span style={{ fontFamily: 'JetBrains Mono', fontSize: 18, color: lightWorld ? '#6B7280' : '#8B93AB' }}>{Math.round(progress * 100)}%</span>
+        </div>
+      )}
     </div>
   );
 };

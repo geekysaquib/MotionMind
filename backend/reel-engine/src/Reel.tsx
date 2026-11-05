@@ -132,10 +132,10 @@ export const Reel: React.FC<ReelSpec> = (input) => {
       ) : (
         <Backdrop frame={frame} fps={fps} tone={beat.card.tone} chapter={beat.chapter} progress={progress} />
       )}
-      <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} steps={spec.steps} brand={spec.brand} platform={spec.platform} dark={spec.world === 'iso' && spec.theme === 'night'} />
+      <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} steps={spec.steps} brand={spec.brand} platform={spec.platform} look={spec.look} dark={spec.world === 'iso' && spec.theme === 'night'} />
       {inStory && spec.world === 'cards' && <CardsScene key={`scene-${beat.id}`} beat={beat} frame={frame} fps={fps} />}
-      {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards'} platform={spec.platform} terms={termsFor(beat, spec.glossary)} logos={brandsFor(beat, spec.brands).map((b) => ({ name: b.name, url: logoUrl(spec.logoBase, b.domain, b.name) }))} />}
-      {inStory && <Captions beat={beat} frame={frame} style={spec.captions ?? DEFAULT_CAPTION_STYLE} platform={spec.platform} />}
+      {inStory && <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards'} platform={spec.platform} look={spec.look} terms={termsFor(beat, spec.glossary)} logos={brandsFor(beat, spec.brands).map((b) => ({ name: b.name, url: logoUrl(spec.logoBase, b.domain, b.name) }))} />}
+      {inStory && <Captions beat={beat} frame={frame} style={spec.captions ?? DEFAULT_CAPTION_STYLE} platform={spec.platform} look={spec.look} progress={progress} />}
       {/* The voice: one clip per scene, each playing its part of the recording at the scene's speed. */}
       {timed.map((b, i) =>
         b.audio ? (

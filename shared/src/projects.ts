@@ -136,6 +136,8 @@ export interface ReelScript {
   world?: 'iso' | 'train';
   /** Iso world: the look of the ground and background. */
   theme?: WorldTheme;
+  /** The template the reel is staged in (chosen after the script, before the storyboard). Missing = the default. */
+  template?: import('./templates').TemplateId;
   /** Locked spots of the 3D objects, by object id (ground x, y in world units). Without it the engine arranges them. */
   layout?: Record<string, { x: number; y: number }>;
   /** The cover (thumbnail) settings. Missing means the defaults. */

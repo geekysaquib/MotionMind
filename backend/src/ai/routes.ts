@@ -6,13 +6,14 @@ import { firstIssue } from '../http';
 import { ClaudeError, claudeClient, CLAUDE_MODEL, type ClaudeClient } from './claude';
 import { manualReelPrompt, manualResearchPrompt, parsePastedScript, parseResearch, PastedScriptError, type ReelBrief } from './reelPrompt';
 import { reelScriptSchema as scriptSchemaV4, type Research } from './reelSchema';
-import type { Project, ReelScript, ResearchReport } from '@motionmind/shared';
+import { TEMPLATE_IDS, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
 
 const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude something.').max(12000) });
 const editSchema = z.object({ script: z.unknown() });
 // The storyboard may carry locked object spots; the schema Claude writes to does not.
 // (Same zod version as the script schema, or the two cannot be combined.)
 const scriptWithLayout = scriptSchemaV4.extend({
+  template: zv4.enum(TEMPLATE_IDS).optional(),
   cover: zv4
     .object({
       scene: zv4.number().int().min(0).max(60),
@@ -203,7 +204,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     const id = (req.params as { id: string }).id;
     const project = z.string().uuid().safeParse(id).success ? await deps.data.getProject(req.userId, id) : null;
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
-    const saved: ReelScript = { ...parsed.data, layout: parsed.data.layout as ReelScript['layout'], cover: parsed.data.cover as ReelScript['cover'], model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
+    const saved: ReelScript = { ...parsed.data, layout: parsed.data.layout as ReelScript['layout'], cover: parsed.data.cover as ReelScript['cover'], template: parsed.data.template, model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
     return {
       project: await deps.data.updateProject(req.userId, project.id, { script: saved, stage: project.stage === 'script' ? 'storyboard' : project.stage }),
     };

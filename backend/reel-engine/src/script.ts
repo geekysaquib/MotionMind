@@ -129,6 +129,8 @@ export type ReelSpec = {
   title: string;
   /** 'train' = the isometric railway world; 'iso' = the 3D isometric scene kit for any topic; 'cards' = flat animated graphics. */
   world: 'train' | 'iso' | 'cards';
+  /** The look of the header, card and captions (set by the template). Missing = the classic look. */
+  look?: ReelLook;
   /** Short forms and what they stand for: every scene that uses one shows its full form. */
   glossary?: { short: string; full: string }[];
   /** Companies named in the reel, so their logos can be shown next to the text. */
@@ -165,6 +167,15 @@ export type ReelSpec = {
   sfx?: { url: string; durationSec: number; at: number; volume: number }[];
   captions?: CaptionStyle;
 };
+
+/**
+ * The look of the reel's own chrome (header, card, captions), chosen by the template. The 3D world is chosen by `theme`.
+ * card: box = the white card, dark = a dark glass card with a glowing outline, headline = big text with no box.
+ * header: steps = the step dots, bar = a thin segmented progress bar with a small label either side.
+ * captions: box = the dark box, pill = a slim pill with a progress line under it.
+ * ink: 'dark' when the world behind is light (the text turns dark).
+ */
+export type ReelLook = { card: 'box' | 'dark' | 'headline'; header: 'steps' | 'bar'; captions: 'box' | 'pill'; accent?: string; ink?: 'light' | 'dark'; tag?: string };
 
 /** Same shape as CaptionStyle in the shared package (the engine doesn't import it). */
 export type CaptionStyle = { size: 'small' | 'medium' | 'large'; position: 'bottom' | 'middle'; look: 'box' | 'plain' };

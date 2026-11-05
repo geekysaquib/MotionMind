@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 're
 import { observer } from 'mobx-react-lite';
 import { useOutletContext } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Plus, Trash2, Layers3 } from 'lucide-react';
-import { reelWorld, WORLD_THEMES, type Project, type ReelBeat, type ReelScript, type ReelTone, type WorldTheme } from '@motionmind/shared';
+import { DEFAULT_TEMPLATE, reelWorld, TEMPLATES, WORLD_THEMES, type Project, type ReelBeat, type ReelScript, type ReelTone, type WorldTheme } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
 import { Alert, Button, Card, Spinner } from '../../components/ui';
@@ -10,6 +10,7 @@ import { errorText } from '../../lib/format';
 import { brandFor, specFromScript } from '../../components/reelSpec';
 import { cn } from '../../lib/cn';
 import { SceneEditor } from '../../components/SceneEditor';
+import { TemplatePicker } from '../../components/TemplatePicker';
 import { TermsEditor } from '../../components/TermsEditor';
 
 const THEME_LABELS: Record<WorldTheme, string> = { city: 'City (apps, payments, services)', nature: 'Nature (food, biology, outdoors)', lab: 'Lab (science, chips, AI)', plain: 'Plain (anything abstract)', night: 'Night (security, space, late-night tech)', sunset: 'Sunset (stories, culture, travel)', ocean: 'Ocean (water, ships, climate)', desert: 'Desert (energy, mining, history)' };
@@ -100,6 +101,16 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-4">
+        <Card>
+          <h2 className="flex items-center gap-2 font-semibold">
+            <Layers3 className="h-4 w-4 text-accent" /> Choose a template
+          </h2>
+          <p className="mt-1 mb-4 text-sm text-ink-400">The look of the reel: the world, the header, the cards and the captions. The preview on the right updates as you pick. You can still edit every scene below.</p>
+          <TemplatePicker
+            value={draft.template ?? DEFAULT_TEMPLATE}
+            onChange={(id) => setDraft({ ...draft, template: id, ...(reelWorld(draft) === 'iso' ? { theme: TEMPLATES[id].theme } : {}) })}
+          />
+        </Card>
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-[220px] flex-1">
