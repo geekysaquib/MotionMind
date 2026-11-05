@@ -5,7 +5,9 @@ import { World, phonePos, type WorldProps } from './World';
 import { Backdrop } from './Backdrop';
 import { CardsScene } from './CardsScene';
 import { IsoWorld, isoCamera, layoutProps } from './IsoWorld';
-import { DiagramWorld, DEFAULT_REGION, type Region } from './DiagramWorld';
+import { DEFAULT_REGION, type Region } from './DiagramWorld';
+import { FlatWorld } from './Shots';
+import { shotPlan } from './shotplan';
 import { withScenes } from './autoScene';
 import { Header, InfoCard, Captions, EndCard, cardLayout } from './Ui';
 import { brandsFor, logoUrl, termsFor } from './terms';
@@ -127,6 +129,8 @@ export const Reel: React.FC<ReelSpec> = (input) => {
   const { fps } = useVideoConfig();
   const { timed, storyFrames, endFrames, totalFrames, closing } = useMemo(() => reelTiming(spec), [spec]);
   const placed = useMemo(() => layoutProps(timed, spec.layout), [timed, spec.layout]);
+  // In a flat template each scene is staged by what it says (a question, a number, a list, a screen...), not always as boxes and arrows.
+  const shots = useMemo(() => shotPlan(timed, spec.look?.shots), [timed, spec.look?.shots]);
   const inStory = frame < storyFrames;
   const beat = timed.find((b) => frame >= b.start && frame < b.start + b.frames) ?? timed[timed.length - 1]!;
   const chapterStart = timed.find((b) => b.chapter === beat.chapter)?.start ?? 0;
@@ -139,7 +143,7 @@ export const Reel: React.FC<ReelSpec> = (input) => {
       {spec.world === 'train' ? (
         <World frame={frame} fps={fps} cam={cameraAt(timed, storyFrames, frame, fps)} fx={fxAt(timed, frame)} pinProgress={pinProgressAt(timed, frame, fps)} />
       ) : spec.world === 'iso' && spec.look?.scene === 'diagram' ? (
-        <DiagramWorld frame={frame} fps={fps} beat={beat} look={spec.look} region={diagramRegion(spec.platform, cardEnd)} logoBase={spec.logoBase} />
+        <FlatWorld frame={frame} fps={fps} beat={beat} look={spec.look} region={diagramRegion(spec.platform, cardEnd)} shot={shots[Math.max(0, timed.indexOf(beat))] ?? 'nodes'} logoBase={spec.logoBase} />
       ) : spec.world === 'iso' ? (
         <IsoWorld frame={frame} fps={fps} cam={isoCamera(timed, placed, storyFrames, frame)} beat={beat} placed={placed} theme={spec.theme} logoBase={spec.logoBase} linkStyle={spec.look?.links} />
       ) : (

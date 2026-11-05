@@ -22,6 +22,8 @@ export interface TemplateLook {
   scene?: 'iso' | 'diagram';
   diagram?: 'neon' | 'minimal' | 'paper' | 'sticker';
   links?: 'arc' | 'dotted';
+  /** The kinds of shot the flat world may stage a scene as, in order of preference (see the engine's shotplan.ts). */
+  shots?: ('hero' | 'stat' | 'compare' | 'checklist' | 'ui' | 'tiles' | 'ring' | 'nodes')[];
 }
 
 export interface ReelTemplate {
@@ -61,7 +63,7 @@ export const TEMPLATES: Record<TemplateId, ReelTemplate> = {
     tagline: 'Editorial type on warm paper',
     description: 'A calm paper-coloured page: one big headline with a red highlight word, and the scene drawn as flat white cards with hard black outlines and offset shadows, joined by red marker arrows. Modelled on an interview-prep reel.',
     theme: 'plain',
-    look: { card: 'headline', header: 'bar', captions: 'pill', accent: '#E5484D', ink: 'dark', tag: 'Interview', scene: 'diagram', diagram: 'paper' },
+    look: { card: 'headline', header: 'bar', captions: 'pill', accent: '#E5484D', ink: 'dark', tag: 'Interview', scene: 'diagram', diagram: 'paper', shots: ['hero', 'stat', 'compare', 'checklist', 'ui', 'nodes'] },
     captions: { size: 'small', position: 'bottom', look: 'box' },
     sample: { video: '/templates/paper-interview.mp4', poster: '/templates/paper-interview.jpg' },
     preview: { ground: '#F3EFE9', accent: '#E5484D', ink: '#1F2430' },
@@ -73,7 +75,7 @@ export const TEMPLATES: Record<TemplateId, ReelTemplate> = {
     tagline: 'Two voices, dark room, neon labels',
     description: 'A dark late-night room with lime highlights: slightly tilted cards with lime outlines, dotted curved arrows and sticker-style labels. Fits scripts written as a back-and-forth. Modelled on a two-character chat reel.',
     theme: 'night',
-    look: { card: 'dark', header: 'bar', captions: 'pill', accent: '#D6F23A', tag: 'Live chat', scene: 'diagram', diagram: 'sticker' },
+    look: { card: 'dark', header: 'bar', captions: 'pill', accent: '#D6F23A', tag: 'Live chat', scene: 'diagram', diagram: 'sticker', shots: ['hero', 'ui', 'stat', 'compare', 'checklist', 'nodes'] },
     captions: { size: 'medium', position: 'bottom', look: 'box' },
     sample: { video: '/templates/conversation.mp4', poster: '/templates/conversation.jpg' },
     preview: { ground: '#171B33', accent: '#D6F23A', ink: '#F4F6FB' },
@@ -85,7 +87,7 @@ export const TEMPLATES: Record<TemplateId, ReelTemplate> = {
     tagline: 'Blue-on-navy diagrams, big titles',
     description: 'Deep navy with a faint grid: a centred title with a blue highlight word, quiet tiles with thin blue arrows and solid labels, and a slim caption pill with a progress line. For algorithms, security and "how does the code get made" topics.',
     theme: 'night',
-    look: { card: 'headline', header: 'bar', captions: 'pill', accent: '#3B82F6', tag: '@handle', scene: 'diagram', diagram: 'minimal' },
+    look: { card: 'headline', header: 'bar', captions: 'pill', accent: '#3B82F6', tag: '@handle', scene: 'diagram', diagram: 'minimal', shots: ['tiles', 'ring', 'stat', 'hero', 'compare', 'nodes'] },
     captions: { size: 'small', position: 'bottom', look: 'box' },
     sample: { video: '/templates/dark-diagram.mp4', poster: '/templates/dark-diagram.jpg' },
     preview: { ground: '#10142A', accent: '#3B82F6', ink: '#F4F6FB' },
@@ -108,7 +110,7 @@ export const TEMPLATES: Record<TemplateId, ReelTemplate> = {
     tagline: 'Glowing nodes, labelled requests',
     description: 'A dark board: neon-green glowing node cards (server, database, bank, company logos) joined by labelled arrows with a travelling packet, a segmented progress bar and a "SYSTEM DESIGN" tag. Modelled on a system-design interview reel.',
     theme: 'night',
-    look: { card: 'dark', header: 'bar', captions: 'pill', accent: '#34D399', tag: 'System design', scene: 'diagram', diagram: 'neon' },
+    look: { card: 'dark', header: 'bar', captions: 'pill', accent: '#34D399', tag: 'System design', scene: 'diagram', diagram: 'neon', shots: ['nodes', 'ui', 'stat', 'compare', 'checklist', 'hero'] },
     captions: { size: 'small', position: 'bottom', look: 'box' },
     sample: { video: '/templates/neon-system.mp4', poster: '/templates/neon-system.jpg' },
     preview: { ground: '#0B1220', accent: '#34D399', ink: '#F4F6FB' },

@@ -176,6 +176,8 @@ export type ReelSpec = {
  * ink: 'dark' when the world behind is light (the text turns dark).
  */
 export type DiagramStyle = 'neon' | 'minimal' | 'paper' | 'sticker';
+/** How one scene is staged in the flat world (see shots.ts). */
+export type ShotKind = 'hero' | 'stat' | 'compare' | 'checklist' | 'ui' | 'tiles' | 'ring' | 'nodes';
 export type ReelLook = {
   card: 'box' | 'dark' | 'headline';
   header: 'steps' | 'bar';
@@ -186,6 +188,8 @@ export type ReelLook = {
   /** How the scene is drawn: 'iso' = the 3D world (default), 'diagram' = flat cards joined by arrows, in the `diagram` style. */
   scene?: 'iso' | 'diagram';
   diagram?: DiagramStyle;
+  /** Which shots the flat world may use, in the template's own taste. Missing = all. */
+  shots?: ShotKind[];
   /** 3D world only: 'arc' = the travelling arcs (default), 'dotted' = thin dotted lines with chip labels. */
   links?: 'arc' | 'dotted';
 };

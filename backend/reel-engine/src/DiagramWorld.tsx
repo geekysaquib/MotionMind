@@ -12,7 +12,7 @@ import type { DiagramStyle, PropKind, ReelLook, ScenePropSpec, TimedBeat, Tone }
 export type Region = { l: number; r: number; t: number; b: number };
 export const DEFAULT_REGION: Region = { l: 90, r: 990, t: 600, b: 1480 };
 
-interface Pal {
+export interface Pal {
   bg: string;
   grid?: string;
   card: string;
@@ -32,7 +32,7 @@ interface Pal {
   pill: 'outline' | 'solid' | 'sticker';
 }
 
-const PALETTES: Record<DiagramStyle, (accent: string) => Pal> = {
+export const PALETTES: Record<DiagramStyle, (accent: string) => Pal> = {
   neon: (accent) => ({ bg: '#0A1020', grid: 'rgba(52,211,153,0.07)', card: '#0E1830', stroke: accent, strokeW: 3, ink: '#EAF2FF', sub: '#7C8DB5', accent, hot: '#F97316', radius: 24, glow: true, tilt: false, arrowW: 5, dashed: false, curved: false, pill: 'outline' }),
   minimal: (accent) => ({ bg: '#0A1030', grid: 'rgba(96,130,255,0.06)', card: 'rgba(255,255,255,0.045)', stroke: 'rgba(120,150,255,0.42)', strokeW: 2, ink: '#F2F5FF', sub: '#8794B8', accent, hot: '#EF4444', radius: 28, glow: false, tilt: false, arrowW: 3, dashed: false, curved: false, pill: 'solid' }),
   paper: (accent) => ({ bg: '#F3EFE9', card: '#FFFFFF', stroke: '#1F2430', strokeW: 5, ink: '#1F2430', sub: '#6B7280', accent, hot: accent, radius: 22, hardShadow: '#1F2430', glow: false, tilt: false, arrowW: 9, dashed: false, curved: true, pill: 'sticker' }),
@@ -40,15 +40,15 @@ const PALETTES: Record<DiagramStyle, (accent: string) => Pal> = {
 };
 
 /** The Lucide icon that stands for each 3D model, for the flat world. */
-const GLYPH_FOR: Partial<Record<PropKind, string>> = {
+export const GLYPH_FOR: Partial<Record<PropKind, string>> = {
   server: 'server', datacenter: 'server', database: 'database', phone: 'smartphone', laptop: 'laptop', tower: 'radio-tower', cloud: 'cloud', bank: 'landmark', shop: 'store', building: 'building-2', house: 'house', factory: 'factory', person: 'user', document: 'file-text', money: 'banknote', chip: 'cpu', car: 'car', satellite: 'satellite', qr: 'qr-code', speaker: 'volume-2', lock: 'lock', router: 'router', battery: 'battery-full', heart: 'heart', gear: 'settings', truck: 'truck', plane: 'plane', train: 'train-front', tree: 'tree-pine', hospital: 'hospital', school: 'school', cart: 'shopping-cart', camera: 'camera', bulb: 'lightbulb', globe: 'globe', envelope: 'mail', clock: 'clock', rocket: 'rocket', syringe: 'syringe', chart: 'chart-column', atm: 'credit-card', brain: 'brain', virus: 'bug', dna: 'dna', flask: 'flask-conical', microscope: 'microscope', sun: 'sun', flame: 'flame', solar: 'sun', windmill: 'wind', bus: 'bus', ship: 'ship', shield: 'shield', book: 'book-open', bell: 'bell', key: 'key-round', receipt: 'receipt', pin: 'map-pin', terminal: 'terminal', loadbalancer: 'split', cache: 'zap', queue: 'list', toggle: 'toggle-right', gauge: 'gauge', cable: 'unplug', chat: 'message-square',
 };
 
 const KIND_NAME: Partial<Record<PropKind, string>> = { server: 'SERVER', datacenter: 'DATA CENTER', database: 'DATABASE', phone: 'DEVICE', laptop: 'DEVICE', cloud: 'CLOUD', bank: 'BANK', loadbalancer: 'LOAD BALANCER', cache: 'CACHE', queue: 'QUEUE', router: 'NETWORK', lock: 'SECURITY', shield: 'SECURITY', cable: 'LINK', terminal: 'CODE', key: 'SECRET', person: 'PERSON', atm: 'ATM', document: 'RECORD', receipt: 'RECEIPT', chat: 'MESSAGES', gauge: 'LOAD', clock: 'TIMER', money: 'PAYMENT' };
 
-const TONES: Record<Tone, string> = { red: '#EF4444', teal: '#14B8A6', purple: '#8B5CF6', blue: '#3B82F6', amber: '#F59E0B' };
+export const TONES: Record<Tone, string> = { red: '#EF4444', teal: '#14B8A6', purple: '#8B5CF6', blue: '#3B82F6', amber: '#F59E0B' };
 
-function Glyph({ name, size, color, w = 1.8 }: { name: string; size: number; color: string; w?: number }) {
+export function Glyph({ name, size, color, w = 1.8 }: { name: string; size: number; color: string; w?: number }) {
   const shapes = ICONS[name] ?? ICONS.box ?? [];
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round">
@@ -77,7 +77,7 @@ function Glyph({ name, size, color, w = 1.8 }: { name: string; size: number; col
 }
 
 /** Hand-drawn flat art for the things reels about software draw most: a phone with an app, a code window, server racks, a database. */
-function Art({ spec, size, pal, frame }: { spec: ScenePropSpec; size: number; pal: Pal; frame: number }) {
+export function Art({ spec, size, pal, frame }: { spec: ScenePropSpec; size: number; pal: Pal; frame: number }) {
   const line = pal.ink;
   const s = size;
   const common = { width: s, height: s, viewBox: '0 0 100 100', fill: 'none', stroke: line, strokeWidth: 3.2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
@@ -133,7 +133,7 @@ function Art({ spec, size, pal, frame }: { spec: ScenePropSpec; size: number; pa
   }
 }
 
-const HAS_ART = new Set<PropKind>(['phone', 'terminal', 'laptop', 'server', 'datacenter', 'loadbalancer', 'database']);
+export const HAS_ART = new Set<PropKind>(['phone', 'terminal', 'laptop', 'server', 'datacenter', 'loadbalancer', 'database']);
 
 interface NodeBox {
   x: number;
