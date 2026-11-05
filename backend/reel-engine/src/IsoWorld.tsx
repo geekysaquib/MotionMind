@@ -3,6 +3,7 @@ import { spring } from 'remotion';
 import { Camera, Vec3, cameraTransform, clamp01, easeInOutCubic, lerp, project, pts, shade, toScreen } from './iso';
 import { EXTRA_TOP, extraItems, type ExtraKind } from './props3d';
 import { MORE_TOP, moreItems, type MoreKind } from './props3d-more';
+import { TECH_TOP, techItems, type TechKind } from './props3d-tech';
 import { declutter, pillWidth, type LabelBox } from './declutter';
 import { GLYPH_TOP, glyphItems, hasGlyph, logoItems } from './glyph';
 import { bareDomain, logoUrl } from './terms';
@@ -232,7 +233,7 @@ export function propTop(p: PlacedProp): number {
 function rawTop(p: PlacedProp): number {
   if (p.kind === 'custom' && (hasGlyph(p.spec.glyph) || p.spec.logo)) return GLYPH_TOP;
   if (p.kind === 'custom') return SHAPE_TOP[p.spec.shape ?? 'block'] ?? SHAPE_TOP.block;
-  return PROP_TOP[p.kind as keyof typeof PROP_TOP] ?? EXTRA_TOP[p.kind as ExtraKind] ?? MORE_TOP[p.kind as MoreKind] ?? SHAPE_TOP.block;
+  return PROP_TOP[p.kind as keyof typeof PROP_TOP] ?? EXTRA_TOP[p.kind as ExtraKind] ?? MORE_TOP[p.kind as MoreKind] ?? TECH_TOP[p.kind as TechKind] ?? SHAPE_TOP.block;
 }
 
 /**
@@ -431,7 +432,7 @@ function propItems(p: PlacedProp, accent: string, frame: number, logoBase?: stri
       break;
     }
     default:
-      return extraItems(p.kind, p, accent, frame) ?? moreItems(p.kind, p, accent, frame) ?? customItems(p, accent, frame, logoBase);
+      return extraItems(p.kind, p, accent, frame) ?? moreItems(p.kind, p, accent, frame) ?? techItems(p.kind, p, accent, frame) ?? customItems(p, accent, frame, logoBase);
   }
   return out;
 }
