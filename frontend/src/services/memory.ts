@@ -1,6 +1,7 @@
 import { RESERVED_HANDLES, normalizeHandle, normalizePlatforms, type Profile, type Project } from '@motionmind/shared';
 import { config } from '../config';
 import { httpClaudeService } from './claudeHttp';
+import { httpFootageService } from './footageHttp';
 import { ServiceError, type AuthService, type ProfileService, type ProjectService, type Services, type Session } from './types';
 
 /**
@@ -130,5 +131,5 @@ export function memoryServices(storage: Storage = window.localStorage, apiUrl = 
     },
   };
 
-  return { mode: 'memory', auth, profiles, projects, claude: (getToken) => httpClaudeService(apiUrl, getToken) };
+  return { mode: 'memory', auth, profiles, projects, claude: (getToken) => httpClaudeService(apiUrl, getToken), footage: (getToken) => httpFootageService(apiUrl, getToken) };
 }

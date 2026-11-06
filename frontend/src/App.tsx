@@ -20,6 +20,8 @@ import { VoiceStagePage } from './pages/app/VoiceStagePage';
 import { ReelEditorPage } from './pages/app/ReelEditorPage';
 import { ExportStagePage } from './pages/app/ExportStagePage';
 import { GraphicsStagePage } from './pages/app/GraphicsStagePage';
+import { FootagePage } from './pages/app/FootagePage';
+import { FootageEditPage } from './pages/app/FootageEditPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LandingPage } from './pages/LandingPage';
 import { Toasts } from './components/Toasts';
@@ -45,6 +47,8 @@ export const routes = [
       { index: true, element: <DashboardPage /> },
       { path: 'discover', element: <DiscoverPage /> },
       { path: 'library', element: <LibraryPage /> },
+      { path: 'footage', element: <FootagePage /> },
+      { path: 'footage/:id', element: <FootageEditPage /> },
       {
         path: 'projects/:id',
         element: <ProjectLayout />,

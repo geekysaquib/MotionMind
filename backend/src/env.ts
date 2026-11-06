@@ -22,6 +22,13 @@ const schema = z
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
     SMTP_FROM: z.string().optional(),
+    // Raw footage editing. Tools are found on PATH; these override it. FOOTAGE_DIR defaults to footage/ at the repo root.
+    FOOTAGE_DIR: z.string().optional(),
+    FFMPEG_BIN: z.string().optional(),
+    FFPROBE_BIN: z.string().optional(),
+    WHISPER_CPP_BIN: z.string().optional(),
+    WHISPER_MODEL: z.string().optional(),
+    YTDLP_BIN: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.API_DATA_MODE === 'supabase' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY)) {

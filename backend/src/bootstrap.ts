@@ -32,5 +32,10 @@ export async function createAppFromEnv(env: Env, opts: { logger: boolean }): Pro
   // MP4 export renders on this machine: it needs a headless Chrome and minutes of CPU.
   const renderer = new (await import('./export/renderer')).RemotionRenderer();
 
-  return buildApp({ ...deps, renderer, sessions, mailer, authSecret: env.AUTH_SECRET, anthropicApiKey: env.ANTHROPIC_API_KEY, elevenLabsApiKey: env.ELEVENLABS_API_KEY, defaultVoiceId: env.ELEVENLABS_VOICE_ID, webOrigin: env.WEB_ORIGIN, mode: env.API_DATA_MODE, logger: opts.logger });
+  // Raw footage editing runs FFmpeg and whisper.cpp on this machine too.
+  const { FootageStore, DEFAULT_FOOTAGE_DIR } = await import('./footage/store');
+  const { LocalMediaTools } = await import('./footage/tools');
+  const footage = { store: new FootageStore(env.FOOTAGE_DIR || DEFAULT_FOOTAGE_DIR), tools: new LocalMediaTools(env) };
+
+  return buildApp({ ...deps, renderer, footage, sessions, mailer, authSecret: env.AUTH_SECRET, anthropicApiKey: env.ANTHROPIC_API_KEY, elevenLabsApiKey: env.ELEVENLABS_API_KEY, defaultVoiceId: env.ELEVENLABS_VOICE_ID, webOrigin: env.WEB_ORIGIN, mode: env.API_DATA_MODE, logger: opts.logger });
 }

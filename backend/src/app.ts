@@ -11,6 +11,7 @@ import { registerVoiceRoutes } from './voice/routes';
 import { registerEditorRoutes } from './editor/routes';
 import type { Renderer } from './export/renderer';
 import { registerExportRoutes, registerRenderDownload } from './export/routes';
+import { registerFootageFiles, registerFootageRoutes, type FootageDeps } from './footage/routes';
 import { registerLogoRoute, type LogoFetcher } from './logo/routes';
 import type { Mailer } from './auth/mailer';
 import { registerLoginRoutes } from './auth/routes';
@@ -46,6 +47,8 @@ export interface AppDeps {
   audio: AudioStore;
   /** MP4 export (Remotion), rendered on the machine running the API. Absent in tests. */
   renderer?: Renderer;
+  /** Raw footage editing (FFmpeg, whisper.cpp) on the machine running the API. Absent: the routes answer 501. */
+  footage?: FootageDeps;
   /** Builds the Claude client. Tests pass a fake. */
   claude?: (apiKey: string) => ClaudeClient;
 }
@@ -69,6 +72,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
   app.get('/health', async () => ({ ok: true, mode: deps.mode }));
   registerRenderDownload(app, deps);
   registerLogoRoute(app, deps);
+  registerFootageFiles(app, deps);
 
   // Public
   app.register(async (auth) => registerLoginRoutes(auth, deps), { prefix: '/api/auth' });
@@ -92,6 +96,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
       registerEditorRoutes(api, deps);
       registerExportRoutes(api, deps);
       registerCoverRoutes(api, deps);
+      registerFootageRoutes(api, deps);
     },
     { prefix: '/api' },
   );

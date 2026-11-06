@@ -100,6 +100,7 @@ Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `rese
 1. Add `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` if you want API-key mode (copy and paste works without them).
 2. Run `npm run assets:usage` after 20 to 30 real reels and hand-build the most-used missing 3D models.
 3. Push the branch.
+4. Edit raw footage, next slices: install whisper.cpp + a model and set `WHISPER_CPP_BIN` / `WHISPER_MODEL` for captions; brand sheet learned from 3 to 5 reference reels (yt-dlp download, FFmpeg scene cuts and frames, Claude reads them into fonts, colours, caption style, pacing; the user approves it); background music; Remotion motion graphics (hook title, lower thirds) laid over the cut.
 
 ## Commit history (newest first)
 

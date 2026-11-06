@@ -1,6 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronRight, Compass, FolderClosed, FolderOpen, LayoutDashboard, LogOut, Plus, Settings } from 'lucide-react';
+import { ChevronRight, Compass, FolderClosed, FolderOpen, LayoutDashboard, LogOut, Plus, Scissors, Settings } from 'lucide-react';
 import { useStores } from '../stores/RootStore';
 import { FloatingIcons } from '../components/FloatingIcons';
 import { ClaudeIcon } from '../components/BrandIcons';
@@ -14,6 +14,7 @@ const NAV = [
   { to: '/app', label: 'Home', icon: LayoutDashboard, end: true },
   { to: '/app/library', label: 'Projects', icon: FolderOpen },
   { to: '/app/discover', label: 'Discover', icon: Compass },
+  { to: '/app/footage', label: 'Raw footage', icon: Scissors },
   { to: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -27,6 +28,7 @@ function useCrumbs(): { label: string; to?: string }[] {
   if (parts.length === 0) return [{ label: 'Home' }];
   if (parts[0] === 'library') return [{ label: 'Projects' }];
   if (parts[0] === 'discover') return [{ label: 'Discover' }];
+  if (parts[0] === 'footage') return parts[1] ? [{ label: 'Raw footage', to: '/app/footage' }, { label: 'Edit' }] : [{ label: 'Raw footage' }];
   if (parts[0] === 'settings') return [{ label: 'Settings', to: '/app/settings' }, { label: parts[1] ? (SETTINGS_TABS[parts[1]] ?? parts[1]) : 'Profile & handle' }];
   if (parts[0] === 'projects' && parts[1]) {
     const p = projects.byId(parts[1]);
