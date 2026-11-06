@@ -55,6 +55,13 @@ describe('keptRanges and timing', () => {
     ]);
     expect(wordsIn(words, { start: 6, end: 7 })).toBe('there');
   });
+
+  it('keeps a word whose rough timing spills into a cut pause', () => {
+    const kept = [{ start: 0, end: 1 }, { start: 1.3, end: 3 }];
+    // Its middle (1.15) is in the cut, but its start was heard.
+    const out = wordsAfterCut([{ text: 'friends', start: 0.9, end: 1.4 }], kept);
+    expect(out).toEqual([{ text: 'friends', start: 0.9, end: 1.1 }]);
+  });
 });
 
 describe('carryChoices', () => {

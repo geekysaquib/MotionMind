@@ -149,15 +149,20 @@ export function toOutputTime(t: number, kept: TimeRange[]): number | null {
   return null;
 }
 
-/** The words still heard after the cut, in seconds of the cut video. A word counts if its middle survived. */
+/**
+ * The words still heard after the cut, in seconds of the cut video. Word timings from speech recognition are
+ * rough, so a word counts when any noticeable part of it (30 ms) survived, and it starts where that part starts.
+ */
 export function wordsAfterCut(words: FootageWord[], kept: TimeRange[]): FootageWord[] {
   const out: FootageWord[] = [];
   for (const w of words) {
-    const mid = toOutputTime((w.start + w.end) / 2, kept);
-    if (mid === null) continue;
-    const len = Math.max(0.05, Math.min(w.end - w.start, 2));
-    const start = Math.max(0, round(mid - len / 2));
-    out.push({ text: w.text, start, end: round(start + len) });
+    const parts = kept.map((r) => ({ start: Math.max(r.start, w.start), end: Math.min(r.end, w.end) })).filter((p) => p.end - p.start > 0);
+    const heard = parts.reduce((sum, p) => sum + (p.end - p.start), 0);
+    if (heard < Math.min(0.03, (w.end - w.start) / 2)) continue;
+    const start = toOutputTime(parts[0]!.start, kept)!;
+    const prev = out[out.length - 1];
+    const from = Math.max(start, prev ? prev.start + 0.05 : 0);
+    out.push({ text: w.text, start: round(from), end: round(Math.max(from + 0.05, from + Math.min(heard, 2))) });
   }
   return out;
 }
