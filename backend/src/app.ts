@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from 'fastify';
+import type { FreeVoice } from './voice/freeVoice';
 import cors from '@fastify/cors';
 import { registerAccountRoutes } from './account/routes';
 import type { ClaudeClient } from './ai/claude';
@@ -49,6 +50,8 @@ export interface AppDeps {
   renderer?: Renderer;
   /** Raw footage editing (FFmpeg, whisper.cpp) on the machine running the API. Absent: the routes answer 501. */
   footage?: FootageDeps;
+  /** The free neural voice (no key). Absent: the free-voice route answers 503. */
+  freeVoice?: FreeVoice;
   /** Builds the Claude client. Tests pass a fake. */
   claude?: (apiKey: string) => ClaudeClient;
 }

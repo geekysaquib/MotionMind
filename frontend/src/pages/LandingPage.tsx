@@ -31,8 +31,8 @@ const STEPS = [
   { icon: Sparkles, title: 'Pick a topic', text: 'Type a question, or start from an idea. Choose the length and the quality.', sample: '“How does a Soundbox know the money arrived?”' },
   { icon: FileSearch, title: 'Research it', text: 'Sources are searched and every claim is marked verified, single-source or conflicting.', sample: '12 facts · 9 verified · 7 sources' },
   { icon: PenLine, title: 'Write the script', text: 'A hook, the explanation in steps, and a payoff, in Hindi, Hinglish or English.', sample: '9 scenes · 52 seconds spoken' },
-  { icon: Layers3, title: 'Storyboard', text: 'Every line becomes a scene. Edit the words, the objects, the links and the look.', sample: 'Phone → NPCI → Bank → Soundbox' },
-  { icon: Boxes, title: 'See it in 3D', text: 'An animated isometric world where the camera glides between the things you are explaining.', sample: 'Any object, any topic' },
+  { icon: Layers3, title: 'Storyboard', text: 'Every line becomes a scene. Edit the words and the picture: steps, numbers, items or a note.', sample: 'Phone → NPCI → Bank → Soundbox' },
+  { icon: Boxes, title: 'Pick a style', text: 'A live city map, a whiteboard, a dark keynote stage, a metro map or a newsroom. Your own reel, previewed in each.', sample: '5 styles, never the same look' },
   { icon: Mic, title: 'Add the voice', text: 'Copy the narration into any text-to-speech tool, or upload your own recording. Set the pace per scene.', sample: 'Captions follow every word' },
   { icon: Clapperboard, title: 'Export', text: 'A 1080 × 1920 MP4 for Instagram Reels, YouTube Shorts or both, with safe margins for each app and your branded end card.', sample: 'Ready to post' },
 ];
@@ -77,7 +77,7 @@ function PhoneMock() {
         </div>
       </div>
       <Chip className="-left-16 top-16 sm:-left-24" icon={<FileSearch className="h-3.5 w-3.5" />} text="12 facts verified" delay="0s" />
-      <Chip className="-right-12 top-44 sm:-right-20" icon={<Boxes className="h-3.5 w-3.5" />} text="3D scene ready" delay="-2s" />
+      <Chip className="-right-12 top-44 sm:-right-20" icon={<Boxes className="h-3.5 w-3.5" />} text="Style picked" delay="-2s" />
       <Chip className="-left-12 bottom-24 sm:-left-20" icon={<Mic className="h-3.5 w-3.5" />} text="Voice in sync" delay="-4s" />
       <Chip className="-right-10 top-6 sm:-right-16" icon={<InstagramIcon className="h-3.5 w-3.5" />} text="Reels ready" delay="-1s" raw />
       <Chip className="-right-14 bottom-10 sm:-right-24" icon={<YouTubeIcon className="h-3.5 w-3.5" />} text="Shorts ready" delay="-3s" raw />
@@ -139,7 +139,7 @@ export const LandingPage = observer(function LandingPage() {
               Today: <Typewriter className="text-accent" phrases={['how UPI Soundbox speaks', 'how a vaccine trains your body', 'where my train is, offline', 'why 5G needs so many towers']} />
             </p>
             <p className="mt-5 max-w-xl animate-rise text-lg text-ink-400 [animation-delay:240ms]">
-              {BRAND.name} researches the topic, writes the script, builds animated 3D scenes that match what you are explaining, and gives you a voice script,
+              {BRAND.name} researches the topic, writes the script, draws it in the motion-graphics style you pick, and gives you a voice script,
               timed captions and a ready-to-post 9:16 video for Instagram Reels, YouTube Shorts, or both.
             </p>
             <div className="mt-9 flex animate-rise flex-wrap items-center gap-3 [animation-delay:320ms]">
@@ -190,9 +190,9 @@ export const LandingPage = observer(function LandingPage() {
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-5 text-center md:grid-cols-4">
           {[
             { n: 2, label: 'platforms: Instagram Reels and YouTube Shorts' },
-            { n: 16, label: 'ready 3D objects, plus any icon you like', suffix: '+' },
+            { n: 5, label: 'reel styles, from a live map to a newsroom' },
             { n: 3, label: 'languages for voice and captions' },
-            { n: 0, label: 'API keys needed in copy-paste mode' },
+            { n: 0, label: 'API keys needed in copy-paste mode', suffix: '' },
           ].map((s, i) => (
             <Reveal key={s.label} delay={i * 90}>
               <div className="font-display text-5xl font-bold tracking-tight text-accent">

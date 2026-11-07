@@ -2,7 +2,7 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { PLATFORM_IDS, editorSpecParts, reelWorld, templateOf, type Platform, type Project } from '@motionmind/shared';
+import { DEFAULT_STYLE, PLATFORM_IDS, editorSpecParts, type Platform, type Project } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { voicePath } from '../voice/audioStore';
 
@@ -14,14 +14,10 @@ export async function reelSpecFor(deps: AppDeps, userId: string, project: Projec
   const initials = name.split(/\s+/).map((w) => w[0] ?? '').join('').slice(0, 2).toUpperCase() || 'MM';
   const spec: Record<string, unknown> = {
     title: script.title,
-    // Same rule as the web app's worldFor().
-    world: reelWorld(script),
-    theme: script.theme,
-    layout: script.layout,
+    style: script.style ?? DEFAULT_STYLE,
     steps: script.steps,
     brand: { name, initials, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', tagline: '' },
     beats: script.beats,
-    look: templateOf(script.template).look,
     glossary: script.glossary,
     brands: script.brands,
     // The renderer's browser loads company logos from this API.
@@ -39,7 +35,6 @@ export async function reelSpecFor(deps: AppDeps, userId: string, project: Projec
     sfx: Object.fromEntries(sfxPaths.flatMap((p) => (urls[paths.indexOf(p)] ? [[p, urls[paths.indexOf(p)]!]] : []))),
   });
   Object.assign(spec, parts);
-  if (!spec.captions) spec.captions = templateOf(script.template).captions;
 
   // ElevenLabs voice is used only when no uploaded recording drives the reel.
   const voice = project.voice;

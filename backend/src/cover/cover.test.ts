@@ -13,7 +13,7 @@ const secret = randomBytes(32).toString('base64');
 const H = { authorization: 'Bearer dev:user-a' };
 const B = { authorization: 'Bearer dev:user-b' };
 const beat = (id: string) => ({ id, narration: 'Ek second.', keywords: [], chapter: 0, card: { eyebrow: 'UPI', headline: 'Fast', tone: 'teal' as const, rows: [] } });
-const SCRIPT: ReelScript = { title: 'How UPI works', world: 'iso', steps: ['App'], beats: [beat('a'), beat('b')] };
+const SCRIPT: ReelScript = { title: 'How UPI works', steps: ['App'], beats: [beat('a'), beat('b')] };
 const COVER: CoverSettings = { scene: 1, headline: 'How *UPI* works', kicker: 'Explained', style: 'center', size: 'feed', tone: 'purple', brand: true };
 
 class FakeRenderer implements Renderer {
@@ -80,9 +80,9 @@ describe('cover render', () => {
     const jpg = await app.inject({ method: 'POST', url: `/api/projects/${id}/cover/render`, headers: H, payload: { cover: COVER, format: 'jpeg' } });
     expect(jpg.json().url).toMatch(/\.jpg$/);
     expect(renderer.stills).toHaveLength(2);
-    const props = renderer.stills[0]!.props as { cover: CoverSettings; world: string; beats: unknown[] };
+    const props = renderer.stills[0]!.props as { cover: CoverSettings; style: string; beats: unknown[] };
     expect(props.cover).toEqual(COVER);
-    expect(props.world).toBe('iso');
+    expect(props.style).toBe('live-map');
     expect(props.beats).toHaveLength(2);
     expect(renderer.stills[1]!.format).toBe('jpeg');
   });

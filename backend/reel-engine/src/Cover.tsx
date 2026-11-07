@@ -1,191 +1,95 @@
 import React, { useMemo } from 'react';
 import { AbsoluteFill, useVideoConfig } from 'remotion';
-import { reelTiming, type ReelSpec, type Tone } from './script';
-import { C, World } from './World';
-import { Backdrop } from './Backdrop';
-import { IsoWorld, frameScene, layoutProps, themeFade } from './IsoWorld';
-import { FlatWorld } from './Shots';
-import { shotPlan } from './shotplan';
-import { withScenes } from './autoScene';
-import { cameraAt, fxAt, logoUrlsOf, pinProgressAt, useLogosLoaded } from './Reel';
-import { Highlight } from './Ui';
-import { fitHeadline, worldRegion, type CoverProps } from './coverLayout';
+import { DEFAULT_CAPTION_STYLE, reelTiming, type ReelSpec } from './script';
+import { kitFor } from './styles';
+import { logoUrlsOf, parts, useLogosLoaded, zonesFor } from './styles/common';
+import { fitHeadline, type CoverProps } from './coverLayout';
 
 /** A reel plus the settings of its cover. This is the input of the "Cover" composition, a single still image. */
 export type CoverSpec = ReelSpec & { cover: CoverProps };
 
-const TONE: Record<Tone, string> = { red: C.red, teal: C.teal, purple: C.purple, blue: C.blue, amber: C.amber };
-const MONO = 'JetBrains Mono';
-const DISPLAY = 'Space Grotesk';
-
-function Kicker({ text, color, s, panel, center }: { text: string; color: string; s: number; panel: string; center?: boolean }) {
-  if (!text.trim()) return null;
-  return (
-    <div style={{ display: 'flex', justifyContent: center ? 'center' : 'flex-start' }}>
-      <span
-        style={{
-          fontFamily: MONO,
-          fontWeight: 700,
-          fontSize: 30 * s,
-          letterSpacing: 6 * s,
-          textTransform: 'uppercase',
-          color,
-          background: panel,
-          border: `${3 * s}px solid ${color}`,
-          borderRadius: 999,
-          padding: `${10 * s}px ${26 * s}px`,
-        }}
-      >
-        {text}
-      </span>
-    </div>
-  );
-}
-
-function BrandChip({ brand, tone, dark, s, solid }: { brand: ReelSpec['brand']; tone: string; dark: boolean; s: number; solid?: boolean }) {
-  return (
-    <div
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 18 * s,
-        padding: `${12 * s}px ${28 * s}px ${12 * s}px ${14 * s}px`,
-        borderRadius: 999,
-        background: solid ? (dark ? 'rgba(16,20,42,0.86)' : 'rgba(255,255,255,0.92)') : 'transparent',
-        boxShadow: solid ? '0 10px 30px rgba(31,36,48,0.18)' : undefined,
-      }}
-    >
-      <div
-        style={{
-          width: 64 * s,
-          height: 64 * s,
-          borderRadius: 999,
-          background: C.ink,
-          color: '#fff',
-          border: `${4 * s}px solid ${tone}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: DISPLAY,
-          fontWeight: 700,
-          fontSize: 26 * s,
-        }}
-      >
-        {brand.initials}
-      </div>
-      <div>
-        <div style={{ fontFamily: MONO, fontWeight: 700, fontSize: 30 * s, letterSpacing: 4 * s, color: dark ? '#F1F3F9' : C.ink }}>{brand.name.toUpperCase()}</div>
-        <div style={{ fontFamily: MONO, fontSize: 26 * s, color: dark ? '#A9B1C6' : '#6B7180', marginTop: 2 * s }}>{brand.handle}</div>
-      </div>
-    </div>
-  );
-}
-
 /**
- * The cover (thumbnail) of a reel: one scene of its 3D world, framed to leave room for a big headline.
+ * The cover (thumbnail) of a reel: one settled moment of a scene, drawn in the reel's style, with a big headline.
  * Three layouts (bold at the bottom, a card in the middle, a panel at the top) in three sizes.
  */
 export const Cover: React.FC<CoverSpec> = (input) => {
-  const { cover, ...rest } = input;
+  const { cover, ...spec } = input;
   const { width: W, height: H, fps } = useVideoConfig();
-  const spec = useMemo(() => withScenes(rest as ReelSpec), [rest]);
-  // The picture is taken only after the company logos have loaded.
   useLogosLoaded(useMemo(() => logoUrlsOf(spec), [spec]));
   const { timed, storyFrames } = useMemo(() => reelTiming(spec), [spec]);
-  const placed = useMemo(() => layoutProps(timed, spec.layout), [timed, spec.layout]);
+  const kit = kitFor(spec.style);
+  const p = kit.palette;
   const idx = Math.min(timed.length - 1, Math.max(0, Math.round(cover.scene) || 0));
   const beat = timed[idx]!;
-  // A moment late in the scene: the objects have dropped in and the camera has settled.
+  // A moment late in the scene, once everything has drawn in.
   const frame = beat.start + Math.min(beat.frames - 1, Math.max(75, Math.round(beat.frames * 0.85)));
-  const accent = TONE[cover.tone ?? beat.card.tone] ?? C.teal;
-  const dark = spec.world === 'iso' && spec.theme === 'night';
-  const panel = dark ? '#10142A' : spec.world === 'iso' ? themeFade(spec.theme) : C.bg;
-  const ink = dark ? '#FFFFFF' : C.ink;
   const s = W / 1080;
-  const region = worldRegion(cover.style, W, H);
-
-  const world =
-    spec.world === 'iso' && spec.look?.scene === 'diagram' ? (
-      <FlatWorld frame={frame} fps={fps} beat={beat} look={spec.look} shot={shotPlan(timed, spec.look?.shots)[idx] ?? 'nodes'} region={{ l: region.left, r: region.right, t: region.top, b: region.bottom }} logoBase={spec.logoBase} />
-    ) : spec.world === 'iso' ? (
-      <IsoWorld frame={frame} fps={fps} cam={frameScene(beat.scene, placed, region)} beat={beat} placed={placed} theme={spec.theme} fade={false} logoBase={spec.logoBase} linkStyle={spec.look?.links} />
-    ) : spec.world === 'train' ? (
-      <World frame={frame} fps={fps} cam={cameraAt(timed, storyFrames, frame, fps)} fx={fxAt(timed, frame)} pinProgress={pinProgressAt(timed, frame, fps)} />
-    ) : (
-      <Backdrop frame={frame} fps={fps} tone={beat.card.tone} chapter={beat.chapter} progress={0.5} />
-    );
+  // The stage is drawn at reel size and scaled to the cover's width; shorter covers show its middle.
+  const zones = zonesFor(spec.platform, DEFAULT_CAPTION_STYLE);
+  const stageScale = W / 1080;
+  const stageTop = (H - 1920 * stageScale) / 2 - (cover.style === 'split' ? -H * 0.12 : H * 0.08);
 
   const headline = (fontSize: number, align: 'left' | 'center') => (
-    <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize, lineHeight: 1.04, letterSpacing: -fontSize * 0.02, color: ink, textAlign: align, marginTop: 26 * s }}>
-      <Highlight text={cover.headline} tone={accent} />
+    <div style={{ fontFamily: p.font, fontWeight: 900, fontSize, lineHeight: 1.04, letterSpacing: -fontSize * 0.02, color: p.ink, textAlign: align, marginTop: 22 * s }}>
+      {parts(cover.headline).map((x, i) => (x.hi ? <span key={i} style={{ color: p.hiInk, background: p.hiBg, padding: p.hiBg === 'transparent' ? 0 : `0 ${10 * s}px` }}>{x.text}</span> : <span key={i}>{x.text}</span>))}
     </div>
   );
+  const kicker = cover.kicker.trim() ? (
+    <span style={{ fontFamily: p.font, fontWeight: 800, fontSize: 30 * s, letterSpacing: 6 * s, textTransform: 'uppercase', color: p.bg, background: p.accent, padding: `${10 * s}px ${24 * s}px`, borderRadius: 999 }}>{cover.kicker}</span>
+  ) : null;
+  const brand = cover.brand ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16 * s, fontFamily: p.font }}>
+      <div style={{ width: 64 * s, height: 64 * s, borderRadius: 999, background: p.accent, color: p.bg, fontWeight: 900, fontSize: 26 * s, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{spec.brand.initials}</div>
+      <div style={{ color: p.ink, fontWeight: 800, fontSize: 30 * s }}>
+        {spec.brand.name}
+        <div style={{ fontWeight: 500, fontSize: 24 * s, opacity: 0.7 }}>{spec.brand.handle}</div>
+      </div>
+    </div>
+  ) : null;
 
   let text: React.ReactNode;
   if (cover.style === 'bold') {
     const fit = fitHeadline(cover.headline, W - 140 * s, H * 0.3);
     text = (
       <>
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: H * 0.52, background: `linear-gradient(to top, ${panel} 0%, ${panel} 56%, ${panel}00 100%)` }} />
-        <div style={{ position: 'absolute', left: 70 * s, right: 70 * s, bottom: (cover.brand ? 150 : 90) * s }}>
-          <Kicker text={cover.kicker} color={accent} s={s} panel={panel} />
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: H * 0.5, background: `linear-gradient(to top, ${p.bg} 0%, ${p.bg} 58%, ${p.bg}00 100%)` }} />
+        <div style={{ position: 'absolute', left: 70 * s, right: 70 * s, bottom: (cover.brand ? 160 : 90) * s }}>
+          {kicker}
           {headline(fit.fontSize * s, 'left')}
         </div>
-        {cover.brand && (
-          <div style={{ position: 'absolute', left: 56 * s, bottom: 50 * s }}>
-            <BrandChip brand={spec.brand} tone={accent} dark={dark} s={s} />
-          </div>
-        )}
+        {brand && <div style={{ position: 'absolute', left: 60 * s, bottom: 50 * s }}>{brand}</div>}
       </>
     );
   } else if (cover.style === 'center') {
-    const fit = fitHeadline(cover.headline, W - 120 * s - 120 * s, H * 0.25);
+    const fit = fitHeadline(cover.headline, W - 240 * s, H * 0.25);
     text = (
       <>
-        <div
-          style={{
-            position: 'absolute',
-            left: 60 * s,
-            right: 60 * s,
-            top: H * 0.585,
-            padding: `${46 * s}px ${56 * s}px ${50 * s}px`,
-            background: dark ? '#1B2140' : '#FFFFFF',
-            borderRadius: 56 * s,
-            border: `${5 * s}px solid ${accent}`,
-            boxShadow: '0 30px 80px rgba(31,36,48,0.28)',
-          }}
-        >
-          <Kicker text={cover.kicker} color={accent} s={s} panel={dark ? '#1B2140' : '#FFFFFF'} center />
+        <div style={{ position: 'absolute', left: 60 * s, right: 60 * s, top: H * 0.56, padding: `${44 * s}px ${56 * s}px`, background: p.panel, borderRadius: 50 * s, border: `${5 * s}px solid ${p.accent}`, boxShadow: '0 30px 80px rgba(0,0,0,0.3)', textAlign: 'center' }}>
+          {kicker}
           {headline(fit.fontSize * s, 'center')}
         </div>
-        {cover.brand && (
-          <div style={{ position: 'absolute', left: 56 * s, top: 56 * s }}>
-            <BrandChip brand={spec.brand} tone={accent} dark={dark} s={s} solid />
-          </div>
-        )}
+        {brand && <div style={{ position: 'absolute', left: 56 * s, top: 56 * s }}>{brand}</div>}
       </>
     );
   } else {
     const fit = fitHeadline(cover.headline, W - 140 * s, H * 0.4 - 230 * s);
     text = (
       <>
-        <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: H * 0.4, background: panel, borderBottom: `${16 * s}px solid ${accent}`, boxShadow: '0 20px 60px rgba(31,36,48,0.22)' }} />
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: H * 0.4, background: p.bg, borderBottom: `${16 * s}px solid ${p.accent}` }} />
         <div style={{ position: 'absolute', left: 70 * s, right: 70 * s, top: 76 * s }}>
-          <Kicker text={cover.kicker} color={accent} s={s} panel={panel} />
+          {kicker}
           {headline(fit.fontSize * s, 'left')}
         </div>
-        {cover.brand && (
-          <div style={{ position: 'absolute', left: 56 * s, bottom: 50 * s }}>
-            <BrandChip brand={spec.brand} tone={accent} dark={dark} s={s} solid />
-          </div>
-        )}
+        {brand && <div style={{ position: 'absolute', left: 56 * s, bottom: 50 * s }}>{brand}</div>}
       </>
     );
   }
 
   return (
-    <AbsoluteFill style={{ background: panel, overflow: 'hidden' }}>
-      {world}
+    <AbsoluteFill style={{ background: p.bg, overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', left: 0, top: stageTop, width: 1080, height: 1920, transform: `scale(${stageScale})`, transformOrigin: 'top left' }}>
+        <kit.Stage frame={frame} fps={fps} spec={spec} timed={timed} beat={beat} index={idx} storyFrames={storyFrames} zones={zones} captions={DEFAULT_CAPTION_STYLE} bare />
+      </div>
       {text}
     </AbsoluteFill>
   );

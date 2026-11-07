@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
-import { AudioLines, Upload, Mic } from 'lucide-react';
+import { AudioLines, Upload, Mic, Gift } from 'lucide-react';
 import type { Project, ReelVoice } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
@@ -15,7 +15,7 @@ import type { EditorUrls } from '../../services/claudeHttp';
 
 const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 
-/** Voice stage: ElevenLabs reads every scene (server key); the preview plays the reel with the voiceover. */
+/** Voice stage: your own recording, the free neural voice (no key), or ElevenLabs (server key); the preview plays the reel with the voiceover. */
 export const VoiceStagePage = observer(function VoiceStagePage() {
   const project = useOutletContext<Project>();
   const { projects, profile, services, auth, aiMode } = useStores();
@@ -29,6 +29,9 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
   const [editorUrls, setEditorUrls] = useState<EditorUrls>({});
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  const [freeVoices, setFreeVoices] = useState<{ id: string; name: string }[]>([]);
+  const [freeId, setFreeId] = useState('');
+  const [freeBusy, setFreeBusy] = useState(false);
 
   useEffect(() => {
     if (!aiMode.paste) {
@@ -40,6 +43,15 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
         })
         .catch((e) => setVoicesError(errorText(e)));
     }
+    // Older test doubles and servers may not have the free voice: then the card stays hidden.
+    Promise.resolve()
+      .then(() => api.freeVoices())
+      .then((r) => {
+        if (!r.available) return;
+        setFreeVoices(r.voices);
+        setFreeId(r.voices.some((v) => v.id === project.voice?.voiceId) ? project.voice!.voiceId : r.defaultVoiceId);
+      })
+      .catch(() => undefined);
     api
       .editorFor(project.id)
       .then((r) => setEditorUrls(r.urls))
@@ -91,6 +103,22 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
     }
   }
 
+  async function generateFree() {
+    setFreeBusy(true);
+    setError(null);
+    const started = Date.now();
+    try {
+      const res = await api.generateFreeVoice(project.id, freeId || undefined);
+      projects.upsert(res.project);
+      setAudio({ voice: res.project.voice, urls: res.urls, stale: false });
+      log.info('voice', 'Free voiceover generated', { projectId: project.id, voice: freeId, ms: Date.now() - started });
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setFreeBusy(false);
+    }
+  }
+
   if (!script) {
     return (
       <EmptyState icon={<Mic className="h-6 w-6" />} title="No script yet" text="The voice script is the narration of your scenes, so write the script first." to={`/app/projects/${project.id}/script`} action="Go to Script" />
@@ -128,6 +156,35 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
           </div>
         </Card>
 
+        {freeVoices.length > 0 && (
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 font-semibold">
+                <Gift className="h-4 w-4 text-accent" /> Free voice
+              </h2>
+              <Badge tone="mint">No key needed</Badge>
+            </div>
+            <p className="mt-1 text-sm text-ink-400">A Microsoft neural voice reads every scene, with word timings for the captions. Hindi voices read Hinglish well. Good for drafts; ElevenLabs or your own voice sounds more natural.</p>
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <label className="block text-xs text-ink-400">
+                Voice
+                <select aria-label="Free voice" className="mt-1 block min-w-[220px] rounded-lg border border-line/15 bg-transparent px-3 py-2 text-sm text-ink-100" value={freeId} onChange={(e) => setFreeId(e.target.value)}>
+                  {freeVoices.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button variant={audio?.voice ? 'secondary' : 'primary'} loading={freeBusy} onClick={() => void generateFree()}>
+                Make it with the free voice
+              </Button>
+            </div>
+            {freeBusy && <p className="mt-3 text-sm text-ink-400">Recording {script.beats.length} scenes. This takes about {Math.max(10, script.beats.length * 2)} seconds.</p>}
+            {aiMode.paste && error && <div className="mt-4"><Alert>{error}</Alert></div>}
+          </Card>
+        )}
+
         {!aiMode.paste && (
         <Card>
           <h2 className="flex items-center gap-2 font-semibold">
@@ -162,7 +219,7 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
         </Card>
         )}
 
-        {!aiMode.paste && audio?.voice && (
+        {audio?.voice && (
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-semibold">Current voiceover</h3>

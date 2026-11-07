@@ -304,20 +304,21 @@ describe('storyboard edits', () => {
     expect(res.json().project.script.beats[0].id).toBe('npci');
   });
 
-  it('keeps locked object positions, and refuses nonsense ones', async () => {
+  it('keeps the picked style on the storyboard and through a rewrite, and refuses an unknown one', async () => {
     const { app } = await setup();
     const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'x', durationSec: 60, qualityTier: 'standard' } });
     const id = created.json().project.id;
     await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
-    const put = (layout: unknown) => app.inject({ method: 'PUT', url: `/api/projects/${id}/script`, headers: H, payload: { script: { ...SCRIPT, layout } } });
-    const ok = await put({ you: { x: 1.5, y: -2 }, bank: { x: 8, y: 0 } });
-    expect(ok.statusCode).toBe(200);
-    expect(ok.json().project.script.layout).toEqual({ you: { x: 1.5, y: -2 }, bank: { x: 8, y: 0 } });
-    expect((await put({ you: { x: 'left', y: 0 } })).statusCode).toBe(400);
-    expect((await put({ you: { x: 9999, y: 0 } })).statusCode).toBe(400);
-    // Saving without a layout unlocks.
-    const cleared = await app.inject({ method: 'PUT', url: `/api/projects/${id}/script`, headers: H, payload: { script: SCRIPT } });
-    expect(cleared.json().project.script.layout).toBeUndefined();
+    const picked = await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: H, payload: { style: 'whiteboard' } });
+    expect(picked.statusCode).toBe(200);
+    expect(picked.json().project).toMatchObject({ stage: 'graphics', script: { style: 'whiteboard' } });
+    expect(picked.json().project.script.editedAt).toBeUndefined();
+    expect((await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: H, payload: { style: 'vaporwave' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: { authorization: 'Bearer dev:u2' }, payload: { style: 'newsroom' } })).statusCode).toBe(404);
+    const saved = await app.inject({ method: 'PUT', url: `/api/projects/${id}/script`, headers: H, payload: { script: { ...SCRIPT, style: 'newsroom' } } });
+    expect(saved.json().project.script.style).toBe('newsroom');
+    const rewritten = await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
+    expect(rewritten.json().project.script.style).toBe('newsroom');
   });
 
   it('rejects a broken or empty storyboard and other people\'s projects', async () => {
@@ -331,34 +332,21 @@ describe('storyboard edits', () => {
   });
 });
 
-describe('3D scenes in the script format', () => {
-  it('accepts an iso script with scenes, and a train script with shots and effects', async () => {
+describe('Scripts written before the style engine', () => {
+  it('still load: the old 3D fields (world, theme, scene, shot) are dropped', async () => {
     const { parsePastedScript } = await import('./reelPrompt');
-    const iso = { ...SCRIPT, world: 'iso', beats: SCRIPT.beats.map((b, i) => ({ ...b, scene: { props: [{ id: 'you', kind: 'phone', label: 'You' }, { id: `b${i}`, kind: 'bank' }], links: [{ from: 'you', to: `b${i}`, label: 'Request' }], effect: 'rings', focus: 'you' } })) };
-    expect(parsePastedScript(JSON.stringify(iso)).beats[0]!.scene!.props[1]!.kind).toBe('bank');
-    const train = { ...SCRIPT, world: 'train', beats: SCRIPT.beats.map((b) => ({ ...b, shot: 'tower', events: ['rings', 'towerIds'] })) };
-    expect(parsePastedScript(JSON.stringify(train)).beats[0]!.shot).toBe('tower');
+    const old = { ...SCRIPT, world: 'iso', theme: 'lab', beats: SCRIPT.beats.map((b) => ({ ...b, shot: 'tower', scene: { props: [{ id: 'you', kind: 'phone' }] } })) };
+    const parsed = parsePastedScript(JSON.stringify(old)) as Record<string, unknown> & { beats: Record<string, unknown>[] };
+    expect(parsed.world).toBeUndefined();
+    expect(parsed.theme).toBeUndefined();
+    expect(parsed.beats[0]!.scene).toBeUndefined();
+    expect(parsed.beats[0]!.shot).toBeUndefined();
   });
 
-  it('keeps custom objects (icon, shape, colour) and the world theme', async () => {
-    const { parsePastedScript } = await import('./reelPrompt');
-    const scene = { props: [{ id: 'v', kind: 'custom', label: 'Virus', icon: '🦠', shape: 'round', tone: 'red' }], effect: 'pulse', focus: 'v' };
-    const script = { ...SCRIPT, world: 'iso', theme: 'lab', beats: SCRIPT.beats.map((b) => ({ ...b, scene })) };
-    const parsed = parsePastedScript(JSON.stringify(script));
-    expect(parsed.theme).toBe('lab');
-    expect(parsed.beats[0]!.scene!.props[0]).toEqual({ id: 'v', kind: 'custom', label: 'Virus', icon: '🦠', shape: 'round', tone: 'red' });
-  });
-
-  it('rejects objects the 3D kit cannot draw', async () => {
-    const { parsePastedScript } = await import('./reelPrompt');
-    const bad = { ...SCRIPT, beats: [{ ...SCRIPT.beats[0], scene: { props: [{ id: 'x', kind: 'dragon' }] } }] };
-    expect(() => parsePastedScript(JSON.stringify(bad))).toThrow(/missing something/);
-  });
-
-  it('tells Claude about both worlds in the prompt', async () => {
+  it('tells Claude how each row becomes the scene picture', async () => {
     const { manualReelPrompt } = await import('./reelPrompt');
     const prompt = manualReelPrompt({ topic: 'UPI', durationSec: 30, language: 'en', niche: null, channelName: null });
-    expect(prompt).toContain('"train" only for topics about trains');
-    expect(prompt).toContain('satellite');
+    expect(prompt).toContain('FIRST card row');
+    expect(prompt).not.toContain('isometric');
   });
 });

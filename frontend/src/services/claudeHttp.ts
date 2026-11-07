@@ -1,4 +1,4 @@
-import type { AudioTrack, CoverSettings, Platform, Project, ReelEditor, ReelScript, ReelVoice } from '@motionmind/shared';
+import type { AudioTrack, CoverSettings, Platform, Project, ReelEditor, ReelScript, ReelVoice, StyleId } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
 
@@ -36,7 +36,7 @@ export interface EditorUrls {
 
 export interface RenderJob {
   id: string;
-  status: 'bundling' | 'rendering' | 'done' | 'failed';
+  status: 'bundling' | 'rendering' | 'finishing' | 'done' | 'failed';
   progress: number;
   file?: string;
   error?: string;
@@ -88,6 +88,11 @@ export interface ClaudeService {
   voices(): Promise<{ voices: { id: string; name: string }[]; defaultVoiceId: string | null }>;
   voiceFor(projectId: string): Promise<{ voice: ReelVoice | null; urls: string[]; stale: boolean }>;
   generateVoice(projectId: string, voiceId?: string, voiceName?: string): Promise<{ project: Project; urls: string[] }>;
+  /** The free neural voice (no key): its voices, and a voiceover made with one. */
+  freeVoices(): Promise<{ voices: { id: string; name: string; language: string }[]; defaultVoiceId: string; available: boolean }>;
+  generateFreeVoice(projectId: string, voiceId?: string): Promise<{ project: Project; urls: string[] }>;
+  /** Style: the look the reel is drawn in. */
+  saveStyle(projectId: string, style: StyleId): Promise<Project>;
   /** Reel editor: upload voice/music, then save the editor state. */
   uploadAudio(projectId: string, kind: 'voice' | 'music' | 'sfx', file: Blob, fileName: string): Promise<{ track: Pick<AudioTrack, 'path' | 'fileName' | 'mime'>; url: string }>;
   editorFor(projectId: string): Promise<{ editor: ReelEditor | null; urls: EditorUrls }>;
@@ -124,6 +129,9 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     voices: () => call('/voices'),
     voiceFor: (projectId) => call(`/projects/${projectId}/voice`),
     generateVoice: (projectId, voiceId, voiceName) => call(`/projects/${projectId}/voice`, 'POST', { voiceId, voiceName }),
+    freeVoices: () => call('/voices/free'),
+    generateFreeVoice: (projectId, voiceId) => call(`/projects/${projectId}/voice/free`, 'POST', { voiceId }),
+    saveStyle: async (projectId, style) => (await call<{ project: Project }>(`/projects/${projectId}/style`, 'PUT', { style })).project,
     uploadAudio: (projectId, kind, file, fileName) => {
       const token = getToken();
       if (!token) throw new ServiceError('You are signed out.', 'unauthorized');

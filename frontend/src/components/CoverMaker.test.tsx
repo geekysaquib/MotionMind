@@ -10,10 +10,9 @@ const beat = (id: string, eyebrow: string, props: number) => ({
   narration: 'Ek second.',
   keywords: [],
   chapter: 0,
-  card: { eyebrow, headline: 'Fast', tone: 'teal' as const, rows: [] },
-  scene: { props: Array.from({ length: props }, (_, i) => ({ id: `${id}${i}`, kind: 'phone' as const })), links: [], effect: 'none' as const },
+  card: { eyebrow, headline: 'Fast', tone: 'teal' as const, rows: Array.from({ length: props }, () => ({ kind: 'note' as const, text: 'n' })) },
 });
-const SCRIPT: ReelScript = { title: 'Soundbox kaise bolta hai', world: 'iso', steps: ['App'], beats: [beat('a', 'Interview', 1), beat('b', 'Callback', 3)] };
+const SCRIPT: ReelScript = { title: 'Soundbox kaise bolta hai', steps: ['App'], beats: [beat('a', 'Interview', 1), beat('b', 'Callback', 3)] };
 
 async function setup(over: Partial<ClaudeService> = {}, script: ReelScript = SCRIPT) {
   const store = await makeStore({ signedIn: true });

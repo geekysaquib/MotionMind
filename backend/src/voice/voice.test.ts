@@ -7,6 +7,7 @@ import { DevTokenVerifier } from '../auth/verifiers';
 import { wordTimings } from '../connectors/elevenlabs';
 import { MemoryDataRepository } from '../data/repository';
 import { MemoryAudioStore } from './audioStore';
+import { parseWordBoundaries, type FreeVoice } from './freeVoice';
 
 const secret = randomBytes(32).toString('base64');
 const H = { authorization: 'Bearer dev:u1' };
@@ -40,7 +41,7 @@ function fakeEleven() {
   return { fetchImpl, spoken };
 }
 
-async function setup(opts: { key?: string | null; fetchImpl?: typeof fetch } = {}) {
+async function setup(opts: { key?: string | null; fetchImpl?: typeof fetch; freeVoice?: FreeVoice } = {}) {
   const data = new MemoryDataRepository();
   const audio = new MemoryAudioStore();
   const app = await buildApp({
@@ -55,6 +56,7 @@ async function setup(opts: { key?: string | null; fetchImpl?: typeof fetch } = {
     elevenLabsApiKey: opts.key === null ? undefined : (opts.key ?? 'el-server-key'),
     defaultVoiceId: 'v-default',
     fetchImpl: opts.fetchImpl,
+    freeVoice: opts.freeVoice,
   });
   const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'UPI', durationSec: 30, qualityTier: 'draft' } });
   const id = created.json().project.id as string;
@@ -120,5 +122,58 @@ describe('wordTimings', () => {
       { start: 0, end: 0.2 },
       { start: 0.3, end: 0.5 },
     ]);
+  });
+});
+
+describe('free voice', () => {
+  const fake = () => {
+    const spoken: { text: string; voice: string }[] = [];
+    const tts: FreeVoice = {
+      speak: async (text, voice) => {
+        spoken.push({ text, voice });
+        return { audio: Buffer.from(`mp3:${text}`), durationSec: 1.5, words: [{ start: 0.1, end: 0.4 }] };
+      },
+    };
+    return { tts, spoken };
+  };
+
+  it('reads every scene with the picked voice, without any key, and saves the timings', async () => {
+    const f = fake();
+    const { app, data, id } = await setup({ key: null, freeVoice: f.tts });
+    await data.updateProject('u1', id, { script: SCRIPT as never, stage: 'graphics' });
+    const list = await app.inject({ method: 'GET', url: '/api/voices/free', headers: H });
+    expect(list.json()).toMatchObject({ available: true, defaultVoiceId: 'hi-IN-MadhurNeural' });
+    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/voice/free`, headers: H, payload: { voiceId: 'en-IN-NeerjaNeural' } });
+    expect(res.statusCode).toBe(200);
+    expect(f.spoken.map((s) => s.voice)).toEqual(['en-IN-NeerjaNeural', 'en-IN-NeerjaNeural']);
+    expect(res.json().project).toMatchObject({ stage: 'voice', voice: { voiceId: 'en-IN-NeerjaNeural', beats: [{ durationSec: 1.5 }, { durationSec: 1.5 }], narrations: ['Ek second mein.', 'NPCI beech mein.'] } });
+    expect(res.json().urls).toHaveLength(2);
+  });
+
+  it('uses the default voice for an unknown one, and needs a script and the project owner', async () => {
+    const f = fake();
+    const { app, data, id } = await setup({ freeVoice: f.tts });
+    expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/voice/free`, headers: H, payload: {} })).statusCode).toBe(400);
+    await data.updateProject('u1', id, { script: SCRIPT as never });
+    expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/voice/free`, headers: { authorization: 'Bearer dev:u2' }, payload: {} })).statusCode).toBe(404);
+    await app.inject({ method: 'POST', url: `/api/projects/${id}/voice/free`, headers: H, payload: { voiceId: 'nope' } });
+    expect(f.spoken[0]!.voice).toBe('hi-IN-MadhurNeural');
+  });
+
+  it('answers 503 without the free voice, and 502 when it fails', async () => {
+    const off = await setup();
+    await off.data.updateProject('u1', off.id, { script: SCRIPT as never });
+    expect((await off.app.inject({ method: 'POST', url: `/api/projects/${off.id}/voice/free`, headers: H, payload: {} })).statusCode).toBe(503);
+    const broken = await setup({ freeVoice: { speak: async () => { throw new Error('socket closed'); } } });
+    await broken.data.updateProject('u1', broken.id, { script: SCRIPT as never });
+    const res = await broken.app.inject({ method: 'POST', url: `/api/projects/${broken.id}/voice/free`, headers: H, payload: {} });
+    expect(res.statusCode).toBe(502);
+    expect(res.json().message).toMatch(/internet connection/);
+  });
+
+  it('reads word timings from the service messages (100 ns ticks)', () => {
+    const raw = '{"Metadata":[{"Type":"WordBoundary","Data":{"Offset":1000000,"Duration":5000000,"text":{"Text":"Har"}}}]}{"Metadata":[{"Type":"WordBoundary","Data":{"Offset":7000000,"Duration":2000000}}]}';
+    const round = (n: number) => Math.round(n * 1000) / 1000;
+    expect(parseWordBoundaries(raw).map((w) => ({ start: round(w.start), end: round(w.end) }))).toEqual([{ start: 0.1, end: 0.6 }, { start: 0.7, end: 0.9 }]);
   });
 });

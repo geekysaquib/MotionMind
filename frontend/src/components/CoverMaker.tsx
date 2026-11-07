@@ -46,7 +46,7 @@ function Seg<T extends string>({ label, value, options, onChange }: { label: str
 }
 
 /**
- * The cover (thumbnail) maker: pick a scene of the 3D world, write the headline, choose a layout and size,
+ * The cover (thumbnail) maker: pick a scene (drawn in the reel's style), write the headline, choose a layout and size,
  * see it live, and download it as an image rendered by the same engine as the video.
  */
 export const CoverMaker = observer(function CoverMaker({ project }: { project: Project }) {
@@ -106,7 +106,7 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
       <h2 className="flex items-center gap-2 font-semibold">
         <ImageIcon className="h-4 w-4 text-accent" /> Cover image
       </h2>
-      <p className="mt-1 text-sm text-ink-400">One scene of your 3D world with a big headline: a thumbnail for the reel, the profile grid or a post.</p>
+      <p className="mt-1 text-sm text-ink-400">One scene of your reel, in its style, with a big headline: a thumbnail for the reel, the profile grid or a post.</p>
 
       <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
         <div className="space-y-4">

@@ -6,8 +6,7 @@ const beat = (id: string, eyebrow: string, props = 0) => ({
   narration: 'x',
   keywords: [],
   chapter: 0,
-  card: { eyebrow, headline: 'h', tone: 'teal' as const, rows: [] },
-  scene: props ? { props: Array.from({ length: props }, (_, i) => ({ id: `p${id}${i}`, kind: 'phone' as const })) } : undefined,
+  card: { eyebrow, headline: 'h', tone: 'teal' as const, rows: Array.from({ length: props }, () => ({ kind: 'note' as const, text: 'n' })) },
 });
 
 describe('withAccent', () => {

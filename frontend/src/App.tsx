@@ -19,7 +19,7 @@ import { StoryboardStagePage } from './pages/app/StoryboardStagePage';
 import { VoiceStagePage } from './pages/app/VoiceStagePage';
 import { ReelEditorPage } from './pages/app/ReelEditorPage';
 import { ExportStagePage } from './pages/app/ExportStagePage';
-import { GraphicsStagePage } from './pages/app/GraphicsStagePage';
+import { StyleStagePage } from './pages/app/StyleStagePage';
 import { FootagePage } from './pages/app/FootagePage';
 import { FootageEditPage } from './pages/app/FootageEditPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -57,7 +57,7 @@ export const routes = [
           { path: 'research', element: <ResearchStagePage /> },
           { path: 'script', element: <ScriptStagePage /> },
           { path: 'storyboard', element: <StoryboardStagePage /> },
-          { path: 'graphics', element: <GraphicsStagePage /> },
+          { path: 'graphics', element: <StyleStagePage /> },
           { path: 'voice', element: <VoiceStagePage /> },
           { path: 'editor', element: <ReelEditorPage /> },
           { path: 'export', element: <ExportStagePage /> },

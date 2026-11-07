@@ -20,7 +20,7 @@ function greeting(d = new Date()) {
 const TIPS = [
   { title: 'Ask “how does it work?”', text: 'Questions make better reels than subjects. “How does a Soundbox know the money arrived?” beats “UPI”.' },
   { title: 'Approve the research first', text: 'The script is written from the research you approve, so check the facts marked “estimate” before you move on.' },
-  { title: 'Make any object appear', text: 'In the storyboard, pick “Anything else” for an object, give it an emoji and a shape, and it shows up in the 3D scene.' },
+  { title: 'Pick a different style', text: 'On the Style step, try a look you have not used lately: Live Map, Whiteboard, Dark Keynote, Transit Map or Newsroom.' },
   { title: 'Slow down the hard scenes', text: 'In the reel editor you can set the pace of one scene, so a busy card stays on screen a little longer.' },
   { title: 'Translate the voice script', text: 'On the Voice step, switch the script to Hindi or English, copy it into your text-to-speech tool, and upload the recording.' },
 ];
@@ -80,7 +80,7 @@ export const DashboardPage = observer(function DashboardPage() {
           <Reveal>
             <section aria-label="Start a new reel" className={cn('rounded-2xl p-5 md:p-6', params.get('new') ? 'bg-mint-500/[0.07] ring-1 ring-mint-500/30' : 'bg-mint-500/[0.05]')}>
               <h2 className="font-display text-lg font-bold">What should your next reel explain?</h2>
-              <p className="mb-4 mt-1 text-sm text-ink-400">Type a question. Research, the script and the 3D scenes follow, and you approve each step.</p>
+              <p className="mb-4 mt-1 text-sm text-ink-400">Type a question. Research, the script and the style follow, and you approve each step.</p>
               <NewReelForm autoFocus={Boolean(params.get('new'))} initialTopic={params.get('topic') ?? ''} />
             </section>
           </Reveal>

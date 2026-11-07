@@ -6,14 +6,14 @@ import { firstIssue } from '../http';
 import { ClaudeError, claudeClient, CLAUDE_MODEL, type ClaudeClient } from './claude';
 import { manualReelPrompt, manualResearchPrompt, parsePastedScript, parseResearch, PastedScriptError, type ReelBrief } from './reelPrompt';
 import { reelScriptSchema as scriptSchemaV4, type Research } from './reelSchema';
-import { TEMPLATE_IDS, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
+import { STYLE_IDS, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
 
 const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude something.').max(12000) });
 const editSchema = z.object({ script: z.unknown() });
-// The storyboard may carry locked object spots; the schema Claude writes to does not.
+// The storyboard carries the chosen style and the cover; the schema Claude writes to does not.
 // (Same zod version as the script schema, or the two cannot be combined.)
 const scriptWithLayout = scriptSchemaV4.extend({
-  template: zv4.enum(TEMPLATE_IDS).optional(),
+  style: zv4.enum(STYLE_IDS).optional(),
   cover: zv4
     .object({
       scene: zv4.number().int().min(0).max(60),
@@ -25,7 +25,7 @@ const scriptWithLayout = scriptSchemaV4.extend({
       brand: zv4.boolean(),
     })
     .optional(),
-  layout: zv4.record(zv4.string().max(60), zv4.object({ x: zv4.number().min(-200).max(200), y: zv4.number().min(-200).max(200) })).optional() });
+});
 const importSchema = z.object({ text: z.string().min(1, "Paste Claude's answer first.").max(100_000) });
 
 /** Model label for scripts written in claude.ai and pasted in. */
@@ -94,7 +94,8 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   }
 
   function saveScript(userId: string, project: Project, script: Omit<ReelScript, 'model' | 'writtenAt'>, model: string) {
-    const saved: ReelScript = { ...script, model, writtenAt: new Date().toISOString() };
+    // A rewritten script keeps the style already picked for the reel.
+    const saved: ReelScript = { ...script, ...(project.script?.style ? { style: project.script.style } : {}), model, writtenAt: new Date().toISOString() };
     return deps.data.updateProject(userId, project.id, {
       script: saved,
       stage: 'script',
@@ -204,9 +205,22 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     const id = (req.params as { id: string }).id;
     const project = z.string().uuid().safeParse(id).success ? await deps.data.getProject(req.userId, id) : null;
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
-    const saved: ReelScript = { ...parsed.data, layout: parsed.data.layout as ReelScript['layout'], cover: parsed.data.cover as ReelScript['cover'], template: parsed.data.template, model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
+    const saved: ReelScript = { ...parsed.data, cover: parsed.data.cover as ReelScript['cover'], style: parsed.data.style, model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
     return {
       project: await deps.data.updateProject(req.userId, project.id, { script: saved, stage: project.stage === 'script' ? 'storyboard' : project.stage }),
     };
+  });
+
+  // ---------- Style ----------
+  // The look the reel is drawn in. Saved in the script; it does not count as editing the storyboard.
+  api.put('/projects/:id/style', async (req, reply) => {
+    const body = z.object({ style: z.enum(STYLE_IDS) }).safeParse(req.body);
+    if (!body.success) return reply.code(400).send({ error: 'invalid_style', message: 'Pick one of the styles.' });
+    const id = (req.params as { id: string }).id;
+    const project = z.string().uuid().safeParse(id).success ? await deps.data.getProject(req.userId, id) : null;
+    if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
+    if (!project.script?.beats.length) return reply.code(400).send({ error: 'no_script', message: 'Write the script first.' });
+    const stage = ['topic', 'research', 'script', 'storyboard'].includes(project.stage) ? 'graphics' : project.stage;
+    return { project: await deps.data.updateProject(req.userId, project.id, { script: { ...project.script, style: body.data.style }, stage }) };
   });
 }

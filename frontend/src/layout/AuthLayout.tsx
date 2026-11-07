@@ -30,7 +30,7 @@ export function AuthLayout({ title, subtitle, children, footer }: { title: strin
             </h2>
             <p className="mt-4 max-w-sm text-sm text-ink-400">{BRAND.tagline}: research, script, storyboard, motion graphics, voice and captions in one studio.</p>
             <ul className="relative mt-8 flex max-w-md flex-wrap justify-center gap-2" aria-label="Steps">
-              {['Topic', 'Research', 'Script', 'Storyboard', '3D scenes', 'Voice', 'Export'].map((t, i) => (
+              {['Topic', 'Research', 'Script', 'Storyboard', 'Style', 'Voice', 'Export'].map((t, i) => (
                 <li key={t} className="animate-pop rounded-full border border-line/10 bg-ink-950/60 px-3 py-1 text-xs font-medium text-ink-300 backdrop-blur" style={{ animationDelay: `${0.5 + i * 0.12}s` }}>
                   {t}
                 </li>

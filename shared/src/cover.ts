@@ -1,6 +1,6 @@
 import type { ReelScript, ReelTone } from './projects';
 
-// The cover (thumbnail) of a reel: one scene of the 3D world as a still image with a big headline on it.
+// The cover (thumbnail) of a reel: one scene, drawn in the reel's style, as a still image with a big headline on it.
 
 /** Where the text sits: big at the bottom, on a card in the middle, or in a panel at the top. */
 export const COVER_STYLES = ['bold', 'center', 'split'] as const;
@@ -15,7 +15,7 @@ export const COVER_SIZES = {
 export type CoverSize = keyof typeof COVER_SIZES;
 
 export interface CoverSettings {
-  /** Which scene's 3D view is the picture (0 = first scene). */
+  /** Which scene is the picture (0 = first scene). */
   scene: number;
   /** The big text. Words in *stars* are highlighted. */
   headline: string;
@@ -49,7 +49,7 @@ export function defaultCover(script: Pick<ReelScript, 'title' | 'beats'>): Cover
   let scene = 0;
   let most = -1;
   script.beats.forEach((b, i) => {
-    const n = b.scene?.props.length ?? 0;
+    const n = b.card.rows?.length ?? 0;
     if (n > most) {
       most = n;
       scene = i;

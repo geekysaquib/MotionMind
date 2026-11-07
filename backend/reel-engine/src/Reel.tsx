@@ -1,168 +1,30 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { AbsoluteFill, Audio, Loop, Sequence, continueRender, delayRender, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
-import { DEFAULT_CAPTION_STYLE, reelTiming, type Brand, type CameraKey, type ReelSpec, type TimedBeat, type TrainShot, type WorldEvent } from './script';
-import { World, phonePos, type WorldProps } from './World';
-import { Backdrop } from './Backdrop';
-import { CardsScene } from './CardsScene';
-import { IsoWorld, isoCamera, layoutProps } from './IsoWorld';
-import { DEFAULT_REGION, type Region } from './DiagramWorld';
-import { FlatWorld } from './Shots';
-import { shotPlan } from './shotplan';
-import { withScenes } from './autoScene';
-import { Header, InfoCard, Captions, EndCard, cardLayout } from './Ui';
-import { brandsFor, logoUrl, termsFor } from './terms';
-import { Camera, clamp01, easeInOutCubic, lerp } from './iso';
+import React, { useMemo } from 'react';
+import { AbsoluteFill, Audio, Loop, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
+import { DEFAULT_CAPTION_STYLE, reelTiming, type ReelSpec } from './script';
+import { kitFor } from './styles';
+import { logoUrlsOf, useLogosLoaded, zonesFor, type SceneProps } from './styles/common';
 
-const FX: Exclude<WorldEvent, 'none'>[] = ['rings', 'towerIds', 'pins', 'gpsLog', 'stationGlow', 'errorBand'];
-const RAMP = 12;
-const STILL: CameraKey = { follow: true, x: 0, y: 0, z: 1, zoom: 40 };
-
-/** Named train-world shots (taken from the sample reel) for scripts that don't give raw coordinates. */
-const TRAIN_SHOT_KEYS: Record<TrainShot, CameraKey> = {
-  phone: { follow: true, x: 0, y: 0, z: 1, zoom: 56 },
-  tower: { follow: true, x: -1, y: -1.5, z: 2, zoom: 32 },
-  map: { x: 30, y: 0, z: 0, zoom: 17 },
-  crowd: { x: 34, y: 0, z: 1, zoom: 24 },
-  station: { x: 45, y: 1, z: 1, zoom: 30 },
-  accuracy: { x: 28, y: 0, z: 0, zoom: 20 },
-  wide: { x: 30, y: 0, z: 0, zoom: 14 },
-};
-const keyOf = (b: TimedBeat): CameraKey => b.camera ?? (b.shot ? TRAIN_SHOT_KEYS[b.shot] : STILL);
-
-function resolveKey(k: CameraKey, frame: number, fps: number) {
-  const x = k.follow ? phonePos(frame / fps).x + k.x : k.x;
-  return { x, y: k.y, z: k.z, zoom: k.zoom };
-}
-
-export function cameraAt(timed: TimedBeat[], storyFrames: number, frame: number, fps: number): Camera {
-  const f = Math.min(frame, storyFrames - 1);
-  const i = Math.max(0, timed.findIndex((b) => f >= b.start && f < b.start + b.frames));
-  const beat = timed[i]!;
-  const cur = resolveKey(keyOf(beat), f, fps);
-  const prev = i > 0 ? resolveKey(keyOf(timed[i - 1]!), f, fps) : cur;
-  const t = easeInOutCubic(clamp01((f - beat.start) / 36));
-  const drift = 1 + 0.035 * clamp01((f - beat.start) / beat.frames);
-  const endPull = frame >= storyFrames ? 1 - 0.08 * clamp01((frame - storyFrames) / 60) : 1;
-  return {
-    target: { x: lerp(prev.x, cur.x, t), y: lerp(prev.y, cur.y, t), z: lerp(prev.z, cur.z, t) },
-    zoom: lerp(prev.zoom, cur.zoom, t) * drift * endPull,
-    cx: 540,
-    cy: 1180,
-  };
-}
-
-export function fxAt(timed: TimedBeat[], frame: number): WorldProps['fx'] {
-  const out = {} as WorldProps['fx'];
-  const has = (b: TimedBeat, name: WorldEvent) => b.events?.includes(name) ?? false;
-  for (const name of FX) {
-    let v = 0;
-    // merge consecutive beats that share the effect into one range
-    let i = 0;
-    while (i < timed.length) {
-      if (!has(timed[i]!, name)) {
-        i++;
-        continue;
-      }
-      const s = timed[i]!.start;
-      let j = i;
-      while (j + 1 < timed.length && has(timed[j + 1]!, name)) j++;
-      const e = timed[j]!.start + timed[j]!.frames;
-      const up = clamp01((frame - s) / RAMP);
-      const down = clamp01((e + RAMP - frame) / RAMP);
-      v = Math.max(v, Math.min(up, down));
-      i = j + 1;
-    }
-    out[name] = v;
-  }
-  return out;
-}
-
-export function pinProgressAt(timed: TimedBeat[], frame: number, fps: number): number {
-  const first = timed.find((b) => b.events?.includes('pins'));
-  if (!first) return 0;
-  return clamp01((frame - first.start - 10) / (3.5 * fps));
-}
-
-/** Every logo image a reel uses (company chips and logo tiles), so they can be loaded before drawing. */
-export function logoUrlsOf(spec: Pick<ReelSpec, 'brands' | 'beats' | 'logoBase'>): string[] {
-  return [...new Set([...(spec.brands ?? []).map((b) => logoUrl(spec.logoBase, b.domain, b.name)), ...spec.beats.flatMap((b) => (b.scene?.props ?? []).flatMap((p) => (p.logo ? [logoUrl(spec.logoBase, p.logo, p.label)] : [])))])];
-}
-
-/** Loads every company logo before a frame is drawn (a missing one is skipped, never an error). */
-export function useLogosLoaded(urls: string[]) {
-  const key = urls.join('|');
-  const [handle] = useState(() => (urls.length ? delayRender('Loading company logos') : null));
-  useEffect(() => {
-    if (handle === null) return;
-    let left = urls.length;
-    const done = () => {
-      left -= 1;
-      if (left <= 0) continueRender(handle);
-    };
-    const timer = setTimeout(() => continueRender(handle), 8000);
-    for (const u of urls) {
-      const img = new Image();
-      img.onload = done;
-      img.onerror = done;
-      img.src = u;
-    }
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-}
-
-/** The part of the frame the flat diagram may use: below the card, above the captions (and clear of each app's buttons). */
-const diagramRegion = (platform: string | undefined, cardEnd = 0): Region => {
-  const base = platform === 'youtube' ? { ...DEFAULT_REGION, t: 680, b: 1400 } : DEFAULT_REGION;
-  // Never start above the end of the card (plus a margin), but keep at least 560 tall.
-  const t = Math.min(base.b - 560, Math.max(base.t, cardEnd + 36));
-  return { ...base, t };
-};
-
-/** One reel, driven entirely by its spec. Used by the CLI renderer and by the in-app preview player. */
-export const Reel: React.FC<ReelSpec> = (input) => {
-  // Every beat gets a 3D scene (or train shot), even when the script didn't describe one.
-  const spec = useMemo(() => withScenes(input), [input]);
-  const logoUrls = useMemo(() => logoUrlsOf(spec), [spec]);
-  useLogosLoaded(logoUrls);
+/** One reel, driven entirely by its spec and drawn in its style. Used by the MP4 export and the in-app preview player. */
+export const Reel: React.FC<ReelSpec> = (spec) => {
+  useLogosLoaded(useMemo(() => logoUrlsOf(spec), [spec]));
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const { timed, storyFrames, endFrames, totalFrames, closing } = useMemo(() => reelTiming(spec), [spec]);
-  const placed = useMemo(() => layoutProps(timed, spec.layout), [timed, spec.layout]);
-  // In a flat template each scene is staged by what it says (a question, a number, a list, a screen...), not always as boxes and arrows.
-  const shots = useMemo(() => shotPlan(timed, spec.look?.shots), [timed, spec.look?.shots]);
-  const inStory = frame < storyFrames;
-  const beat = timed.find((b) => frame >= b.start && frame < b.start + b.frames) ?? timed[timed.length - 1]!;
-  const chapterStart = timed.find((b) => b.chapter === beat.chapter)?.start ?? 0;
-  const progress = storyFrames ? Math.min(1, frame / storyFrames) : 0;
-  const flat = spec.world === 'iso' && spec.look?.scene === 'diagram';
-  const cardEnd = flat ? cardLayout(beat.card, termsFor(beat, spec.glossary), brandsFor(beat, spec.brands), spec.look, spec.platform ?? 'instagram', 820).end : 0;
+  const kit = kitFor(spec.style);
+  const captions = spec.captions ?? DEFAULT_CAPTION_STYLE;
+  const zones = zonesFor(spec.platform, captions);
+  const clampFrame = Math.min(frame, storyFrames - 1);
+  const index = Math.max(0, timed.findIndex((b) => clampFrame >= b.start && clampFrame < b.start + b.frames));
+  const props: SceneProps = { frame, fps, spec, timed, beat: timed[index]!, index, storyFrames, zones, captions };
 
   return (
-    <AbsoluteFill style={{ background: '#F6F2E9', overflow: 'hidden' }}>
-      {spec.world === 'train' ? (
-        <World frame={frame} fps={fps} cam={cameraAt(timed, storyFrames, frame, fps)} fx={fxAt(timed, frame)} pinProgress={pinProgressAt(timed, frame, fps)} />
-      ) : spec.world === 'iso' && spec.look?.scene === 'diagram' ? (
-        <FlatWorld frame={frame} fps={fps} beat={beat} look={spec.look} region={diagramRegion(spec.platform, cardEnd)} shot={shots[Math.max(0, timed.indexOf(beat))] ?? 'nodes'} logoBase={spec.logoBase} />
-      ) : spec.world === 'iso' ? (
-        <IsoWorld frame={frame} fps={fps} cam={isoCamera(timed, placed, storyFrames, frame)} beat={beat} placed={placed} theme={spec.theme} logoBase={spec.logoBase} linkStyle={spec.look?.links} />
-      ) : (
-        <Backdrop frame={frame} fps={fps} tone={beat.card.tone} chapter={beat.chapter} progress={progress} />
-      )}
-      <Header chapter={beat.chapter} frame={frame} fps={fps} chapterStart={chapterStart} steps={spec.steps} brand={spec.brand} platform={spec.platform} look={spec.look} dark={spec.world === 'iso' && spec.theme === 'night'} />
-      {inStory && spec.world === 'cards' && <CardsScene key={`scene-${beat.id}`} beat={beat} frame={frame} fps={fps} />}
-      {inStory && (() => {
-        const terms = termsFor(beat, spec.glossary);
-        const logos = brandsFor(beat, spec.brands).map((b) => ({ name: b.name, url: logoUrl(spec.logoBase, b.domain, b.name) }));
-        // In a flat diagram the card must stop above the scene: it leaves out its rows when they would not fit.
-        const fit = cardLayout(beat.card, terms, logos, spec.look, spec.platform ?? 'instagram', flat ? 820 : 9999);
-        return <InfoCard key={beat.id} card={beat.card} frame={frame} fps={fps} start={beat.start} compact={spec.world === 'cards' || !fit.showRows} platform={spec.platform} look={spec.look} terms={terms} logos={logos} />;
-      })()}
-      {inStory && <Captions beat={beat} frame={frame} style={spec.captions ?? DEFAULT_CAPTION_STYLE} platform={spec.platform} look={spec.look} progress={progress} />}
+    <AbsoluteFill style={{ background: kit.palette.bg, overflow: 'hidden' }}>
+      <kit.Stage {...props} />
+      {frame < storyFrames && <kit.Captions {...props} />}
       {/* The voice: one clip per scene, each playing its part of the recording at the scene's speed. */}
       {timed.map((b, i) =>
         b.audio ? (
-          <Sequence key={`vo${b.id}`} from={b.audio.from} durationInFrames={Math.max(1, b.audio.frames)}>
+          <Sequence key={`vo${b.id}${i}`} from={b.audio.from} durationInFrames={Math.max(1, b.audio.frames)}>
             <Audio
               src={b.audio.source === 'track' ? spec.voiceTrack!.url : spec.audioUrls?.[i] || staticFile(`voice/beat_${i}.mp3`)}
               trimBefore={Math.round(b.audio.srcStartSec * fps)}
@@ -188,7 +50,7 @@ export const Reel: React.FC<ReelSpec> = (input) => {
         </Sequence>
       )}
       <Sequence from={storyFrames}>
-        <EndCardWrapper brand={spec.brand} platform={spec.platform} />
+        <EndCardWrapper spec={spec} />
       </Sequence>
     </AbsoluteFill>
   );
@@ -205,7 +67,6 @@ const Music: React.FC<{ url: string; durationSec: number; volume: number; totalF
   return (
     <Sequence from={0} durationInFrames={totalFrames}>
       {musicFrames < totalFrames ? (
-        // Looping restarts the frame count, so a looped track keeps a steady volume.
         <Loop durationInFrames={musicFrames}>
           <Audio src={url} volume={volume} />
         </Loop>
@@ -216,8 +77,9 @@ const Music: React.FC<{ url: string; durationSec: number; volume: number; totalF
   );
 };
 
-const EndCardWrapper: React.FC<{ brand: Brand; platform?: 'instagram' | 'youtube' }> = ({ brand, platform }) => {
+const EndCardWrapper: React.FC<{ spec: ReelSpec }> = ({ spec }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  return <EndCard frame={frame} fps={fps} brand={brand} platform={platform} />;
+  const Kit = kitFor(spec.style);
+  return <Kit.EndCard frame={frame} fps={fps} brand={spec.brand} platform={spec.platform} />;
 };

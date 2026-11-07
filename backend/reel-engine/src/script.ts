@@ -1,12 +1,16 @@
-// Reel format the engine renders, plus the "Where is my Train" sample reel.
-// Each beat is one narration line with an on-screen card. Durations come from real TTS word
-// timings when a voice track exists, and are estimated from word count otherwise.
-
-import voice from './voice.json';
+// The reel format the engine renders. Each beat is one narration line with an on-screen card; the chosen
+// style decides how the card's headline, chips, flows and numbers are drawn. Durations come from real
+// voice timings when there are any, and are estimated from the word count otherwise.
 
 export const FPS = 30;
 const WORDS_PER_SEC = 2.7;
 const BEAT_PAD_SEC = 0.6;
+
+/** The looks a reel can be drawn in (same list as STYLE_IDS in the shared package; a test keeps them equal). */
+export const STYLE_IDS = ['live-map', 'whiteboard', 'dark-keynote', 'transit-map', 'newsroom'] as const;
+export type StyleId = (typeof STYLE_IDS)[number];
+export const DEFAULT_STYLE: StyleId = 'live-map';
+export const styleOf = (id: string | undefined | null): StyleId => ((STYLE_IDS as readonly string[]).includes(id ?? '') ? (id as StyleId) : DEFAULT_STYLE);
 
 /** 0 = intro, then 1..steps.length for the progress steps in the header. */
 export type Chapter = number;
@@ -15,8 +19,6 @@ export type CardRow =
   | { kind: 'chips'; items: { text: string; tone?: Tone; strike?: boolean }[] }
   | { kind: 'flow'; items: string[] }
   | { kind: 'kv'; k: string; v: string; tone?: Tone }
-  | { kind: 'file'; name: string; size: string; note: string }
-  | { kind: 'timetable'; rows: { stop: string; time: string; state: 'done' | 'here' | 'next' }[] }
   | { kind: 'note'; text: string };
 
 export type Tone = 'red' | 'teal' | 'purple' | 'blue' | 'amber';
@@ -29,70 +31,6 @@ export interface Card {
   rows?: CardRow[];
 }
 
-export interface CameraKey {
-  /** When true, x tracks the rider's phone on the moving train. */
-  follow?: boolean;
-  x: number;
-  y: number;
-  z: number;
-  zoom: number;
-}
-
-export type WorldEvent =
-  | 'rings'
-  | 'towerIds'
-  | 'pins'
-  | 'gpsLog'
-  | 'stationGlow'
-  | 'errorBand'
-  | 'none';
-
-/** Objects the 3D isometric scene kit can draw ('iso' world). */
-export const PROP_KINDS = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'qr', 'speaker', 'lock', 'database', 'router', 'battery', 'heart', 'gear', 'truck', 'plane', 'train', 'tree', 'hospital', 'school', 'cart', 'camera', 'bulb', 'globe', 'envelope', 'clock', 'rocket', 'syringe', 'chart', 'atm', 'brain', 'virus', 'dna', 'flask', 'microscope', 'sun', 'flame', 'solar', 'windmill', 'bus', 'ship', 'shield', 'book', 'bell', 'key', 'receipt', 'pin', 'terminal', 'loadbalancer', 'cache', 'queue', 'datacenter', 'toggle', 'gauge', 'cable', 'chat', 'custom'] as const;
-export type PropKind = (typeof PROP_KINDS)[number];
-
-/** Body of a 'custom' object (anything the 16 named kinds can't draw): a block, a tall tower, a wide slab, a flat pad or a ball. */
-export const PROP_SHAPES = ['block', 'tall', 'wide', 'flat', 'round'] as const;
-export type PropShape = (typeof PROP_SHAPES)[number];
-
-/** The look of the 3D world around the props. */
-export const WORLD_THEMES = ['city', 'nature', 'lab', 'plain', 'night', 'sunset', 'ocean', 'desert'] as const;
-export type WorldTheme = (typeof WORLD_THEMES)[number];
-
-export interface ScenePropSpec {
-  id: string;
-  kind: PropKind;
-  label?: string;
-  /** One emoji floated above the object. For 'custom' objects it is what makes them recognisable. */
-  icon?: string;
-  /** 'custom' only: the name of a Lucide icon (e.g. 'microscope', 'wheat'), drawn as a raised 3D tile. Beats `icon` and `shape`. */
-  glyph?: string;
-  /** 'custom' only: a company's website (like 'irctc.co.in'); its logo is drawn on a raised tile. Beats `glyph`. */
-  logo?: string;
-  /** 'custom' only: the body shape. */
-  shape?: PropShape;
-  /** Colour of a 'custom' body. Defaults to the scene's tone. */
-  tone?: Tone;
-}
-
-/**
- * One scene in the 3D isometric world. Props with the same id are the same object in every scene,
- * so the camera travels around one persistent world; a prop appears the first time a scene uses it.
- */
-export interface IsoScene {
-  props: ScenePropSpec[];
-  /** Animated signal lines between props, drawn as arcs with a travelling packet. */
-  links?: { from: string; to: string; label?: string }[];
-  /** rings = signal waves from the focus prop; pulse = it glows; none. */
-  effect?: 'rings' | 'pulse' | 'none';
-  /** The prop the camera and effect centre on. Defaults to the first prop. */
-  focus?: string;
-}
-
-/** Train world only: a named camera shot instead of raw coordinates. */
-export const TRAIN_SHOTS = ['phone', 'tower', 'map', 'crowd', 'station', 'accuracy', 'wide'] as const;
-export type TrainShot = (typeof TRAIN_SHOTS)[number];
-
 export interface Beat {
   id: string;
   narration: string;
@@ -100,14 +38,6 @@ export interface Beat {
   keywords: string[];
   card: Card;
   chapter: Chapter;
-  /** Train world only: where the camera looks during this beat. */
-  camera?: CameraKey;
-  /** Train world only: effects shown in the scene. */
-  events?: WorldEvent[];
-  /** Train world only: a named shot, turned into a camera key when `camera` is not given. */
-  shot?: TrainShot;
-  /** Iso world only: what this scene shows. */
-  scene?: IsoScene;
 }
 
 export interface Brand {
@@ -127,35 +57,25 @@ export interface VoiceBeat {
 // A type alias (not an interface) so Remotion accepts it as composition props.
 export type ReelSpec = {
   title: string;
-  /** 'train' = the isometric railway world; 'iso' = the 3D isometric scene kit for any topic; 'cards' = flat animated graphics. */
-  world: 'train' | 'iso' | 'cards';
-  /** The look of the header, card and captions (set by the template). Missing = the classic look. */
-  look?: ReelLook;
-  /** Short forms and what they stand for: every scene that uses one shows its full form. */
+  /** The look the whole reel is drawn in. Missing = the default style. */
+  style?: StyleId;
+  /** Short forms and what they stand for: a scene that uses one shows its full form. */
   glossary?: { short: string; full: string }[];
-  /** Companies named in the reel, so their logos can be shown next to the text. */
+  /** Companies named in the reel, so their logos can be shown. */
   brands?: { name: string; domain: string }[];
   /** Where the logo images come from (the API's origin, or empty for the same origin). Logos are `<base>/api/logo/<domain>`. */
   logoBase?: string;
   /** Where the reel is going. Shorts keeps clear of its taller top bar and bottom caption area, and the end card asks to subscribe. Default: instagram. */
   platform?: 'instagram' | 'youtube';
-  /** Iso world: what the ground and background look like. */
-  theme?: WorldTheme;
-  /** Iso world: locked object spots by id. Objects without one are placed automatically around the locked ones. */
-  layout?: Record<string, { x: number; y: number }>;
   /** Names of the progress steps shown in the header (chapters 1..n). */
   steps: string[];
   brand: Brand;
   beats: Beat[];
-  /** Per-beat TTS timings; audio files are expected at voice/beat_<i>.mp3 unless audioUrls is given. */
+  /** Per-beat voice timings; audio files are expected at voice/beat_<i>.mp3 unless audioUrls is given. */
   voice?: VoiceBeat[];
   /** Where each beat's voiceover MP3 is (the web app passes signed URLs). */
   audioUrls?: string[];
-  /**
-   * The user's own voiceover: one recording for the whole reel. `cuts[i]` is where scene i + 1 starts in it
-   * (seconds), so there is one cut fewer than beats. It replaces `voice` and `audioUrls`.
-   */
-  /** One recording for the whole reel. `closingAt` = where its follow line starts: the last scene ends there and the end card plays the line. */
+  /** One recording for the whole reel. `cuts[i]` = where scene i + 1 starts (seconds). `closingAt` = where its follow line starts. */
   voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number; peaks?: number[] };
   /** Speed of the voice for the whole reel (1 = as recorded). */
   pace?: number;
@@ -168,33 +88,7 @@ export type ReelSpec = {
   captions?: CaptionStyle;
 };
 
-/**
- * The look of the reel's own chrome (header, card, captions), chosen by the template. The 3D world is chosen by `theme`.
- * card: box = the white card, dark = a dark glass card with a glowing outline, headline = big text with no box.
- * header: steps = the step dots, bar = a thin segmented progress bar with a small label either side.
- * captions: box = the dark box, pill = a slim pill with a progress line under it.
- * ink: 'dark' when the world behind is light (the text turns dark).
- */
-export type DiagramStyle = 'neon' | 'minimal' | 'paper' | 'sticker';
-/** How one scene is staged in the flat world (see shots.ts). */
-export type ShotKind = 'hero' | 'stat' | 'compare' | 'checklist' | 'ui' | 'tiles' | 'ring' | 'nodes';
-export type ReelLook = {
-  card: 'box' | 'dark' | 'headline';
-  header: 'steps' | 'bar';
-  captions: 'box' | 'pill';
-  accent?: string;
-  ink?: 'light' | 'dark';
-  tag?: string;
-  /** How the scene is drawn: 'iso' = the 3D world (default), 'diagram' = flat cards joined by arrows, in the `diagram` style. */
-  scene?: 'iso' | 'diagram';
-  diagram?: DiagramStyle;
-  /** Which shots the flat world may use, in the template's own taste. Missing = all. */
-  shots?: ShotKind[];
-  /** 3D world only: 'arc' = the travelling arcs (default), 'dotted' = thin dotted lines with chip labels. */
-  links?: 'arc' | 'dotted';
-};
-
-/** Same shape as CaptionStyle in the shared package (the engine doesn't import it). */
+/** Same shape as CaptionStyle in the shared package (the engine doesn't import it). Each style draws captions its own way; size and position apply to all. */
 export type CaptionStyle = { size: 'small' | 'medium' | 'large'; position: 'bottom' | 'middle'; look: 'box' | 'plain' };
 
 export const DEFAULT_CAPTION_STYLE: CaptionStyle = { size: 'medium', position: 'bottom', look: 'box' };
@@ -214,174 +108,6 @@ export function sceneRates(spec: Pick<ReelSpec, 'beats' | 'pace' | 'scenePace'>)
 }
 
 export const END_CARD_FRAMES = 3 * FPS;
-
-const TRAIN_BEATS: Beat[] = [
-  {
-    id: 'hook',
-    narration: 'Na internet, na GPS. Phir bhi ye app bilkul sahi batata hai ki aapki train kahan hai. Kaise?',
-    keywords: ['internet,', 'gps.', 'sahi', 'kaise?'],
-    chapter: 0,
-    camera: { follow: true, x: 0, y: 0, z: 1, zoom: 56 },
-    events: ['none'],
-    card: {
-      eyebrow: 'Where is my Train',
-      headline: 'Na *GPS*, na *internet*. Phir bhi tracking.',
-      tone: 'red',
-      rows: [
-        {
-          kind: 'chips',
-          items: [
-            { text: 'GPS off', tone: 'red', strike: true },
-            { text: 'Mobile data off', tone: 'red', strike: true },
-            { text: 'Live status on', tone: 'teal' },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: 'towers',
-    narration:
-      'Aapka phone hamesha sabse paas wale mobile tower se baat karta rehta hai, mobile data band ho tab bhi.',
-    keywords: ['hamesha', 'tower', 'band', 'bhi.'],
-    chapter: 1,
-    camera: { follow: true, x: -1, y: -1.5, z: 2, zoom: 34 },
-    events: ['rings'],
-    card: {
-      eyebrow: 'Step 1 · Mobile tower',
-      headline: 'Phone *hamesha* paas wale tower se baat karta hai',
-      tone: 'teal',
-      rows: [{ kind: 'flow', items: ['Aapka phone', 'Paas ka tower', 'Network'] }],
-    },
-  },
-  {
-    id: 'ids',
-    narration: 'Har tower ki apni ek ID hoti hai. App ye ID seedhe aapke phone se padh leta hai.',
-    keywords: ['id', 'seedhe'],
-    chapter: 1,
-    camera: { follow: true, x: -1, y: -1.5, z: 2, zoom: 30 },
-    events: ['rings', 'towerIds'],
-    card: {
-      eyebrow: 'Step 1 · Mobile tower',
-      headline: 'Har tower ki apni *ID* hoti hai',
-      tone: 'teal',
-      rows: [
-        { kind: 'kv', k: 'Connected to', v: 'Tower 40471', tone: 'teal' },
-        { kind: 'note', text: 'Example ID. Phone mein network signal hona chahiye.' },
-      ],
-    },
-  },
-  {
-    id: 'map',
-    narration:
-      'App ke andar ek chhota sa offline naksha hai, ki kaun se tower kis railway line par khade hain. Poore Bharat ka data, sirf saat-aath MB mein.',
-    keywords: ['offline', 'naksha', 'railway', 'mb'],
-    chapter: 2,
-    camera: { x: 30, y: 0, z: 0, zoom: 17 },
-    events: ['towerIds', 'pins'],
-    card: {
-      eyebrow: 'Step 2 · Tower ka naksha',
-      headline: 'Tracks ke towers ka chhota sa *offline naksha*',
-      tone: 'purple',
-      rows: [{ kind: 'file', name: 'rail routes ke towers', size: '7–8 MB', note: 'Poora Bharat, founder ke mutabik' }],
-    },
-  },
-  {
-    id: 'built',
-    narration:
-      'Ye naksha banaya kisne? Shuruaati yatriyon ne. Unke phone ne GPS aur tower ID saath-saath record kiye, aur har tower track par apni jagah pin ho gaya.',
-    keywords: ['yatriyon', 'gps', 'pin', 'track'],
-    chapter: 2,
-    camera: { x: 34, y: 0, z: 1, zoom: 24 },
-    events: ['gpsLog', 'pins'],
-    card: {
-      eyebrow: 'Naksha kaise bana',
-      headline: 'Yatriyon ne *GPS + tower ID* saath record kiye',
-      tone: 'purple',
-      rows: [
-        { kind: 'flow', items: ['GPS point', 'Tower ID', 'Track par pin'] },
-        { kind: 'note', text: 'Train mein safar karne walon se crowdsourced' },
-      ],
-    },
-  },
-  {
-    id: 'timetable',
-    narration: 'Ab isme jodiye timetable, wo bhi offline. Tower plus timetable, yaani aapki train ka live status.',
-    keywords: ['timetable,', 'offline.', 'live', 'status.'],
-    chapter: 3,
-    camera: { x: 45, y: 1, z: 1, zoom: 30 },
-    events: ['stationGlow'],
-    card: {
-      eyebrow: 'Step 3 · Offline timetable',
-      headline: 'Tower + timetable = *live status*',
-      tone: 'blue',
-      rows: [
-        {
-          kind: 'timetable',
-          rows: [
-            { stop: 'Pichhla stop', time: '10:05', state: 'done' },
-            { stop: 'Tower 40477 ke paas', time: 'now', state: 'here' },
-            { stop: 'Agla station', time: '10:40', state: 'next' },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    id: 'accuracy',
-    narration:
-      'Kya ye ekdam sateek hai? Nahi, kuch kilometre ka fark ho sakta hai. Lekin train khud aadha kilometre lambi hoti hai, to itna kaafi hai.',
-    keywords: ['sateek', 'kilometre', 'aadha', 'kaafi'],
-    chapter: 4,
-    camera: { x: 28, y: 0, z: 0, zoom: 20 },
-    events: ['errorBand'],
-    card: {
-      eyebrow: 'Step 4 · Kitna sahi?',
-      headline: 'Kuch km ka fark bhi *kaafi hai*',
-      tone: 'amber',
-      rows: [
-        { kind: 'kv', k: 'Stations ke beech', v: 'kuch km', tone: 'amber' },
-        { kind: 'kv', k: 'Train ki lambai', v: '~0.5 km', tone: 'blue' },
-      ],
-    },
-  },
-  {
-    id: 'google',
-    narration: 'Ye itna badhiya chala ki 2018 mein Google ne ye app hi khareed liya.',
-    keywords: ['google', '2018'],
-    chapter: 4,
-    camera: { x: 30, y: 0, z: 0, zoom: 15 },
-    events: ['none'],
-    card: {
-      eyebrow: 'Twist',
-      headline: 'Dec 2018 mein *Google* ne khareeda',
-      tone: 'teal',
-      rows: [{ kind: 'note', text: 'Banaya tha Sigmoid Labs, Bengaluru ne' }],
-    },
-  },
-  {
-    id: 'cta',
-    narration: 'Agli baar kis app ke baare mein jaanna chahte hain? Comment mein bataiye.',
-    keywords: ['agli', 'comment'],
-    chapter: 4,
-    camera: { x: 30, y: 0, z: 0, zoom: 14 },
-    events: ['none'],
-    card: {
-      eyebrow: 'Comment mein batao',
-      headline: 'Agla *kaunsa app* samjhayein?',
-      tone: 'teal',
-      rows: [
-        {
-          kind: 'chips',
-          items: [
-            { text: 'Google Maps traffic', tone: 'blue' },
-            { text: 'UPI payments', tone: 'purple' },
-          ],
-        },
-      ],
-    },
-  },
-];
 
 export interface TimedBeat extends Beat {
   start: number;
@@ -554,14 +280,25 @@ export function reelTiming(spec: Pick<ReelSpec, 'beats' | 'voice' | 'pace' | 'sc
   return { timed, storyFrames, endFrames, totalFrames: storyFrames + endFrames, closing: at != null ? { srcStartSec: at, rate: pace } : null };
 }
 
+
 export const DEFAULT_BRAND: Brand = { name: 'Reel Studio', initials: 'RS', handle: '@yourchannel', tagline: 'Roz ki tech, andar ki baat' };
 
-/** The sample reel, rendered in the train world with its recorded voice track (if generated). */
-export const TRAIN_REEL: ReelSpec = {
-  title: 'Where is my Train',
-  world: 'train',
-  steps: ['Tower', 'Naksha', 'Timetable', 'Accuracy'],
+/** The sample reel (the kit's Uber live heatmap story), used by the CLI render and the Remotion studio. */
+export const SAMPLE_REEL: ReelSpec = {
+  title: 'Uber ka live heatmap',
+  style: 'live-map',
+  steps: ['GPS', 'Kafka', 'Redis', 'H3 grid', 'Surge'],
   brand: DEFAULT_BRAND,
-  beats: TRAIN_BEATS,
-  voice: (voice as { beats?: VoiceBeat[] }).beats ?? [],
+  brands: [{ name: 'Uber', domain: 'uber.com' }, { name: 'Redis', domain: 'redis.io' }, { name: 'Kafka', domain: 'kafka.apache.org' }],
+  glossary: [{ short: 'GPS', full: 'Global Positioning System' }],
+  beats: [
+    { id: 'hook', chapter: 0, narration: 'Concert khatam, aur hazaaron log ek saath Uber book kar rahe hain. Par Uber ko kaise pata, ki kis area mein kitne drivers hain?', keywords: ['concert', 'hazaaron', 'uber', 'drivers'], card: { eyebrow: 'Live heatmap', headline: 'Uber ko *kaise pata*?', tone: 'red', rows: [{ kind: 'chips', items: [{ text: 'Ride dhoondh rahe hain' }, { text: 'Driver nahi mila', tone: 'red', strike: true }, { text: 'Booking…', tone: 'blue' }] }] } },
+    { id: 'gps', chapter: 1, narration: 'Har driver ka phone lagbhag har chaar second mein, apni GPS location Uber ke servers ko bhejta hai.', keywords: ['chaar', 'second', 'gps'], card: { eyebrow: 'Step 1 · GPS', headline: 'Har *4 second* mein ek ping', tone: 'blue', rows: [{ kind: 'kv', k: 'Ping har', v: '4 sec', tone: 'blue' }, { kind: 'kv', k: 'Drivers online', v: '25,000', tone: 'teal' }] } },
+    { id: 'kafka', chapter: 2, narration: 'Ye lakhon location pings Kafka jaisi stream mein aate hain, ek lambi queue, jo kabhi rukti nahi.', keywords: ['lakhon', 'kafka', 'rukti', 'nahi'], card: { eyebrow: 'Step 2 · Kafka', headline: 'Pings ki *non-stop* queue', tone: 'purple', rows: [{ kind: 'flow', items: ['Driver phone', 'Kafka stream', 'Uber servers'] }] } },
+    { id: 'redis', chapter: 3, narration: 'Har driver ki latest location Redis mein save hoti hai. Redis memory mein chalta hai, isliye lookup milliseconds mein hota hai.', keywords: ['latest', 'redis', 'milliseconds'], card: { eyebrow: 'Step 3 · Redis', headline: 'Latest location, *ms* mein', tone: 'red', rows: [{ kind: 'kv', k: 'Lookup', v: '2 ms', tone: 'red' }, { kind: 'note', text: 'Redis RAM mein chalta hai' }] } },
+    { id: 'hex', chapter: 4, narration: 'Phir poore shehar ko chhote chhote hexagons mein baant diya jaata hai. Uber ise H3 grid kehta hai.', keywords: ['hexagons', 'h3', 'grid'], card: { eyebrow: 'Step 4 · H3 grid', headline: 'Shehar ban gaya *hexagons*', tone: 'teal', rows: [{ kind: 'chips', items: [{ text: 'H3 grid', tone: 'teal' }, { text: 'Har hexagon ek area', tone: 'blue' }] }] } },
+    { id: 'count', chapter: 4, narration: 'Har hexagon mein real-time ginti hoti hai: kitne drivers free hain, aur kitne log ride maang rahe hain.', keywords: ['real-time', 'free', 'ride'], card: { eyebrow: 'Ginti', headline: '*Supply* vs *demand*', tone: 'amber', rows: [{ kind: 'kv', k: 'Free drivers', v: '12', tone: 'teal' }, { kind: 'kv', k: 'Ride requests', v: '340', tone: 'red' }] } },
+    { id: 'surge', chapter: 5, narration: 'Jahan demand zyada aur drivers kam hain, wahan surge price badhta hai, aur aas paas ke drivers ko signal milta hai.', keywords: ['demand', 'kam', 'surge', 'signal'], card: { eyebrow: 'Step 5 · Surge', headline: '*Surge* bulata hai drivers ko', tone: 'red', rows: [{ kind: 'kv', k: 'Surge', v: '1.8x', tone: 'red' }] } },
+    { id: 'recap', chapter: 5, narration: 'Toh agli baar surge dikhe, samajh jaana: ye lakhon GPS pings ka real-time hisaab hai.', keywords: ['surge', 'lakhon', 'hisaab'], card: { eyebrow: 'Recap', headline: 'Surge = *lakhon pings* ka hisaab', tone: 'teal', rows: [{ kind: 'flow', items: ['GPS', 'Kafka', 'Redis', 'H3', 'Surge'] }] } },
+  ],
 };

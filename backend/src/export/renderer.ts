@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { mkdir, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Platform } from '@motionmind/shared';
@@ -13,7 +14,7 @@ import type { Platform } from '@motionmind/shared';
 export interface RenderJob {
   id: string;
   projectId: string;
-  status: 'bundling' | 'rendering' | 'done' | 'failed';
+  status: 'bundling' | 'rendering' | 'finishing' | 'done' | 'failed';
   progress: number;
   file?: string;
   error?: string;
@@ -105,6 +106,9 @@ export class RemotionRenderer implements Renderer {
           job.progress = Math.round(progress * 100) / 100;
         },
       });
+      // The kit's finishing pass: loudness to -14 LUFS (what Instagram and YouTube play at) and a fast-start MP4.
+      job.status = 'finishing';
+      await finishWithFfmpeg(path.join(RENDERS_DIR, file));
       job.file = file;
       job.progress = 1;
       job.status = 'done';
@@ -116,4 +120,24 @@ export class RemotionRenderer implements Renderer {
       job.finishedAt = new Date().toISOString();
     }
   }
+}
+
+/**
+ * FFmpeg pass after Remotion, as in the video kit: normalise the loudness to -14 LUFS and move the index to the
+ * front so the file plays while it downloads. The video stream is copied, not re-encoded. Without FFmpeg (or if
+ * it fails) the Remotion file is kept as it is.
+ */
+export async function finishWithFfmpeg(file: string, bin = process.env.FFMPEG_BIN || 'ffmpeg'): Promise<boolean> {
+  const tmp = file.replace(/\.mp4$/,'.finishing.mp4');
+  const ok = await new Promise<boolean>((resolve) => {
+    const p = spawn(bin, ['-y', '-loglevel', 'error', '-i', file, '-c:v', 'copy', '-af', 'loudnorm=I=-14:TP=-1.2:LRA=11', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', tmp], { stdio: 'ignore', windowsHide: true });
+    p.on('error', () => resolve(false));
+    p.on('close', (code) => resolve(code === 0));
+  });
+  if (!ok) {
+    await rm(tmp, { force: true });
+    return false;
+  }
+  await rename(tmp, file);
+  return true;
 }

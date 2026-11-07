@@ -15,7 +15,7 @@ import type { RenderJob } from '../../services/claudeHttp';
 
 const POLL_MS = 2000;
 
-const isRunning = (j: RenderJob | null | undefined) => j?.status === 'bundling' || j?.status === 'rendering';
+const isRunning = (j: RenderJob | null | undefined) => j?.status === 'bundling' || j?.status === 'rendering' || j?.status === 'finishing';
 
 /** One platform's export: its own button, progress, preview and download. */
 function PlatformCard({ platform, project, job, withVoice, available, onStart }: { platform: Platform; project: Project; job: RenderJob | null; withVoice: boolean | null; available: boolean | null; onStart: () => void }) {
@@ -45,7 +45,7 @@ function PlatformCard({ platform, project, job, withVoice, available, onStart }:
                     <div className="bar-live h-full rounded-full transition-all duration-500" style={{ width: `${Math.round((job?.progress ?? 0) * 100)}%` }} />
                   </div>
                   <p className="mt-2 text-sm text-ink-400">
-                    {job?.status === 'bundling' ? 'Preparing the engine. The very first export also downloads a headless Chrome, which takes a few minutes.' : `Rendering… ${Math.round((job?.progress ?? 0) * 100)}%`}
+                    {job?.status === 'bundling' ? 'Preparing the engine. The very first export also downloads a headless Chrome, which takes a few minutes.' : job?.status === 'finishing' ? 'Finishing: levelling the sound with FFmpeg…' : `Rendering… ${Math.round((job?.progress ?? 0) * 100)}%`}
                   </p>
                 </div>
               )}

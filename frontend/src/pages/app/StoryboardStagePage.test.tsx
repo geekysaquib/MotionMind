@@ -84,49 +84,27 @@ describe('StoryboardStagePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Undo changes' }));
     expect(screen.getAllByLabelText(/Narration/)[1]).toHaveProperty('value', 'NPCI beech mein hai.');
   });
-  it('turns an automatic scene into editable objects, edits them, and saves the scene and the theme', async () => {
+  it('edits a scene picture: switches the main row to steps and saves them without blank lines', async () => {
     const { saved } = await setup();
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Edit the 3D scene of scene 1' }));
-    });
-    expect(screen.getByLabelText('Scene 1 object 1 kind')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Scene 1 object 1 kind'), { target: { value: 'custom' } });
-    fireEvent.change(screen.getByLabelText('Scene 1 object 1 label'), { target: { value: 'My thing' } });
-    fireEvent.change(screen.getByLabelText('Scene 1 object 1 icon'), { target: { value: '🧬' } });
-    fireEvent.change(screen.getByLabelText('Scene 1 object 1 shape'), { target: { value: 'tall' } });
-    fireEvent.change(screen.getByLabelText('Add an object to scene 1'), { target: { value: 'new' } });
-    expect(screen.getByLabelText('Scene 1 object 2 kind')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Add a link to scene 1' }));
-    fireEvent.change(screen.getByLabelText('Scene 1 link 1 label'), { target: { value: 'data' } });
-    fireEvent.change(screen.getByLabelText('Scene 1 effect'), { target: { value: 'rings' } });
-    fireEvent.change(screen.getByLabelText('Look of the 3D world'), { target: { value: 'lab' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add a row to scene 1' }));
+    fireEvent.change(screen.getByLabelText('Steps, scene 1'), { target: { value: ['Phone', '', 'Bank', 'NPCI'].join('\n') } });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save storyboard' }));
     });
-    const script = saved.at(-1)!;
-    expect(script.theme).toBe('lab');
-    const scene = script.beats[0]!.scene!;
-    expect(scene.props[0]).toMatchObject({ kind: 'custom', label: 'My thing', icon: '🧬', shape: 'tall' });
-    expect(scene.props).toHaveLength(2);
-    expect(scene.links).toEqual([{ from: scene.props[0]!.id, to: scene.props[1]!.id, label: 'data' }]);
-    expect(scene.effect).toBe('rings');
+    expect(saved.at(-1)!.beats[0]!.card.rows[0]).toEqual({ kind: 'flow', items: ['Phone', 'Bank', 'NPCI'] });
   });
 
-  it('removing an object also removes its links and fixes the camera focus', async () => {
+  it('crosses out items that start with ~ and adds a number row', async () => {
     const { saved } = await setup();
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Edit the 3D scene of scene 2' }));
-    });
-    fireEvent.change(screen.getByLabelText('Add an object to scene 2'), { target: { value: 'new' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add a link to scene 2' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Remove object 2 from scene 2' }));
-    expect(screen.queryByLabelText('Scene 2 link 1 label')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a row to scene 1' }));
+    fireEvent.change(screen.getByLabelText('Row 1 kind, scene 1'), { target: { value: 'chips' } });
+    fireEvent.change(screen.getByLabelText('Items, scene 1'), { target: { value: ['Cash', '~Cheque'].join('\n') } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add a row to scene 1' }));
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save storyboard' }));
     });
-    const scene = saved.at(-1)!.beats[1]!.scene!;
-    expect(scene.props).toHaveLength(1);
-    expect(scene.links).toEqual([]);
-    expect(scene.focus).toBe(scene.props[0]!.id);
+    const rows = saved.at(-1)!.beats[0]!.card.rows;
+    expect(rows[0]).toEqual({ kind: 'chips', items: [{ text: 'Cash' }, { text: 'Cheque', strike: true, tone: 'red' }] });
+    expect(rows).toHaveLength(2);
   });
 });

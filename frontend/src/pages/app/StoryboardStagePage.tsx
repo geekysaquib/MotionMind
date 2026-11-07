@@ -2,20 +2,15 @@ import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 're
 import { observer } from 'mobx-react-lite';
 import { useOutletContext } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Plus, Trash2, Layers3 } from 'lucide-react';
-import { DEFAULT_TEMPLATE, reelWorld, TEMPLATES, WORLD_THEMES, type Project, type ReelBeat, type ReelScript, type ReelTone, type WorldTheme } from '@motionmind/shared';
+import type { Project, ReelBeat, ReelScript, ReelTone } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
 import { Alert, Button, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { brandFor, specFromScript } from '../../components/reelSpec';
 import { cn } from '../../lib/cn';
-import { SceneEditor } from '../../components/SceneEditor';
-import { TemplatePicker } from '../../components/TemplatePicker';
-import { GraphicsDesigner, ScoreBadge } from '../../components/GraphicsDesigner';
-import { scoreScene } from '@motionmind/reel-engine';
+import { cleanRows, RowsEditor } from '../../components/RowsEditor';
 import { TermsEditor } from '../../components/TermsEditor';
-
-const THEME_LABELS: Record<WorldTheme, string> = { city: 'City (apps, payments, services)', nature: 'Nature (food, biology, outdoors)', lab: 'Lab (science, chips, AI)', plain: 'Plain (anything abstract)', night: 'Night (security, space, late-night tech)', sunset: 'Sunset (stories, culture, travel)', ocean: 'Ocean (water, ships, climate)', desert: 'Desert (energy, mining, history)' };
 
 const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 
@@ -35,7 +30,7 @@ function cleanKeywords(b: ReelBeat): ReelBeat {
   return { ...b, keywords: b.keywords.filter((k) => words.has(k.toLowerCase())) };
 }
 
-/** Storyboard stage: edit the script beat by beat (words, card, colour, order) with the reel playing alongside. */
+/** Storyboard stage: edit the script beat by beat (words, card, scene picture, colour, order) with the reel playing alongside. */
 export const StoryboardStagePage = observer(function StoryboardStagePage() {
   const project = useOutletContext<Project>();
   const { projects, profile } = useStores();
@@ -90,7 +85,7 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
     setSaving(true);
     setError(null);
     try {
-      await projects.saveScript(project.id, { ...draft, glossary: draft.glossary?.filter((g) => g.short.trim() && g.full.trim()), brands: draft.brands?.filter((b) => b.name.trim() && b.domain.trim()), beats: draft.beats.map(cleanKeywords) });
+      await projects.saveScript(project.id, { ...draft, glossary: draft.glossary?.filter((g) => g.short.trim() && g.full.trim()), brands: draft.brands?.filter((b) => b.name.trim() && b.domain.trim()), beats: draft.beats.map((b) => cleanKeywords({ ...b, card: { ...b.card, rows: cleanRows(b.card.rows) } })) });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -103,17 +98,6 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-4">
-        <Card>
-          <h2 className="flex items-center gap-2 font-semibold">
-            <Layers3 className="h-4 w-4 text-accent" /> Choose a template
-          </h2>
-          <p className="mt-1 mb-4 text-sm text-ink-400">The look of the reel: the world, the header, the cards and the captions. The preview on the right updates as you pick. You can still edit every scene below.</p>
-          <TemplatePicker
-            value={draft.template ?? DEFAULT_TEMPLATE}
-            onChange={(id) => setDraft({ ...draft, template: id, ...(reelWorld(draft) === 'iso' ? { theme: TEMPLATES[id].theme } : {}) })}
-          />
-        </Card>
-        <GraphicsDesigner script={draft} onChange={setDraft} />
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-[220px] flex-1">
@@ -131,18 +115,6 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
               </Button>
             </div>
           </div>
-          {reelWorld(draft) === 'iso' && (
-            <label className="mt-4 block text-xs text-ink-400">
-              Look of the 3D world
-              <select className={cn(inputCls, 'mt-1 max-w-xs')} value={draft.theme ?? 'city'} onChange={(e) => setDraft({ ...draft, theme: e.target.value as WorldTheme })}>
-                {WORLD_THEMES.map((t) => (
-                  <option key={t} value={t}>
-                    {THEME_LABELS[t]}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           <div className="mt-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">Header steps</span>
             <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -166,7 +138,6 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="flex items-center gap-2 text-sm font-semibold">
                 Scene {i + 1}
-                {reelWorld(draft) === 'iso' && <ScoreBadge score={scoreScene(b as never, b.scene as never, { glossary: draft.glossary, brands: draft.brands })} />}
               </span>
               <div className="flex items-center gap-1">
                 <IconButton label={`Move scene ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)} icon={<ArrowUp className="h-4 w-4" />} />
@@ -213,15 +184,7 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
                 />
               ))}
             </div>
-            {reelWorld(draft) === 'iso' && (
-              <SceneEditor
-                beat={b}
-                index={i}
-                known={knownProps(draft, i)}
-                previous={draft.beats[i - 1]?.scene}
-                onChange={(scene) => update(i, (x) => ({ ...x, scene }))}
-              />
-            )}
+            <RowsEditor rows={b.card.rows} index={i} onChange={(rows) => updateCard(i, { rows })} />
           </Card>
         ))}
       </div>
@@ -237,15 +200,6 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
     </div>
   );
 });
-
-/** Objects the other scenes use, once each, so a scene can reuse one and the camera stays in one world. */
-function knownProps(script: ReelScript, except: number) {
-  const seen = new Map<string, NonNullable<ReelBeat['scene']>['props'][number]>();
-  script.beats.forEach((b, j) => {
-    if (j !== except) for (const p of b.scene?.props ?? []) if (!seen.has(p.id)) seen.set(p.id, p);
-  });
-  return [...seen.values()];
-}
 
 function IconButton({ label, icon, onClick, disabled }: { label: string; icon: ReactNode; onClick: () => void; disabled?: boolean }) {
   return (

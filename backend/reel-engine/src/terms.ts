@@ -7,7 +7,7 @@ export type BrandRef = { name: string; domain: string };
 const SPECIAL = '.*+?^${}()|[]' + String.fromCharCode(92);
 const esc = (t: string) => [...t].map((c) => (SPECIAL.includes(c) ? String.fromCharCode(92) + c : c)).join('');
 
-/** Every piece of text a beat puts on screen or says: the narration, the card, and the labels in the scene. */
+/** Every piece of text a beat puts on screen or says: the narration and the card. */
 export function textOf(beat: Beat): string {
   const rows = (beat.card.rows ?? []).flatMap((r) => {
     const row = r as unknown as Record<string, unknown>;
@@ -22,8 +22,7 @@ export function textOf(beat: Beat): string {
         return [String(row.text ?? '')];
     }
   });
-  const scene = beat.scene;
-  return [beat.narration, beat.card.eyebrow, beat.card.headline, ...rows, ...(scene?.props.map((p) => p.label ?? '') ?? []), ...(scene?.links?.map((l) => l.label ?? '') ?? [])].join(' \n ');
+  return [beat.narration, beat.card.eyebrow, beat.card.headline, ...rows].join(' \n ');
 }
 
 const wordRe = (word: string, flags: string) => new RegExp(`(?<![A-Za-z0-9])${esc(word)}(?![A-Za-z0-9])`, flags);
@@ -50,12 +49,11 @@ export const bareDomain = (d: string) => d.trim().toLowerCase().replace(/^[a-z]+
 export function brandsFor(beat: Beat, brands: BrandRef[] | undefined, max = 3): BrandRef[] {
   if (!brands?.length) return [];
   const text = textOf(beat);
-  const tiles = new Set((beat.scene?.props ?? []).map((p) => (p.logo ? bareDomain(p.logo) : '')).filter(Boolean));
   const out: BrandRef[] = [];
   for (const b of brands) {
     const domain = bareDomain(b.domain);
     if (!domain || out.some((o) => bareDomain(o.domain) === domain)) continue;
-    if (!tiles.has(domain) && !wordRe(b.name.trim(), 'i').test(text)) continue;
+    if (!wordRe(b.name.trim(), 'i').test(text)) continue;
     out.push({ name: b.name.trim(), domain });
     if (out.length >= max) break;
   }

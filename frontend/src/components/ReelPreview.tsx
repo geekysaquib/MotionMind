@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
 import { Player } from '@remotion/player';
-import { FPS, Reel, reelTiming, TRAIN_REEL, type ReelSpec } from '@motionmind/reel-engine';
+import { FPS, Reel, reelTiming, SAMPLE_REEL, type ReelSpec } from '@motionmind/reel-engine';
 
 /**
  * The reel engine, running in the browser: the same composition the renderer turns into an MP4,
  * played live so a script can be checked before anything is rendered.
- * Without a spec it plays the sample "Where is my Train" reel.
+ * Without a spec it plays the sample reel.
  */
-export default function ReelPreview({ spec = TRAIN_REEL }: { spec?: ReelSpec }) {
+export default function ReelPreview({ spec = SAMPLE_REEL }: { spec?: ReelSpec }) {
   const total = useMemo(() => reelTiming(spec).totalFrames, [spec]);
   return (
     <div className="overflow-hidden rounded-2xl border border-line/10 bg-ink-900 shadow-soft">

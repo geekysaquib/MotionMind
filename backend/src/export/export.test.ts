@@ -93,9 +93,9 @@ describe('MP4 export', () => {
     const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/export`, headers: H });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ withVoice: true, job: { status: 'rendering' } });
-    const props = renderer.started[0]!.props as { brand: { name: string; initials: string; handle: string }; audioUrls: string[]; world: string };
+    const props = renderer.started[0]!.props as { brand: { name: string; initials: string; handle: string }; audioUrls: string[]; style: string };
     expect(props.brand).toMatchObject({ name: 'Decodify X', initials: 'DX', handle: '@decodify_x' });
-    expect(props.world).toBe('iso');
+    expect(props.style).toBe('live-map');
     expect(props.audioUrls[0]).toMatch(/^data:audio\/mpeg/);
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/export`, headers: H })).json()).toMatchObject({ available: true, job: { progress: 0.4 } });
   });

@@ -1,6 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom';
-import { ArrowRight, Box, Check, Clapperboard, FileText, LayoutGrid, Lightbulb, Mic, PenLine, Scissors, Search, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Check, Palette, Clapperboard, FileText, LayoutGrid, Lightbulb, Mic, PenLine, Scissors, Search, type LucideIcon } from 'lucide-react';
 import { useStores } from '../../stores/RootStore';
 import { Spinner } from '../../components/ui';
 import { ProgressRing } from '../../components/motion';
@@ -9,7 +9,7 @@ import { nextStage, progressOf, stageDone, STAGE_INFO } from '../../lib/progress
 import { cn } from '../../lib/cn';
 
 /** A small icon for each step. */
-export const STAGE_ICONS: Record<string, LucideIcon> = { '': PenLine, research: Search, script: FileText, storyboard: LayoutGrid, graphics: Box, voice: Mic, editor: Scissors, export: Clapperboard };
+export const STAGE_ICONS: Record<string, LucideIcon> = { '': PenLine, research: Search, script: FileText, storyboard: LayoutGrid, graphics: Palette, voice: Mic, editor: Scissors, export: Clapperboard };
 
 export const PROJECT_TABS = STAGE_INFO.map(({ path, label }) => ({ path, label }));
 

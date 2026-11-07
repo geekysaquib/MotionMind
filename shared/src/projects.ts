@@ -82,28 +82,6 @@ export type ReelRow =
   | { kind: 'kv'; k: string; v: string; tone?: ReelTone }
   | { kind: 'note'; text: string };
 
-/** Objects the 3D isometric world can draw (same list as the reel engine's PROP_KINDS). */
-export type ScenePropKind = 'phone' | 'laptop' | 'tower' | 'server' | 'cloud' | 'bank' | 'shop' | 'building' | 'house' | 'factory' | 'person' | 'document' | 'money' | 'chip' | 'car' | 'satellite' | 'qr' | 'speaker' | 'lock' | 'database' | 'router' | 'battery' | 'heart' | 'gear' | 'truck' | 'plane' | 'train' | 'tree' | 'hospital' | 'school' | 'cart' | 'camera' | 'bulb' | 'globe' | 'envelope' | 'clock' | 'rocket' | 'syringe' | 'chart' | 'atm' | 'brain' | 'virus' | 'dna' | 'flask' | 'microscope' | 'sun' | 'flame' | 'solar' | 'windmill' | 'bus' | 'ship' | 'shield' | 'book' | 'bell' | 'key' | 'receipt' | 'pin' | 'terminal' | 'loadbalancer' | 'cache' | 'queue' | 'datacenter' | 'toggle' | 'gauge' | 'cable' | 'chat' | 'custom';
-
-/** Every kind the scene editor offers (the engine's PROP_KINDS). */
-export const SCENE_PROP_KINDS: ScenePropKind[] = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'qr', 'speaker', 'lock', 'database', 'router', 'battery', 'heart', 'gear', 'truck', 'plane', 'train', 'tree', 'hospital', 'school', 'cart', 'camera', 'bulb', 'globe', 'envelope', 'clock', 'rocket', 'syringe', 'chart', 'atm', 'brain', 'virus', 'dna', 'flask', 'microscope', 'sun', 'flame', 'solar', 'windmill', 'bus', 'ship', 'shield', 'book', 'bell', 'key', 'receipt', 'pin', 'terminal', 'loadbalancer', 'cache', 'queue', 'datacenter', 'toggle', 'gauge', 'cable', 'chat', 'custom'];
-export const SCENE_PROP_SHAPES: ScenePropShape[] = ['block', 'tall', 'wide', 'flat', 'round'];
-export const WORLD_THEMES: WorldTheme[] = ['city', 'nature', 'lab', 'plain', 'night', 'sunset', 'ocean', 'desert'];
-
-/** Body of a 'custom' object. */
-export type ScenePropShape = 'block' | 'tall' | 'wide' | 'flat' | 'round';
-
-/** The look of the ground and background in the iso world. */
-export type WorldTheme = 'city' | 'nature' | 'lab' | 'plain' | 'night' | 'sunset' | 'ocean' | 'desert';
-
-/** A beat's 3D scene: which objects are on screen, what moves between them, and the effect. */
-export interface ReelScene {
-  props: { id: string; kind: ScenePropKind; label?: string; icon?: string; glyph?: string; logo?: string; shape?: ScenePropShape; tone?: 'red' | 'teal' | 'purple' | 'blue' | 'amber' }[];
-  links?: { from: string; to: string; label?: string }[];
-  effect?: 'rings' | 'pulse' | 'none';
-  focus?: string;
-}
-
 export interface ReelBeat {
   id: string;
   narration: string;
@@ -112,34 +90,13 @@ export interface ReelBeat {
   /** 0 = hook, then 1..steps.length */
   chapter: number;
   card: { eyebrow: string; headline: string; tone: ReelTone; rows: ReelRow[] };
-  /** 3D isometric world: what this beat shows. */
-  scene?: ReelScene;
-  /** Train world: a named camera shot and effects. */
-  shot?: 'phone' | 'tower' | 'map' | 'crowd' | 'station' | 'accuracy' | 'wide';
-  events?: ('rings' | 'towerIds' | 'pins' | 'gpsLog' | 'stationGlow' | 'errorBand' | 'none')[];
-}
-
-/**
- * Which 3D world renders a script. Claude picks it; older scripts without a choice get the train world
- * when they are about trains, and the isometric scene kit otherwise. Every reel is 3D.
- */
-export function reelWorld(script: Pick<ReelScript, 'world' | 'title' | 'steps'> & { beats: Pick<ReelBeat, 'narration'>[] }): 'iso' | 'train' {
-  if (script.world) return script.world;
-  const text = [script.title, ...script.steps, ...script.beats.slice(0, 3).map((b) => b.narration)].join(' ');
-  return /\b(train|trains|railway|railways|rail|metro)\b/i.test(text) ? 'train' : 'iso';
 }
 
 /** A reel script: what the voice says and what each on-screen card shows. The reel engine renders it. */
 export interface ReelScript {
   title: string;
-  /** Which 3D world renders it. Missing on older scripts, which render as flat cards. */
-  world?: 'iso' | 'train';
-  /** Iso world: the look of the ground and background. */
-  theme?: WorldTheme;
-  /** The template the reel is staged in (chosen after the script, before the storyboard). Missing = the default. */
-  template?: import('./templates').TemplateId;
-  /** Locked spots of the 3D objects, by object id (ground x, y in world units). Without it the engine arranges them. */
-  layout?: Record<string, { x: number; y: number }>;
+  /** The look the reel is drawn in (picked on the Style step). Missing = the default style. */
+  style?: import('./styles').StyleId;
   /** The cover (thumbnail) settings. Missing means the defaults. */
   cover?: import('./cover').CoverSettings;
   steps: string[];
@@ -172,7 +129,7 @@ export const STAGE_LABELS: Record<Stage, string> = {
   research: 'Research',
   script: 'Script',
   storyboard: 'Storyboard',
-  graphics: 'Graphics',
+  graphics: 'Style',
   voice: 'Voice',
   final: 'Final video',
 };

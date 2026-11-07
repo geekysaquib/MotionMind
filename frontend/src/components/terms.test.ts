@@ -22,9 +22,9 @@ describe('termsFor', () => {
   it('skips a short form whose full form is already spelled out on the card', () => {
     expect(termsFor(beat({ headline: 'Passenger Reservation System (PRS)' }), GLOSSARY)).toEqual([]);
   });
-  it('finds short forms in scene labels, and shows at most two', () => {
-    const b = beat({ narration: 'Ek.', headline: 'Pay', scene: { props: [{ id: 'a', kind: 'phone', label: 'OTP' }, { id: 'b', kind: 'bank', label: 'UPI' }, { id: 'c', kind: 'server', label: 'PRS' }] } });
-    expect(termsFor(b, GLOSSARY).map((t) => t.short)).toEqual(['PRS', 'OTP']);
+  it('shows at most two short forms', () => {
+    const b = beat({ narration: 'OTP aur UPI aur PRS.', headline: 'Pay' });
+    expect(termsFor(b, GLOSSARY)).toHaveLength(2);
   });
 });
 
@@ -33,10 +33,9 @@ describe('brandsFor and logoUrl', () => {
     { name: 'NPCI', domain: 'https://www.npci.org.in/' },
     { name: 'Paytm', domain: 'paytm.com' },
   ];
-  it('finds brands named in the text or drawn as a logo tile, with a clean website', () => {
+  it('finds brands named in the text, with a clean website', () => {
     expect(brandsFor(beat({ narration: 'NPCI confirms.' }), BRANDS)).toEqual([{ name: 'NPCI', domain: 'npci.org.in' }]);
-    const tile = beat({ narration: 'Ek.', scene: { props: [{ id: 'p', kind: 'custom', logo: 'paytm.com' }] } });
-    expect(brandsFor(tile, BRANDS)).toEqual([{ name: 'Paytm', domain: 'paytm.com' }]);
+    expect(brandsFor(beat({ narration: 'Paytm se.' }), BRANDS)).toEqual([{ name: 'Paytm', domain: 'paytm.com' }]);
     expect(brandsFor(beat({ narration: 'Nothing.' }), BRANDS)).toEqual([]);
   });
   it('builds the logo address on the API, with the name for the fallback tile', () => {
