@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, interpolate } from 'remotion';
 import type { Tone } from '../script';
+import { Composer, type Skin } from './composer';
 import { captionScale, chunkAt, cleanWord, contentOf, countText, ctaFor, easeInOut, extrasOf, fade, isKey, parts, pop, ramp, rnd, stepName, Logo, fitSize, type SceneProps, type StyleKit } from './common';
 
 // Live Map: a flat, light city map that stays on screen the whole reel, with cars driving and location pings.
@@ -268,13 +269,56 @@ const Layer: React.FC<SceneProps> = (props) => {
   );
 };
 
+/** Live Map's look for the pieces Claude places in a scene: white rounded cards, black ink, yellow marker. */
+const SKIN: Skin = {
+  font: FONT,
+  mono: '"JetBrains Mono", Consolas, monospace',
+  ink: C.ink,
+  sub: C.sub,
+  accent: C.yellow,
+  hiInk: C.ink,
+  hiBg: C.yellow,
+  tone: (t) => (t ? TONE[t] : C.ink),
+  panel: ({ focus, round }) => ({ style: { background: C.white, borderRadius: round ?? 30, boxShadow: '0 18px 44px #0B0B0C24', border: focus ? `5px solid ${C.ink}` : undefined } }),
+  enter: (k) => ({ opacity: k, transform: `translateY(${(1 - k) * 50}px) scale(${0.92 + 0.08 * k})` }),
+  Link: ({ a, b, k, frame, label, dashed }) => {
+    const e = { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+    const t = ((frame * 0.03) % 1) * (k >= 1 ? 1 : 0);
+    const ang = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+    return (
+      <g>
+        <line x1={a.x} y1={a.y} x2={e.x} y2={e.y} stroke={C.ink} strokeWidth={12} strokeLinecap="round" strokeDasharray={dashed ? '4 22' : undefined} />
+        {!dashed && <line x1={a.x} y1={a.y} x2={e.x} y2={e.y} stroke={C.yellow} strokeWidth={4} strokeDasharray="12 14" strokeDashoffset={-frame * 2} />}
+        {k >= 1 && <polygon points="0,-16 26,0 0,16" fill={C.ink} transform={`translate(${b.x},${b.y}) rotate(${ang}) translate(-22,0)`} />}
+        {k >= 1 && <circle cx={a.x + (b.x - a.x) * t} cy={a.y + (b.y - a.y) * t} r={13} fill={C.blue} stroke="#fff" strokeWidth={4} />}
+        {label && k >= 1 && (
+          <g transform={`translate(${(a.x + b.x) / 2},${(a.y + b.y) / 2})`}>
+            <rect x={-label.length * 9 - 18} y={-24} width={label.length * 18 + 36} height={48} rx={24} fill={C.ink} />
+            <text textAnchor="middle" y={10} fontFamily={FONT} fontWeight={800} fontSize={28} fill={C.yellow}>{label}</text>
+          </g>
+        )}
+      </g>
+    );
+  },
+};
+
+/** Without the map: the same light ground, with a faint street grid. */
+const PlainGround: React.FC = () => (
+  <svg width={1080} height={1920} style={{ position: 'absolute', inset: 0 }}>
+    <rect width={1080} height={1920} fill={C.bg} />
+    {Array.from({ length: 12 }, (_, i) => <line key={`v${i}`} x1={i * 100 + 40} y1={0} x2={i * 100 + 40} y2={1920} stroke="#E4E6EA" strokeWidth={2} />)}
+    {Array.from({ length: 20 }, (_, i) => <line key={`h${i}`} x1={0} y1={i * 100 + 20} x2={1080} y2={i * 100 + 20} stroke="#E4E6EA" strokeWidth={2} />)}
+  </svg>
+);
+
 const Stage: React.FC<SceneProps> = (props) => {
   const leads = props.timed.map((b) => contentOf(b).lead);
+  const v = props.beat.visual;
   return (
     <AbsoluteFill style={{ background: C.bg, fontFamily: FONT }}>
-      <CityMap {...props} leads={leads} />
+      {v && !v.map ? <PlainGround /> : <CityMap {...props} leads={leads} />}
       <AbsoluteFill style={{ background: 'linear-gradient(#F7F7F5 0%, #F7F7F5cc 16%, transparent 30%, transparent 74%, #F7F7F5cc 82%, #F7F7F5 100%)' }} />
-      {props.frame < props.storyFrames && <Layer {...props} />}
+      {props.frame < props.storyFrames && (v ? <AbsoluteFill style={{ opacity: fade(props.frame - props.beat.start, props.beat.frames - 8, props.beat.frames, 1, 0) }}><Composer visual={v} beat={props.beat} frame={props.frame} area={{ l: 50, r: 1030, t: props.zones.top, b: props.zones.bottom }} skin={SKIN} logoBase={props.spec.logoBase} /></AbsoluteFill> : <Layer {...props} />)}
       {!props.bare && props.frame < props.storyFrames && <Header {...props} />}
     </AbsoluteFill>
   );

@@ -8,6 +8,8 @@ import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
 import { errorText, timeAgo } from '../../lib/format';
 import { brandFor, specFromScript } from '../../components/reelSpec';
 import { PasteScriptPanel } from './PasteScriptPanel';
+import { STYLES } from '@motionmind/shared';
+import { pickedStyle } from '../../lib/pickedStyle';
 
 // The player pulls in the whole reel engine, so it loads only on this page.
 const ReelPreview = lazy(() => import('../../components/ReelPreview'));
@@ -20,13 +22,14 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
   const [error, setError] = useState<string | null>(null);
   const [showSample, setShowSample] = useState(false);
   const script = project.script;
+  const style = pickedStyle(project);
   const spec = useMemo(() => (script ? specFromScript(script, brandFor(profile.profile)) : null), [script, profile.profile]);
 
   async function write() {
     setBusy(true);
     setError(null);
     try {
-      await projects.writeScript(project.id);
+      await projects.writeScript(project.id, style);
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -37,6 +40,23 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-6">
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-ink-400">
+              {style ? (
+                <>
+                  Claude designs every scene for the <span className="font-semibold text-ink-100">{STYLES[style].name}</span> style.
+                </>
+              ) : (
+                'Pick a style first: Claude designs every scene for the style you choose.'
+              )}
+            </p>
+            <Link to={`/app/projects/${project.id}/graphics`} className="text-sm font-semibold text-accent hover:underline">
+              {style ? 'Change the style' : 'Pick a style'}
+            </Link>
+          </div>
+          {script && style && script.style && script.style !== style && <p className="mt-2 text-xs text-amber-700">This script was designed for another style. Write it again for the best fit.</p>}
+        </Card>
         {aiMode.paste && script ? (
           <details className="group card overflow-hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-semibold">

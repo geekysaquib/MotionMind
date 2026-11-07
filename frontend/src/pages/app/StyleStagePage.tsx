@@ -1,15 +1,16 @@
-import { Check, Palette, Sparkles } from 'lucide-react';
+import { ArrowRight, Check, Palette, Sparkles } from 'lucide-react';
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
-import { DEFAULT_STYLE, STYLE_IDS, STYLES, suggestStyles, type Project, type StyleId } from '@motionmind/shared';
+import { DEFAULT_STYLE, STYLES, suggestStyles, type Project, type StyleId } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
-import { EmptyState } from '../../components/EmptyState';
 import { Alert, Badge, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
 import { cn } from '../../lib/cn';
 import { brandFor, specFromScript } from '../../components/reelSpec';
+import { pickedStyle, rememberStyle } from '../../lib/pickedStyle';
+import { SAMPLE_SCRIPT } from '../../components/sampleScript';
 
 const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 const StyleThumb = lazy(() => import('../../components/StyleThumb'));
@@ -24,25 +25,25 @@ export const StyleStagePage = observer(function StyleStagePage() {
   const [busy, setBusy] = useState<StyleId | null>(null);
   const [error, setError] = useState<string | null>(null);
   const script = project.script;
-  const current = script?.style ?? null;
+  const [local, setLocal] = useState(() => pickedStyle(project));
+  const current = script?.style ?? local;
   const recent = useMemo(
     () => projects.items.filter((p) => p.id !== project.id && p.script?.style).slice(0, 3).map((p) => p.script!.style!),
     [projects.items, project.id],
   );
-  const order = useMemo(() => (script ? suggestStyles(script, recent) : [...STYLE_IDS]), [script, recent]);
+  const order = useMemo(() => suggestStyles(script ?? { title: project.topic ?? project.title, beats: [] }, recent), [script, recent, project.topic, project.title]);
   const shown = current ?? order[0] ?? DEFAULT_STYLE;
   const brand = brandFor(profile.profile);
-  const spec = useMemo(() => (script ? specFromScript(script, brand, undefined, undefined, undefined, shown) : null), [script, brand, shown]);
-
-  if (!script || !spec) {
-    return <EmptyState icon={<Palette className="h-6 w-6" />} title="No script yet" text="Styles draw your own script, so write it first." to={`/app/projects/${project.id}/script`} action="Go to Script" />;
-  }
+  // Before the script exists, the styles are shown on a sample reel.
+  const spec = useMemo(() => specFromScript(script ?? SAMPLE_SCRIPT, brand, undefined, undefined, undefined, shown), [script, brand, shown]);
 
   async function pick(id: StyleId) {
     setBusy(id);
     setError(null);
     try {
-      projects.upsert(await services.claude(() => auth.session?.accessToken ?? null).saveStyle(project.id, id));
+      rememberStyle(project.id, id);
+      setLocal(id);
+      if (script) projects.upsert(await services.claude(() => auth.session?.accessToken ?? null).saveStyle(project.id, id));
       log.info('style', 'Style picked', { projectId: project.id, style: id });
     } catch (e) {
       setError(errorText(e));
@@ -59,12 +60,16 @@ export const StyleStagePage = observer(function StyleStagePage() {
             <Palette className="h-4 w-4 text-accent" /> Pick a style
           </h2>
           <p className="mt-1 text-sm text-ink-400">
-            The style draws every scene: the headline, the scene picture (steps, numbers, items, notes), the captions and the end card. Each card below is your own reel. To change what a scene shows, edit its picture in the{' '}
-            <Link to={`/app/projects/${project.id}/storyboard`} className="text-accent hover:underline">
-              Storyboard
-            </Link>
-            .
+            Pick the look first. Then Claude writes the script and designs every scene for that style: the pieces on screen (servers, phones, queues, numbers, stamps), how they connect, and the word each one appears on.{' '}
+            {script ? 'Each card below is your own reel.' : 'Until the script is written, each card shows a sample reel.'}
           </p>
+          {current && (
+            <div className="mt-3">
+              <Link to={`/app/projects/${project.id}/script`} className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline">
+                {script ? 'Write the script again for this style' : 'Next: write the script'} <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          )}
           {!current && <p className="mt-2 text-sm text-ink-400">Nothing picked yet: the preview shows the best fit for this topic.</p>}
           {error && <div className="mt-3"><Alert>{error}</Alert></div>}
         </Card>

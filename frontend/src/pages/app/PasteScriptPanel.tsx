@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { ClipboardCopy, ExternalLink } from 'lucide-react';
 import type { Project } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
+import { pickedStyle } from '../../lib/pickedStyle';
 import { Alert, Button, Card } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
@@ -97,14 +98,15 @@ export function ClaudeAiPanel({ title, chatHint, placeholder, disabled, getPromp
 /** Script stage: write the script in claude.ai instead of with the server's API key. */
 export const PasteScriptPanel = observer(function PasteScriptPanel({ project }: { project: Project }) {
   const { projects, services, auth } = useStores();
+  const style = pickedStyle(project);
   return (
     <ClaudeAiPanel
       title="Write it in claude.ai"
       placeholder='{ "title": "...", "steps": [...], "beats": [...] }'
       disabled={!project.topic}
       logScope="Script"
-      getPrompt={() => services.claude(() => auth.session?.accessToken ?? null).scriptPrompt(project.id)}
-      onImport={(text) => projects.importScript(project.id, text)}
+      getPrompt={() => services.claude(() => auth.session?.accessToken ?? null).scriptPrompt(project.id, style)}
+      onImport={(text) => projects.importScript(project.id, text, style)}
     />
   );
 });

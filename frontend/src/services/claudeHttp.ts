@@ -75,10 +75,10 @@ export interface ClaudeService {
   status(): Promise<ClaudeStatus>;
   ask(prompt: string): Promise<ClaudeAnswer>;
   /** Claude writes the project's reel script; returns the updated project. */
-  writeScript(projectId: string): Promise<Project>;
+  writeScript(projectId: string, style?: StyleId | null): Promise<Project>;
   /** For claude.ai: the prompt to copy, then the answer to paste back. */
-  scriptPrompt(projectId: string): Promise<string>;
-  importScript(projectId: string, text: string): Promise<Project>;
+  scriptPrompt(projectId: string, style?: StyleId | null): Promise<string>;
+  importScript(projectId: string, text: string, style?: StyleId | null): Promise<Project>;
   /** Research: Claude searches the web (API), or the same through claude.ai, then the user approves it. */
   research(projectId: string): Promise<Project>;
   researchPrompt(projectId: string): Promise<string>;
@@ -120,9 +120,9 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     testElevenLabs: async () => (await call<{ result: ElevenLabsCheck }>('/connectors/elevenlabs/test', 'POST')).result,
     status: () => call<ClaudeStatus>('/claude/status'),
     ask: (prompt) => call<ClaudeAnswer>('/claude/ask', 'POST', { prompt }),
-    writeScript: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'POST')).project,
-    scriptPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt`)).prompt,
-    importScript: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/script/import`, 'POST', { text })).project,
+    writeScript: async (projectId, style) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'POST', style ? { style } : undefined)).project,
+    scriptPrompt: async (projectId, style) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt${style ? `?style=${style}` : ''}`)).prompt,
+    importScript: async (projectId, text, style) => (await call<{ project: Project }>(`/projects/${projectId}/script/import`, 'POST', style ? { text, style } : { text })).project,
     research: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research`, 'POST')).project,
     researchPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt`)).prompt,
     importResearch: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/research/import`, 'POST', { text })).project,

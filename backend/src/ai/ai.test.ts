@@ -311,7 +311,7 @@ describe('storyboard edits', () => {
     await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
     const picked = await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: H, payload: { style: 'whiteboard' } });
     expect(picked.statusCode).toBe(200);
-    expect(picked.json().project).toMatchObject({ stage: 'graphics', script: { style: 'whiteboard' } });
+    expect(picked.json().project).toMatchObject({ stage: 'script', script: { style: 'whiteboard' } });
     expect(picked.json().project.script.editedAt).toBeUndefined();
     expect((await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: H, payload: { style: 'vaporwave' } })).statusCode).toBe(400);
     expect((await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: { authorization: 'Bearer dev:u2' }, payload: { style: 'newsroom' } })).statusCode).toBe(404);
@@ -343,10 +343,34 @@ describe('Scripts written before the style engine', () => {
     expect(parsed.beats[0]!.shot).toBeUndefined();
   });
 
-  it('tells Claude how each row becomes the scene picture', async () => {
+  it('asks Claude to design every scene, for the default style when none was picked', async () => {
     const { manualReelPrompt } = await import('./reelPrompt');
     const prompt = manualReelPrompt({ topic: 'UPI', durationSec: 30, language: 'en', niche: null, channelName: null });
-    expect(prompt).toContain('FIRST card row');
+    expect(prompt).toContain('DESIGN THE PICTURE');
+    expect(prompt).toContain('"Live Map" style');
     expect(prompt).not.toContain('isometric');
+  });
+
+  it('writes the claude.ai prompt for the style picked before the script, and saves the pasted script with it', async () => {
+    const { app } = await setup();
+    const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'Tatkal', topic: 'IRCTC Tatkal backend', durationSec: 45, qualityTier: 'standard' } });
+    const id = created.json().project.id;
+    const prompt = (await app.inject({ method: 'GET', url: `/api/projects/${id}/script/prompt?style=whiteboard`, headers: H })).json().prompt as string;
+    expect(prompt).toContain('"Whiteboard" style');
+    expect(prompt).toContain('marker');
+    expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/script/prompt?style=nope`, headers: H })).json().prompt).toContain('"Live Map" style');
+    const designed = {
+      ...SCRIPT,
+      beats: SCRIPT.beats.map((b) => ({
+        ...b,
+        visual: { elements: [{ id: 'lb', kind: 'card', label: 'Load balancer', icon: 'split', x: 50, y: 40, on: 'npci' }, { id: 'db', kind: 'stamp', label: 'Confirmed' }], links: [{ from: 'lb', to: 'db', label: 'book' }] },
+      })),
+    };
+    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: JSON.stringify(designed), style: 'whiteboard' } });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().project.script.style).toBe('whiteboard');
+    expect(res.json().project.script.beats[0].visual.elements[0]).toMatchObject({ kind: 'card', label: 'Load balancer', on: 'npci' });
+    const bad = { ...SCRIPT, beats: [{ ...SCRIPT.beats[0], visual: { elements: [{ id: 'x', kind: 'hologram' }] } }] };
+    expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: JSON.stringify(bad) } })).statusCode).toBe(400);
   });
 });

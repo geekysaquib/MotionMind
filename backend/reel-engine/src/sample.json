@@ -1,0 +1,484 @@
+{
+ "title": "Tatkal ke 60 second",
+ "steps": [
+  "Bheed",
+  "Queue",
+  "Captcha",
+  "Seat lock",
+  "Payment"
+ ],
+ "glossary": [
+  {
+   "short": "IRCTC",
+   "full": "Indian Railway Catering and Tourism Corporation"
+  },
+  {
+   "short": "PRS",
+   "full": "Passenger Reservation System"
+  },
+  {
+   "short": "OTP",
+   "full": "One Time Password"
+  }
+ ],
+ "brands": [
+  {
+   "name": "IRCTC",
+   "domain": "irctc.co.in"
+  }
+ ],
+ "beats": [
+  {
+   "id": "hook",
+   "chapter": 0,
+   "narration": "Subah dus baje Tatkal khulta hai, aur ek minute mein lakhon log ek saath IRCTC par toot padte hain. Phir bhi server girta kyun nahi?",
+   "keywords": [
+    "tatkal",
+    "lakhon",
+    "server"
+   ],
+   "card": {
+    "eyebrow": "IRCTC Tatkal",
+    "headline": "10 baje, *lakhon* log ek saath",
+    "tone": "red",
+    "rows": [
+     {
+      "kind": "kv",
+      "k": "Logins at 10:00",
+      "v": "3 lakh+",
+      "tone": "red"
+     }
+    ]
+   },
+   "visual": {
+    "elements": [
+     {
+      "id": "clock",
+      "kind": "card",
+      "label": "10:00:00 AM",
+      "sub": "Tatkal window opens",
+      "icon": "alarm-clock",
+      "x": 50,
+      "y": 12,
+      "tone": "red",
+      "on": "dus"
+     },
+     {
+      "id": "crowd",
+      "kind": "queue",
+      "label": "Users hitting Book Now",
+      "value": "12",
+      "x": 50,
+      "y": 45,
+      "on": "lakhon"
+     },
+     {
+      "id": "irctc",
+      "kind": "card",
+      "label": "IRCTC",
+      "sub": "irctc.co.in",
+      "logo": "irctc.co.in",
+      "x": 50,
+      "y": 82,
+      "focus": true,
+      "on": "irctc"
+     }
+    ],
+    "links": [
+     {
+      "from": "crowd",
+      "to": "irctc",
+      "label": "login",
+      "on": "toot"
+     }
+    ]
+   }
+  },
+  {
+   "id": "waiting",
+   "chapter": 1,
+   "narration": "Pehla kaam: sabko seedha database tak jaane nahi diya jaata. Load balancer requests ko alag alag servers mein baant deta hai.",
+   "keywords": [
+    "database",
+    "load",
+    "balancer"
+   ],
+   "card": {
+    "eyebrow": "Step 1 · Load balancer",
+    "headline": "Bheed ko *baant do*",
+    "tone": "blue",
+    "rows": [
+     {
+      "kind": "flow",
+      "items": [
+       "Users",
+       "Load balancer",
+       "Servers"
+      ]
+     }
+    ]
+   },
+   "visual": {
+    "elements": [
+     {
+      "id": "users",
+      "kind": "card",
+      "label": "Lakhon requests",
+      "icon": "users",
+      "x": 50,
+      "y": 10
+     },
+     {
+      "id": "lb",
+      "kind": "card",
+      "label": "Load balancer",
+      "icon": "split",
+      "x": 50,
+      "y": 42,
+      "focus": true,
+      "on": "load"
+     },
+     {
+      "id": "s1",
+      "kind": "card",
+      "label": "Server 1",
+      "icon": "server",
+      "x": 18,
+      "y": 85,
+      "w": 30,
+      "on": "servers"
+     },
+     {
+      "id": "s2",
+      "kind": "card",
+      "label": "Server 2",
+      "icon": "server",
+      "x": 50,
+      "y": 85,
+      "w": 30,
+      "on": "servers"
+     },
+     {
+      "id": "s3",
+      "kind": "card",
+      "label": "Server 3",
+      "icon": "server",
+      "x": 82,
+      "y": 85,
+      "w": 30,
+      "on": "servers"
+     }
+    ],
+    "links": [
+     {
+      "from": "users",
+      "to": "lb"
+     },
+     {
+      "from": "lb",
+      "to": "s1"
+     },
+     {
+      "from": "lb",
+      "to": "s2"
+     },
+     {
+      "from": "lb",
+      "to": "s3"
+     }
+    ]
+   }
+  },
+  {
+   "id": "captcha",
+   "chapter": 3,
+   "narration": "Phir aata hai captcha aur OTP, taaki bots ek second mein saari seats na utha lein.",
+   "keywords": [
+    "captcha",
+    "otp",
+    "bots"
+   ],
+   "card": {
+    "eyebrow": "Step 3 · Captcha",
+    "headline": "*Bots* ko bahar rakho",
+    "tone": "amber",
+    "rows": [
+     {
+      "kind": "chips",
+      "items": [
+       {
+        "text": "Human",
+        "tone": "teal"
+       },
+       {
+        "text": "Bot",
+        "tone": "red",
+        "strike": true
+       }
+      ]
+     }
+    ]
+   },
+   "visual": {
+    "elements": [
+     {
+      "id": "phone",
+      "kind": "phone",
+      "label": "IRCTC Rail Connect",
+      "logo": "irctc.co.in",
+      "items": [
+       {
+        "text": "Enter captcha: x7Kp2"
+       },
+       {
+        "text": "x7Kp2"
+       },
+       {
+        "text": "OTP sent: 48xx91"
+       },
+       {
+        "text": "Verified",
+        "ok": true
+       }
+      ],
+      "x": 28,
+      "y": 50,
+      "on": "captcha"
+     },
+     {
+      "id": "checks",
+      "kind": "list",
+      "label": "Who gets in",
+      "items": [
+       {
+        "text": "Real passenger",
+        "ok": true
+       },
+       {
+        "text": "Bot script",
+        "ok": false
+       },
+       {
+        "text": "Bulk agent",
+        "ok": false
+       }
+      ],
+      "x": 74,
+      "y": 50,
+      "w": 46,
+      "on": "bots"
+     }
+    ]
+   }
+  },
+  {
+   "id": "lock",
+   "chapter": 4,
+   "narration": "Seat select hote hi PRS us seat ko kuch minute ke liye lock kar deta hai. Doosra koi wahi seat nahi le sakta.",
+   "keywords": [
+    "prs",
+    "lock",
+    "seat"
+   ],
+   "card": {
+    "eyebrow": "Step 4 · Seat lock",
+    "headline": "Seat *lock*, sirf aapke liye",
+    "tone": "purple",
+    "rows": [
+     {
+      "kind": "kv",
+      "k": "Seat hold",
+      "v": "5 min",
+      "tone": "purple"
+     }
+    ]
+   },
+   "visual": {
+    "elements": [
+     {
+      "id": "code",
+      "kind": "code",
+      "label": "PRS · seat inventory",
+      "items": [
+       {
+        "text": "SELECT seat 42 FOR UPDATE"
+       },
+       {
+        "text": "lock(B4-42, user_8812)",
+        "ok": true
+       },
+       {
+        "text": "user_3301 -> B4-42 : busy",
+        "ok": false
+       }
+      ],
+      "x": 50,
+      "y": 30,
+      "on": "prs"
+     },
+     {
+      "id": "hold",
+      "kind": "number",
+      "label": "Seat on hold",
+      "value": "5 min",
+      "x": 30,
+      "y": 82,
+      "w": 50,
+      "on": "lock"
+     },
+     {
+      "id": "stamp",
+      "kind": "stamp",
+      "label": "Locked",
+      "x": 76,
+      "y": 82,
+      "tone": "purple",
+      "on": "nahi"
+     }
+    ]
+   }
+  },
+  {
+   "id": "pay",
+   "chapter": 5,
+   "narration": "Payment hote hi booking pakki, PNR ban jaata hai. Payment fail hua, to seat wapas pool mein chali jaati hai.",
+   "keywords": [
+    "payment",
+    "pnr",
+    "wapas"
+   ],
+   "card": {
+    "eyebrow": "Step 5 · Payment",
+    "headline": "Paise aaye, *PNR* bana",
+    "tone": "teal",
+    "rows": [
+     {
+      "kind": "flow",
+      "items": [
+       "Payment",
+       "PNR",
+       "Seat confirm"
+      ]
+     }
+    ]
+   },
+   "visual": {
+    "elements": [
+     {
+      "id": "pay",
+      "kind": "card",
+      "label": "Payment",
+      "sub": "UPI / card",
+      "icon": "credit-card",
+      "x": 22,
+      "y": 20,
+      "on": "payment"
+     },
+     {
+      "id": "pnr",
+      "kind": "card",
+      "label": "PNR 4521-883",
+      "sub": "Booking pakki",
+      "icon": "ticket",
+      "x": 72,
+      "y": 20,
+      "focus": true,
+      "tone": "teal",
+      "on": "pnr"
+     },
+     {
+      "id": "ok",
+      "kind": "stamp",
+      "label": "Confirmed",
+      "tone": "teal",
+      "x": 72,
+      "y": 55,
+      "on": "ban"
+     },
+     {
+      "id": "fail",
+      "kind": "card",
+      "label": "Payment fail",
+      "sub": "Seat back to pool",
+      "icon": "rotate-ccw",
+      "tone": "red",
+      "x": 28,
+      "y": 85,
+      "on": "fail"
+     }
+    ],
+    "links": [
+     {
+      "from": "pay",
+      "to": "pnr",
+      "label": "success"
+     },
+     {
+      "from": "pay",
+      "to": "fail",
+      "dashed": true,
+      "on": "fail"
+     }
+    ]
+   }
+  },
+  {
+   "id": "numbers",
+   "chapter": 5,
+   "narration": "Isi tarah ek minute mein hazaaron tickets book hote hain, bina system gire.",
+   "keywords": [
+    "minute",
+    "hazaaron"
+   ],
+   "card": {
+    "eyebrow": "Recap",
+    "headline": "1 minute, *hazaaron* tickets",
+    "tone": "teal",
+    "rows": [
+     {
+      "kind": "kv",
+      "k": "Tickets per minute",
+      "v": "25,000",
+      "tone": "teal"
+     }
+    ]
+   },
+   "visual": {
+    "elements": [
+     {
+      "id": "bars",
+      "kind": "bars",
+      "label": "Tickets booked",
+      "items": [
+       {
+        "text": "10:00",
+        "value": 4000
+       },
+       {
+        "text": "10:01",
+        "value": 25000
+       },
+       {
+        "text": "10:02",
+        "value": 18000
+       }
+      ],
+      "x": 50,
+      "y": 35,
+      "on": "minute"
+     },
+     {
+      "id": "up",
+      "kind": "ring",
+      "label": "System up",
+      "value": "100%",
+      "x": 50,
+      "y": 85,
+      "w": 30,
+      "on": "bina"
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -184,6 +184,17 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
                 />
               ))}
             </div>
+            {b.visual && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-accent/[0.06] px-3 py-2 text-xs text-ink-300">
+                <span>
+                  Claude designed this scene: {b.visual.elements.map((e) => e.label || e.kind).slice(0, 5).join(', ')}
+                  {b.visual.links?.length ? `, with ${b.visual.links.length} arrow${b.visual.links.length > 1 ? 's' : ''}` : ''}.
+                </span>
+                <button type="button" className="font-semibold text-accent hover:underline" onClick={() => update(i, (x) => ({ ...x, visual: undefined }))}>
+                  Use the simple picture below instead
+                </button>
+              </div>
+            )}
             <RowsEditor rows={b.card.rows} index={i} onChange={(rows) => updateCard(i, { rows })} />
           </Card>
         ))}

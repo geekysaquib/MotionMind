@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import type { Project, ReelScript } from '@motionmind/shared';
+import type { Project, ReelScript, StyleId } from '@motionmind/shared';
 import type { RootStore } from './RootStore';
 import type { NewProject } from '../services/types';
 import { log } from '../lib/logger';
@@ -76,10 +76,10 @@ export class ProjectStore {
   }
 
   /** Claude writes the reel script for this project (server side, with the user's Anthropic key). */
-  async writeScript(id: string) {
+  async writeScript(id: string, style?: StyleId | null) {
     log.info('claude', 'Writing reel script', { projectId: id });
     const started = Date.now();
-    const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).writeScript(id);
+    const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).writeScript(id, style);
     log.info('claude', 'Reel script written', { projectId: id, beats: p.script?.beats.length, model: p.script?.model, ms: Date.now() - started });
     runInAction(() => {
       this.items = [p, ...this.items.filter((x) => x.id !== id)];
@@ -131,8 +131,8 @@ export class ProjectStore {
   }
 
   /** Saves a script written in claude.ai and pasted back (for people without an API key). */
-  async importScript(id: string, text: string) {
-    const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).importScript(id, text);
+  async importScript(id: string, text: string, style?: StyleId | null) {
+    const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).importScript(id, text, style);
     log.info('claude', 'Pasted script imported', { projectId: id, beats: p.script?.beats.length });
     runInAction(() => {
       this.items = [p, ...this.items.filter((x) => x.id !== id)];

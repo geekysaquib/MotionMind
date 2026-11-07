@@ -35,7 +35,7 @@ describe('PasteScriptPanel', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }));
     });
-    expect(scriptPrompt).toHaveBeenCalledWith(project.id);
+    expect(scriptPrompt).toHaveBeenCalledWith(project.id, null);
     expect(writeText).toHaveBeenCalledWith('PROMPT FOR CLAUDE.AI');
     expect(screen.getByRole('button', { name: 'Copied' })).toBeTruthy();
   });

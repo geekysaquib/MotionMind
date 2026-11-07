@@ -6,7 +6,7 @@ import { firstIssue } from '../http';
 import { ClaudeError, claudeClient, CLAUDE_MODEL, type ClaudeClient } from './claude';
 import { manualReelPrompt, manualResearchPrompt, parsePastedScript, parseResearch, PastedScriptError, type ReelBrief } from './reelPrompt';
 import { reelScriptSchema as scriptSchemaV4, type Research } from './reelSchema';
-import { STYLE_IDS, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
+import { STYLE_IDS, type StyleId, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
 
 const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude something.').max(12000) });
 const editSchema = z.object({ script: z.unknown() });
@@ -26,7 +26,12 @@ const scriptWithLayout = scriptSchemaV4.extend({
     })
     .optional(),
 });
-const importSchema = z.object({ text: z.string().min(1, "Paste Claude's answer first.").max(100_000) });
+const importSchema = z.object({ text: z.string().min(1, "Paste Claude's answer first.").max(100_000), style: z.enum(STYLE_IDS).optional() });
+/** The style picked before the script: the prompt designs every scene for it, and the script is saved with it. */
+const styleOf = (v: unknown) => {
+  const r = z.enum(STYLE_IDS).safeParse(v);
+  return r.success ? r.data : undefined;
+};
 
 /** Model label for scripts written in claude.ai and pasted in. */
 export const PASTED_MODEL = 'claude.ai (pasted)';
@@ -80,7 +85,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     return project;
   }
 
-  async function briefFor(userId: string, project: Project): Promise<ReelBrief> {
+  async function briefFor(userId: string, project: Project, style?: StyleId): Promise<ReelBrief> {
     const profile = await deps.data.getProfile(userId);
     return {
       topic: project.topic!,
@@ -90,12 +95,14 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
       channelName: profile?.channelName ?? null,
       // Only research the user approved feeds the script.
       research: project.research?.approvedAt ? project.research : null,
+      style: style ?? project.script?.style ?? null,
     };
   }
 
-  function saveScript(userId: string, project: Project, script: Omit<ReelScript, 'model' | 'writtenAt'>, model: string) {
-    // A rewritten script keeps the style already picked for the reel.
-    const saved: ReelScript = { ...script, ...(project.script?.style ? { style: project.script.style } : {}), model, writtenAt: new Date().toISOString() };
+  function saveScript(userId: string, project: Project, script: Omit<ReelScript, 'model' | 'writtenAt'>, model: string, style?: StyleId) {
+    // The script is saved with the style it was designed for (or keeps the one already picked).
+    const chosen = style ?? project.script?.style;
+    const saved: ReelScript = { ...script, ...(chosen ? { style: chosen } : {}), model, writtenAt: new Date().toISOString() };
     return deps.data.updateProject(userId, project.id, {
       script: saved,
       stage: 'script',
@@ -164,8 +171,9 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     const claude = claudeOr503(reply);
     if (!claude) return reply;
     try {
-      const { script, model } = await claude.writeReel(await briefFor(req.userId, project));
-      return { project: await saveScript(req.userId, project, script, model) };
+      const style = styleOf((req.body as { style?: unknown } | undefined)?.style);
+      const { script, model } = await claude.writeReel(await briefFor(req.userId, project, style));
+      return { project: await saveScript(req.userId, project, script, model, style) };
     } catch (err) {
       return sendClaudeError(err, reply);
     }
@@ -175,7 +183,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   api.get('/projects/:id/script/prompt', async (req, reply) => {
     const project = await projectFor(req, reply);
     if (!project) return reply;
-    return { prompt: manualReelPrompt(await briefFor(req.userId, project)) };
+    return { prompt: manualReelPrompt(await briefFor(req.userId, project, styleOf((req.query as { style?: unknown }).style))) };
   });
 
   api.post('/projects/:id/script/import', async (req, reply) => {
@@ -185,7 +193,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     if (!project) return reply;
     try {
       const script = parsePastedScript(body.data.text);
-      return { project: await saveScript(req.userId, project, script, PASTED_MODEL) };
+      return { project: await saveScript(req.userId, project, script, PASTED_MODEL, body.data.style) };
     } catch (err) {
       if (err instanceof PastedScriptError) return reply.code(400).send({ error: 'invalid_script', message: err.message });
       throw err;
@@ -220,7 +228,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     const project = z.string().uuid().safeParse(id).success ? await deps.data.getProject(req.userId, id) : null;
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
     if (!project.script?.beats.length) return reply.code(400).send({ error: 'no_script', message: 'Write the script first.' });
-    const stage = ['topic', 'research', 'script', 'storyboard'].includes(project.stage) ? 'graphics' : project.stage;
+    const stage = ['topic', 'research'].includes(project.stage) ? 'graphics' : project.stage;
     return { project: await deps.data.updateProject(req.userId, project.id, { script: { ...project.script, style: body.data.style }, stage }) };
   });
 }

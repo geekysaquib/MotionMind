@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
 import type { Tone } from '../script';
+import { Composer, type Skin } from './composer';
 import { captionScale, chunkAt, cleanWord, clamp01, contentOf, ctaFor, easeInOut, extrasOf, fade, isKey, parts, plain, pop, rnd, stepName, fitSize, type SceneProps, type StyleKit } from './common';
 
 // Whiteboard: one glossy dry-erase board. Everything is written and drawn in marker in front of the viewer,
@@ -73,6 +74,45 @@ const Pen: React.FC<{ x: number; y: number; color: string; lift: number }> = ({ 
   </svg>
 );
 
+/** Whiteboard's look for Claude's scene pieces: no fill, a hand-drawn marker outline that draws itself, arrows drawn on. */
+const SKIN: Skin = {
+  font: HAND,
+  mono: HAND,
+  ink: C.ink,
+  sub: '#5b6170',
+  accent: C.accent,
+  hiInk: C.accent,
+  hiBg: 'transparent',
+  tone: (t) => (t ? TONE[t] : C.blue),
+  panel: ({ w, h, k, color, focus, seed, frame }) => ({
+    style: {},
+    overlay: (
+      <svg width={w + 40} height={h + 40} style={{ position: 'absolute', left: -20, top: -20, overflow: 'visible', pointerEvents: 'none' }}>
+        <Stroke d={roughRect(20, 20, w, h, seed + 7)} f={k * 12} a={0} len={12} color={focus ? C.accent : color === C.blue ? C.ink : color} width={focus ? 9 : 7} />
+        {focus && frame >= 0 && <Stroke d={roughEllipse(20 + w / 2, 20 + h / 2, w * 0.62, h * 0.72, seed)} f={k * 12} a={6} len={10} color={C.accent} width={5} />}
+      </svg>
+    ),
+  }),
+  enter: (k) => ({ opacity: k > 0 ? 1 : 0, clipPath: `inset(0 ${(1 - clamp01(k * 1.4)) * 100}% 0 0)` }),
+  Link: ({ a, b, k, label, seed }) => {
+    const mx = (a.x + b.x) / 2 + (rnd(seed) - 0.5) * 60;
+    const my = (a.y + b.y) / 2 + (rnd(seed + 3) - 0.5) * 60;
+    const ang = Math.atan2(b.y - my, b.x - mx);
+    const head = `M${b.x - 28 * Math.cos(ang - 0.5)},${b.y - 28 * Math.sin(ang - 0.5)} L${b.x},${b.y} L${b.x - 28 * Math.cos(ang + 0.5)},${b.y - 28 * Math.sin(ang + 0.5)}`;
+    return (
+      <g>
+        <Stroke d={`M${a.x},${a.y} Q${mx},${my} ${b.x},${b.y}`} f={k * 14} a={0} len={14} color={C.blue} width={7} />
+        {k >= 1 && <Stroke d={head} f={1} a={0} len={1} color={C.blue} width={7} />}
+        {label && k >= 1 && (
+          <text x={mx + 16} y={my - 8} fontFamily={HAND} fontWeight={700} fontSize={34} fill={C.blue}>
+            {label}
+          </text>
+        )}
+      </g>
+    );
+  },
+};
+
 /** Where scene i sits on the big board. */
 const regionOf = (i: number) => ({ x: (i % 2) * 1240 + (Math.floor(i / 2) % 2) * 260, y: Math.floor(i / 2) * 1620 });
 
@@ -86,7 +126,10 @@ const Region: React.FC<SceneProps & { i: number; f: number }> = ({ i, f, fps, ti
   const { terms } = extrasOf(beat, spec);
   let pen = { x: 840, y: zones.top + 40, until: t0 };
   let picture: React.ReactNode = null;
-  if (c.lead === 'flow') {
+  if (beat.visual) {
+    picture = <Composer visual={beat.visual} beat={{ ...beat, start: beat.start }} frame={beat.start + f} area={{ l: 50, r: 1030, t: zones.top, b: zones.bottom }} skin={SKIN} logoBase={spec.logoBase} />;
+    pen = { x: 940, y: zones.top + 60, until: t0 + 30 };
+  } else if (c.lead === 'flow') {
     const n = c.flow.length;
     const gap = Math.min(220, (zones.bottom - zones.top - 60) / n);
     const h = Math.min(130, gap - 70);

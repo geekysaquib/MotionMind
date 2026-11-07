@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill } from 'remotion';
 import type { Tone } from '../script';
+import { Composer, type Skin } from './composer';
 import { captionScale, chunkAt, cleanWord, clamp01, contentOf, countText, ctaFor, easeInOut, extrasOf, fade, isKey, parts, plain, pop, splitNumber, Logo, type SceneProps, type StyleKit } from './common';
 
 // Transit Map: a metro schematic printed on paper. The reel is one line: every scene is a station, and a glowing
@@ -32,6 +33,8 @@ function stations(n: number): Pt[] {
   return out;
 }
 const CENTER = { x: 380, y: 760 };
+/** With a scene Claude designed, the line runs higher so the scene has room below it. */
+const CENTER_DESIGNED = { x: 380, y: 500 };
 
 /** Text printed on the sheet, with a paper-coloured halo under it. */
 const Label: React.FC<{ x: number; y: number; text: string; size: number; weight?: number; anchor?: 'start' | 'middle' | 'end'; color?: string; opacity?: number }> = ({ x, y, text, size, weight = 700, anchor = 'start', color = C.ink, opacity = 1 }) => (
@@ -59,12 +62,13 @@ const Sheet: React.FC<SceneProps> = (props) => {
   const to = pts[index]!;
   const tip = { x: from.x + (to.x - from.x) * draw, y: from.y + (to.y - from.y) * draw };
   const cam = tip;
-  const tx = CENTER.x - cam.x;
-  const ty = CENTER.y - cam.y;
+  const centre = beat.visual ? CENTER_DESIGNED : CENTER;
+  const tx = centre.x - cam.x;
+  const ty = centre.y - cam.y;
   const linePts = [...pts.slice(0, index), tip];
   const d = linePts.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
   const c = contentOf(beat);
-  const branchItems = c.lead === 'flow' ? c.flow : c.lead === 'chips' ? c.chips.map((ch) => ch.text) : [];
+  const branchItems = beat.visual ? [] : c.lead === 'flow' ? c.flow : c.lead === 'chips' ? c.chips.map((ch) => ch.text) : [];
   const closed = c.lead === 'chips' ? c.chips.map((ch) => !!ch.strike) : [];
   const bColor = BRANCH[index % BRANCH.length]!;
   const branchGap = Math.min(1.5 * G, (zones.bottom - zones.top - 2 * G) / Math.max(1, branchItems.length));
@@ -189,7 +193,7 @@ const Overlay: React.FC<SceneProps> = ({ frame, fps, beat, spec, zones, bare, in
           </div>
         </div>
       )}
-      {c.lead === 'stats' && (
+      {!beat.visual && c.lead === 'stats' && (
         <div style={{ position: 'absolute', left: 70, right: 70, top: zones.top + 280, display: 'flex', flexDirection: 'column', gap: 26, alignItems: 'flex-start' }}>
           {c.stats.map((s, i) => (
             <div key={i} style={{ opacity: fade(f, 16 + i * 14, 24 + i * 14), transform: `translateX(${(1 - clamp01((f - 16 - i * 14) / 10)) * -60}px)` }}>
@@ -207,10 +211,44 @@ const Overlay: React.FC<SceneProps> = ({ frame, fps, beat, spec, zones, bare, in
   );
 };
 
+/** Transit Map's look for Claude's scene pieces: white station plates with a line-colour edge, joined by eight-direction lines with stops. */
+const SKIN: Skin = {
+  font: FONT,
+  mono: '"JetBrains Mono", Consolas, monospace',
+  ink: C.ink,
+  sub: C.sub,
+  accent: C.accent,
+  hiInk: C.accent,
+  hiBg: 'transparent',
+  tone: (t) => (t ? LINE[t] : C.navy),
+  panel: ({ color, focus, round }) => ({ style: { background: '#fff', borderRadius: round ?? 18, borderLeft: `14px solid ${focus ? C.accent : color}`, boxShadow: '0 8px 22px rgba(27,28,30,0.14)' } }),
+  enter: (k) => ({ opacity: clamp01(k * 2), transform: `scale(${0.9 + 0.1 * k})` }),
+  Link: ({ a, b, k, color, label }) => {
+    // Eight directions only: a diagonal leg, then a straight one.
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const d = Math.min(Math.abs(dx), Math.abs(dy));
+    const mid = { x: a.x + Math.sign(dx) * d, y: a.y + Math.sign(dy) * d };
+    const L1 = Math.hypot(mid.x - a.x, mid.y - a.y);
+    const L2 = Math.hypot(b.x - mid.x, b.y - mid.y);
+    const total = L1 + L2 || 1;
+    const path = `M${a.x},${a.y} L${mid.x},${mid.y} L${b.x},${b.y}`;
+    return (
+      <g>
+        <path d={path} fill="none" stroke={color} strokeWidth={22} strokeLinecap="round" strokeLinejoin="round" pathLength={1} strokeDasharray={1} strokeDashoffset={1 - k} />
+        {k >= 1 && <circle cx={a.x} cy={a.y} r={16} fill="#fff" stroke={color} strokeWidth={8} />}
+        {k >= 1 && <circle cx={b.x} cy={b.y} r={16} fill="#fff" stroke={color} strokeWidth={8} />}
+        {label && k >= 1 && <Label x={(L1 > total / 2 ? (a.x + mid.x) / 2 : (mid.x + b.x) / 2) + 24} y={(L1 > total / 2 ? (a.y + mid.y) / 2 : (mid.y + b.y) / 2) + 10} text={label} size={30} />}
+      </g>
+    );
+  },
+};
+
 const Stage: React.FC<SceneProps> = (props) => (
   <AbsoluteFill style={{ background: C.paper }}>
     <Sheet {...props} />
     <AbsoluteFill style={{ background: 'radial-gradient(ellipse at 30% 30%, transparent 55%, rgba(60,50,30,0.18) 100%)' }} />
+    {props.frame < props.storyFrames && props.beat.visual && <Composer visual={props.beat.visual} beat={props.beat} frame={props.frame} area={{ l: 60, r: 1020, t: props.zones.top, b: props.zones.bottom }} skin={SKIN} logoBase={props.spec.logoBase} />}
     {props.frame < props.storyFrames && <Overlay {...props} />}
   </AbsoluteFill>
 );

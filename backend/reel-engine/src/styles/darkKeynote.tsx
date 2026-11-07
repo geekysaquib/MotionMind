@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing } from 'remotion';
+import { Composer, type Skin } from './composer';
 import { captionScale, chunkAt, cleanWord, clamp01, contentOf, countText, ctaFor, extrasOf, fade, isKey, parts, plain, rnd, splitNumber, stepName, Logo, fitSize, type SceneProps, type StyleKit } from './common';
 
 // Dark Keynote: a software-launch stage. Near-black, a hairline grid, soft cool light, one accent colour, and
@@ -203,10 +204,42 @@ const Picture: React.FC<SceneProps> = ({ frame, beat, zones }) => {
   );
 };
 
+/** Dark Keynote's look for Claude's scene pieces: raised dark panels, hairline borders, one lime accent, snap-in. */
+const SKIN: Skin = {
+  font: SANS,
+  mono: MONO,
+  ink: C.t1,
+  sub: C.t2,
+  accent: C.accent,
+  hiInk: C.accent,
+  hiBg: 'transparent',
+  tone: (t) => (t === 'red' ? C.problem : t ? { teal: '#4FD1C5', purple: '#8B7CFF', blue: '#7AA2FF', amber: '#FFB547' }[t] : C.t2),
+  panel: ({ focus, round }) => ({ style: { background: C.s2, border: `1px solid ${focus ? C.accent : C.line}`, borderRadius: round ?? 26, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 60px rgba(0,0,0,0.5)${focus ? `, 0 0 40px ${C.accent}44` : ''}` } }),
+  enter: (k) => {
+    const e = back(k);
+    return { opacity: clamp01(k * 2), transform: `translateY(${(1 - e) * 40}px) scale(${0.94 + 0.06 * e})` };
+  },
+  Link: ({ a, b, k, frame, label, dashed }) => {
+    const e = { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+    const t = (frame % 30) / 30;
+    return (
+      <g>
+        <line x1={a.x} y1={a.y} x2={e.x} y2={e.y} stroke={C.accent} strokeOpacity={0.75} strokeWidth={2.5} strokeDasharray={dashed ? '8 10' : undefined} />
+        {k >= 1 && <circle cx={a.x + (b.x - a.x) * t} cy={a.y + (b.y - a.y) * t} r={9} fill={C.accent} style={{ filter: `drop-shadow(0 0 10px ${C.accent})` }} />}
+        {label && k >= 1 && (
+          <text x={(a.x + b.x) / 2 + 14} y={(a.y + b.y) / 2 - 10} fontFamily={MONO} fontSize={24} fill={C.t2} letterSpacing={2}>
+            {label.toUpperCase()}
+          </text>
+        )}
+      </g>
+    );
+  },
+};
+
 const Stage: React.FC<SceneProps> = (props) => (
   <AbsoluteFill style={{ background: C.stage }}>
     <Grid frame={props.frame} />
-    {props.frame < props.storyFrames && <Picture {...props} />}
+    {props.frame < props.storyFrames && (props.beat.visual ? <Composer visual={props.beat.visual} beat={props.beat} frame={props.frame} area={{ l: 60, r: 1020, t: props.zones.top + 40, b: props.zones.bottom }} skin={SKIN} logoBase={props.spec.logoBase} /> : <Picture {...props} />)}
     {!props.bare && props.frame < props.storyFrames && <Headline {...props} />}
   </AbsoluteFill>
 );

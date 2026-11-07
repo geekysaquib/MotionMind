@@ -1,6 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, Easing } from 'remotion';
 import type { Tone } from '../script';
+import { Composer, type Skin } from './composer';
 import { captionScale, chunkAt, cleanWord, clamp01, contentOf, countText, ctaFor, extrasOf, fade, isKey, parts, plain, Logo, fitSize, type SceneProps, type StyleKit } from './common';
 
 // Newsroom: social-video news that reads with the sound off. Huge captions are the lead actor, slammed in a
@@ -131,12 +132,45 @@ const Picture: React.FC<SceneProps & { bandBottom: number }> = ({ frame, beat, b
   return (
     <>
       {title}
-      {body}
+      {!beat.visual && body}
     </>
   );
 };
 
 const bandBottomOf = (z: SceneProps['zones']) => z.bottom - 110;
+
+/** Newsroom's look for Claude's scene pieces: dark ledger panels, a honey border on the one that matters, slammed in. */
+const SKIN: Skin = {
+  font: SANS,
+  mono: '"JetBrains Mono", Consolas, monospace',
+  ink: C.ivory,
+  sub: C.grey,
+  accent: C.honey,
+  hiInk: C.ink,
+  hiBg: C.honey,
+  tone: (t) => (t ? TONE[t] : C.ivory),
+  panel: ({ focus, round }) => ({ style: { background: '#1F1F1B', border: `4px solid ${focus ? C.honey : '#2E2E29'}`, borderRadius: round ?? 4 } }),
+  enter: (k) => {
+    const e = back(k);
+    return { opacity: clamp01(k * 3), transform: `scale(${1.25 - 0.25 * e})` };
+  },
+  Link: ({ a, b, k, label }) => {
+    const e = { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
+    const ang = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+    return (
+      <g>
+        <line x1={a.x} y1={a.y} x2={e.x} y2={e.y} stroke={C.honey} strokeWidth={8} />
+        {k >= 1 && <polygon points="0,-18 30,0 0,18" fill={C.honey} transform={`translate(${b.x},${b.y}) rotate(${ang}) translate(-26,0)`} />}
+        {label && k >= 1 && (
+          <g transform={`translate(${(a.x + b.x) / 2},${(a.y + b.y) / 2})`}>
+            <rect x={-label.length * 9 - 14} y={-22} width={label.length * 18 + 28} height={44} fill={C.honey} />
+            <text textAnchor="middle" y={10} fontFamily={SANS} fontWeight={900} fontSize={26} fill={C.ink}>{label.toUpperCase()}</text>
+          </g>
+        )}
+      </g>
+    );
+  },
+};
 
 const Stage: React.FC<SceneProps> = (props) => {
   const { frame, beat, timed, index, zones } = props;
@@ -148,7 +182,7 @@ const Stage: React.FC<SceneProps> = (props) => {
   return (
     <AbsoluteFill style={{ background: C.desk }}>
       <Ledger f={f} bottom={bandBottom} />
-      {frame < props.storyFrames && <Picture {...props} bandBottom={bandBottom} />}
+      {frame < props.storyFrames && (beat.visual ? <><Picture {...props} bandBottom={bandBottom} /><Composer visual={beat.visual} beat={beat} frame={frame} area={{ l: 110, r: 1020, t: (props.spec.platform === 'youtube' ? 360 : 290) + 250, b: bandBottom - 30 }} skin={SKIN} logoBase={props.spec.logoBase} /></> : <Picture {...props} bandBottom={bandBottom} />)}
       {!props.bare && <Bug {...props} />}
       <AbsoluteFill style={{ background: '#fff', opacity: flash }} />
     </AbsoluteFill>
@@ -172,7 +206,7 @@ const Captions: React.FC<SceneProps> = ({ beat, frame, zones, captions }) => {
           if (key) keyUsed = true;
           const wipe = clamp01((ch.since - at) / 4);
           return (
-            <span key={i} style={{ display: 'inline-block', fontWeight: 900, fontSize: 92 * s, lineHeight: 1.08, letterSpacing: -2, color: key ? C.ink : C.ivory, textShadow: key ? undefined : '0 6px 20px rgba(0,0,0,0.6)', transform: `scale(${1.3 - 0.3 * k})`, opacity: ch.since < at - 2 ? 0 : 1, padding: key ? '0 10px' : 0, background: key ? `linear-gradient(90deg, ${C.honey} ${wipe * 100}%, transparent ${wipe * 100}%)` : undefined }}>
+            <span key={i} style={{ display: 'inline-block', fontWeight: 900, fontSize: 92 * s, lineHeight: 1.08, letterSpacing: -2, color: key ? C.ink : C.ivory, textShadow: key ? undefined : '0 6px 20px rgba(0,0,0,0.6)', transform: `scale(${1.15 - 0.15 * k})`, transformOrigin: 'left bottom', opacity: ch.since < at - 2 ? 0 : 1, padding: key ? '0 10px' : 0, background: key ? `linear-gradient(90deg, ${C.honey} ${wipe * 100}%, transparent ${wipe * 100}%)` : undefined }}>
               {cleanWord(w.text)}
             </span>
           );

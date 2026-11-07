@@ -21,6 +21,8 @@ export interface ReelStyle {
   swatch: [string, string];
   /** Where the style comes from. */
   credit: string;
+  /** How Claude should design scenes for this style (goes into the script prompt). */
+  direction: string;
 }
 
 const LEMO = 'Written from a style rulebook in lemo-opuscar by LemoLab (MIT).';
@@ -35,6 +37,7 @@ export const STYLES: Record<StyleId, ReelStyle> = {
     cues: ['uber', 'ola', 'swiggy', 'zomato', 'zepto', 'delivery', 'ride', 'driver', 'map', 'gps', 'location', 'city', 'traffic', 'surge', 'order', 'rapido'],
     swatch: ['#F7F7F5', '#FFD60A'],
     credit: "Motion Mind's own, from the Uber heatmap reel made with the video kit.",
+    direction: "Live Map: a flat, light motion-graphics look: white rounded cards with black ink, a yellow marker highlight, bold sans type, things sliding and popping in. Set \"map\": true ONLY on scenes that really happen in a city or on a map (rides, deliveries, a place, a route between places); every other scene sits on a plain light grid. Favour cards for actors, phones for app screens, numbers that count up, and arrows with a moving dot for what travels between them.",
   },
   whiteboard: {
     id: 'whiteboard',
@@ -45,6 +48,7 @@ export const STYLES: Record<StyleId, ReelStyle> = {
     cues: ['science', 'how', 'why', 'formula', 'body', 'brain', 'interest', 'tax', 'loan', 'study', 'exam', 'learn', 'physics', 'chemistry', 'biology'],
     swatch: ['#FBFAF6', '#d97757'],
     credit: LEMO,
+    direction: "Whiteboard: everything is drawn live in marker on a white board, one idea per scene, the camera moving across the board. Keep scenes simple like a teacher's sketch: 2 to 4 pieces, a clear left-to-right or top-to-bottom order, arrows for cause and effect, one focus piece circled. Lists with ticks and crosses, a number written big, and short labels work best. Avoid busy screens with many lines.",
   },
   'dark-keynote': {
     id: 'dark-keynote',
@@ -55,6 +59,7 @@ export const STYLES: Record<StyleId, ReelStyle> = {
     cues: ['ai', 'app', 'software', 'server', 'cloud', 'api', 'startup', 'launch', 'data', 'code', 'chatgpt', 'openai', 'google', 'apple', 'redis', 'kafka', 'database'],
     swatch: ['#07080B', '#B7F34A'],
     credit: LEMO,
+    direction: "Dark Keynote: a software launch stage: near-black, a hairline grid, one lime accent reserved for the thing that matters. Interface pieces (windows, phones, code that types out, notification-like cards) snap into place; one giant number per scene at most. Use red (tone red) only for the problem (errors, failures, bots) and never after the fix. Keep a lot of empty space: 2 to 4 pieces.",
   },
   'transit-map': {
     id: 'transit-map',
@@ -65,6 +70,7 @@ export const STYLES: Record<StyleId, ReelStyle> = {
     cues: ['train', 'metro', 'railway', 'irctc', 'journey', 'travel', 'route', 'station', 'flight', 'supply', 'step', 'process', 'history', 'timeline'],
     swatch: ['#F2EEE5', '#E3002B'],
     credit: LEMO,
+    direction: "Transit Map: a printed metro map. The reel is one line and each scene is a station; the pieces of a scene are station plates joined by eight-direction lines with stops. Design each scene as a short route or a junction: 2 to 4 cards connected by links in the order things happen, the destination as the focus. Numbers sit on a ticket-counter; a stamp works as the verdict at the end of a line.",
   },
   newsroom: {
     id: 'newsroom',
@@ -75,6 +81,7 @@ export const STYLES: Record<StyleId, ReelStyle> = {
     cues: ['news', 'government', 'rbi', 'budget', 'price', 'market', 'stock', 'ban', 'rule', 'law', 'court', 'election', 'crore', 'scam', 'policy', 'fine'],
     swatch: ['#151512', '#FFC21A'],
     credit: LEMO,
+    direction: "Newsroom: social news that reads with the sound off: dark ledger cards with a honey-yellow accent, big slammed captions under them. Every number should feel like evidence: number pieces with a clear label, bars to compare, a stamp for the verdict (BANNED, CONFIRMED, FAILED), lists with crosses for what changed. Red (tone red) means losses or the bad number. 2 to 4 pieces, hard and factual.",
   },
 };
 

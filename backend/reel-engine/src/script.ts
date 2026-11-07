@@ -1,3 +1,5 @@
+import sample from './sample.json';
+
 // The reel format the engine renders. Each beat is one narration line with an on-screen card; the chosen
 // style decides how the card's headline, chips, flows and numbers are drawn. Durations come from real
 // voice timings when there are any, and are estimated from the word count otherwise.
@@ -38,6 +40,52 @@ export interface Beat {
   keywords: string[];
   card: Card;
   chapter: Chapter;
+  /** The scene's picture as Claude designed it for the topic. Without it the style draws the card's first row. */
+  visual?: SceneVisual;
+}
+
+/**
+ * The building blocks Claude composes a scene from. Every style draws each kind in its own look
+ * (hand-drawn on the whiteboard, dark UI panels on the keynote stage, and so on).
+ */
+export const ELEMENT_KINDS = ['card', 'phone', 'window', 'code', 'number', 'list', 'bars', 'ring', 'queue', 'stamp', 'logo', 'text'] as const;
+export type ElementKind = (typeof ELEMENT_KINDS)[number];
+
+export interface VisualElement {
+  id: string;
+  kind: ElementKind;
+  /** Main text: a card's name, a number's label, a window's title, a stamp's word. Words in *stars* are highlighted. */
+  label?: string;
+  /** Second line under the label. */
+  sub?: string;
+  /** A Lucide icon name (kebab-case, like 'server', 'train-front', 'shield-check'). */
+  icon?: string;
+  /** A company's website, to show its logo. */
+  logo?: string;
+  /** number: the value with its unit ('4 sec', '1.2 lakh'); ring: a percentage ('80%'); stamp: optional. */
+  value?: string;
+  /** list (ok = tick, false = cross), bars (value = length), queue (tokens), code / phone / window (lines). */
+  items?: { text: string; value?: number; ok?: boolean }[];
+  /** Centre of the element as a percentage of the scene area (0 = left / top, 100 = right / bottom). */
+  x?: number;
+  y?: number;
+  /** Width as a percentage of the scene area. */
+  w?: number;
+  tone?: Tone;
+  /** Appears when the narration says this word. */
+  on?: string;
+  /** Or this many seconds into the scene. */
+  at?: number;
+  /** The element the scene is about: drawn larger, with the accent. */
+  focus?: boolean;
+}
+
+export interface SceneVisual {
+  elements: VisualElement[];
+  /** Arrows between elements (by id); a packet travels along each. */
+  links?: { from: string; to: string; label?: string; on?: string; dashed?: boolean }[];
+  /** Live Map only: draw the scene over the city map (for topics about places, rides, deliveries). */
+  map?: boolean;
 }
 
 export interface Brand {
@@ -283,22 +331,5 @@ export function reelTiming(spec: Pick<ReelSpec, 'beats' | 'voice' | 'pace' | 'sc
 
 export const DEFAULT_BRAND: Brand = { name: 'Reel Studio', initials: 'RS', handle: '@yourchannel', tagline: 'Roz ki tech, andar ki baat' };
 
-/** The sample reel (the kit's Uber live heatmap story), used by the CLI render and the Remotion studio. */
-export const SAMPLE_REEL: ReelSpec = {
-  title: 'Uber ka live heatmap',
-  style: 'live-map',
-  steps: ['GPS', 'Kafka', 'Redis', 'H3 grid', 'Surge'],
-  brand: DEFAULT_BRAND,
-  brands: [{ name: 'Uber', domain: 'uber.com' }, { name: 'Redis', domain: 'redis.io' }, { name: 'Kafka', domain: 'kafka.apache.org' }],
-  glossary: [{ short: 'GPS', full: 'Global Positioning System' }],
-  beats: [
-    { id: 'hook', chapter: 0, narration: 'Concert khatam, aur hazaaron log ek saath Uber book kar rahe hain. Par Uber ko kaise pata, ki kis area mein kitne drivers hain?', keywords: ['concert', 'hazaaron', 'uber', 'drivers'], card: { eyebrow: 'Live heatmap', headline: 'Uber ko *kaise pata*?', tone: 'red', rows: [{ kind: 'chips', items: [{ text: 'Ride dhoondh rahe hain' }, { text: 'Driver nahi mila', tone: 'red', strike: true }, { text: 'Booking…', tone: 'blue' }] }] } },
-    { id: 'gps', chapter: 1, narration: 'Har driver ka phone lagbhag har chaar second mein, apni GPS location Uber ke servers ko bhejta hai.', keywords: ['chaar', 'second', 'gps'], card: { eyebrow: 'Step 1 · GPS', headline: 'Har *4 second* mein ek ping', tone: 'blue', rows: [{ kind: 'kv', k: 'Ping har', v: '4 sec', tone: 'blue' }, { kind: 'kv', k: 'Drivers online', v: '25,000', tone: 'teal' }] } },
-    { id: 'kafka', chapter: 2, narration: 'Ye lakhon location pings Kafka jaisi stream mein aate hain, ek lambi queue, jo kabhi rukti nahi.', keywords: ['lakhon', 'kafka', 'rukti', 'nahi'], card: { eyebrow: 'Step 2 · Kafka', headline: 'Pings ki *non-stop* queue', tone: 'purple', rows: [{ kind: 'flow', items: ['Driver phone', 'Kafka stream', 'Uber servers'] }] } },
-    { id: 'redis', chapter: 3, narration: 'Har driver ki latest location Redis mein save hoti hai. Redis memory mein chalta hai, isliye lookup milliseconds mein hota hai.', keywords: ['latest', 'redis', 'milliseconds'], card: { eyebrow: 'Step 3 · Redis', headline: 'Latest location, *ms* mein', tone: 'red', rows: [{ kind: 'kv', k: 'Lookup', v: '2 ms', tone: 'red' }, { kind: 'note', text: 'Redis RAM mein chalta hai' }] } },
-    { id: 'hex', chapter: 4, narration: 'Phir poore shehar ko chhote chhote hexagons mein baant diya jaata hai. Uber ise H3 grid kehta hai.', keywords: ['hexagons', 'h3', 'grid'], card: { eyebrow: 'Step 4 · H3 grid', headline: 'Shehar ban gaya *hexagons*', tone: 'teal', rows: [{ kind: 'chips', items: [{ text: 'H3 grid', tone: 'teal' }, { text: 'Har hexagon ek area', tone: 'blue' }] }] } },
-    { id: 'count', chapter: 4, narration: 'Har hexagon mein real-time ginti hoti hai: kitne drivers free hain, aur kitne log ride maang rahe hain.', keywords: ['real-time', 'free', 'ride'], card: { eyebrow: 'Ginti', headline: '*Supply* vs *demand*', tone: 'amber', rows: [{ kind: 'kv', k: 'Free drivers', v: '12', tone: 'teal' }, { kind: 'kv', k: 'Ride requests', v: '340', tone: 'red' }] } },
-    { id: 'surge', chapter: 5, narration: 'Jahan demand zyada aur drivers kam hain, wahan surge price badhta hai, aur aas paas ke drivers ko signal milta hai.', keywords: ['demand', 'kam', 'surge', 'signal'], card: { eyebrow: 'Step 5 · Surge', headline: '*Surge* bulata hai drivers ko', tone: 'red', rows: [{ kind: 'kv', k: 'Surge', v: '1.8x', tone: 'red' }] } },
-    { id: 'recap', chapter: 5, narration: 'Toh agli baar surge dikhe, samajh jaana: ye lakhon GPS pings ka real-time hisaab hai.', keywords: ['surge', 'lakhon', 'hisaab'], card: { eyebrow: 'Recap', headline: 'Surge = *lakhon pings* ka hisaab', tone: 'teal', rows: [{ kind: 'flow', items: ['GPS', 'Kafka', 'Redis', 'H3', 'Surge'] }] } },
-  ],
-};
+/** The sample reel (IRCTC Tatkal, scenes designed the way Claude is asked to), for the CLI render, the studio and the Style page. */
+export const SAMPLE_REEL: ReelSpec = { ...(sample as unknown as Omit<ReelSpec, 'brand' | 'style'>), style: 'live-map', brand: DEFAULT_BRAND };

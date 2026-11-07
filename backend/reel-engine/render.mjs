@@ -18,7 +18,7 @@ console.log('frames', composition.durationInFrames);
 if (mode === 'stills') {
   // A settled moment in every scene, plus the end card.
   const { reelTiming } = await import('./src/script.ts').catch(() => ({ reelTiming: null }));
-  const frames = reelTiming ? [...reelTiming(inputProps).timed.map((b) => b.start + Math.min(b.frames - 1, 70)), composition.durationInFrames - 20] : [40, 200, 400, 600, 800, 1000];
+  const frames = reelTiming ? [...reelTiming(inputProps).timed.map((b) => b.start + Math.round(b.frames * 0.85)), composition.durationInFrames - 20] : [40, 200, 400, 600, 800, 1000];
   for (const f of frames) {
     await renderStill({ serveUrl, composition, inputProps, frame: f, output: `${out}/${style ?? 'reel'}_${f}.png`, browserExecutable, scale: 0.5 });
   }
