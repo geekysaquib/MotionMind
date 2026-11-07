@@ -345,6 +345,36 @@ function Body({ p, skin, t, frame, logoBase }: { p: Placed; skin: Skin; t: numbe
 const BARE = new Set(['stamp', 'text']);
 
 /** One scene as Claude designed it, drawn in a style. */
+/**
+ * How the whole scene sits in its area: scaled up (to 1.3x) so the pieces fill the space, centred, pushing in
+ * slowly while the scene plays, and arriving with a quick whip from the side.
+ */
+export function sceneFrame(placed: Placed[], area: Area, beat: TimedBeat, frame: number) {
+  if (!placed.length) return { transform: 'none', filter: 'none', fill: 1 };
+  const l = Math.min(...placed.map((q) => q.x - q.w / 2));
+  const r = Math.max(...placed.map((q) => q.x + q.w / 2));
+  const t = Math.min(...placed.map((q) => q.y - q.h / 2));
+  const b = Math.max(...placed.map((q) => q.y + q.h / 2));
+  // The most the group can grow and still fit (with room for the focus glow), never shrinking below its own size.
+  const room = Math.min((area.r - area.l - 40) / Math.max(1, r - l), (area.b - area.t - 30) / Math.max(1, b - t));
+  const fill = Math.max(Math.min(1, room), Math.min(1.3, room / 1.04));
+  const cx = (area.l + area.r) / 2;
+  const cy = (area.t + area.b) / 2;
+  const bx = (l + r) / 2;
+  const by = (t + b) / 2;
+  const local = frame - beat.start;
+  const push = 1 + 0.04 * clamp01(local / Math.max(1, beat.frames));
+  const whip = 1 - easeOut(clamp01(local / 9));
+  const scale = Math.min(fill * push, Math.max(fill, room));
+  return {
+    fill,
+    // Move the group's centre to the area's centre, then scale about it.
+    transform: `translate(${cx + whip * 140}px, ${cy}px) scale(${scale}) translate(${-bx}px, ${-by}px)`,
+    filter: whip > 0.05 ? `blur(${(whip * 10).toFixed(1)}px)` : 'none',
+  };
+}
+
+/** One scene as Claude designed it, drawn in a style. */
 export const Composer: React.FC<{ visual: SceneVisual; beat: TimedBeat; frame: number; area: Area; skin: Skin; logoBase?: string }> = ({ visual, beat, frame, area, skin, logoBase }) => {
   const placed = placeElements(visual, area, beat);
   const byId = new Map(placed.map((p) => [p.el.id, p]));
@@ -355,9 +385,14 @@ export const Composer: React.FC<{ visual: SceneVisual; beat: TimedBeat; frame: n
     const start = l.on ? appearFrame(beat, { on: l.on }, 0) : Math.max(a.appear, b.appear) + 6;
     return [{ l, a, b, start, i }];
   });
+  const end = beat.start + beat.frames;
+  const cam = sceneFrame(placed, area, beat, frame);
+  // At the end of the scene the pieces leave one after another, last in first out.
+  const exitOf = (i: number) => clamp01((end - frame - (placed.length - 1 - i) * 2) / 9);
+  const linkExit = clamp01((end - frame - placed.length * 2) / 9);
   return (
-    <>
-      <svg width={1080} height={1920} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
+    <div style={{ position: 'absolute', left: 0, top: 0, width: 1080, height: 1920, transformOrigin: '0 0', transform: cam.transform, filter: cam.filter }}>
+      <svg width={1080} height={1920} style={{ position: 'absolute', inset: 0, overflow: 'visible', opacity: linkExit }}>
         {links.map(({ l, a, b, start, i }) => {
           const k = clamp01((frame - start) / 14);
           if (k <= 0) return null;
@@ -370,17 +405,46 @@ export const Composer: React.FC<{ visual: SceneVisual; beat: TimedBeat; frame: n
         const t = frame - p.appear;
         if (t < 0) return null;
         const k = clamp01(t / 12);
+        const out = exitOf(p.i);
         const color = p.el.tone ? skin.tone(p.el.tone) : p.el.focus ? skin.accent : skin.tone(undefined);
         const panel = BARE.has(p.el.kind) ? { style: {} as React.CSSProperties } : skin.panel({ w: p.w, h: p.h, k, color, focus: !!p.el.focus, seed: p.i + Math.round(rnd(p.i) * 10), frame, round: p.el.kind === 'phone' ? 48 : undefined });
+        const enter = skin.enter(k, p.i);
+        // Once in, every piece floats a little, and the focus piece breathes, so no frame is ever still.
+        const settled = clamp01((t - 12) / 10);
+        const float = Math.sin((frame + p.i * 23) / 28) * 5 * settled;
+        const breathe = p.el.focus ? 1 + 0.015 * Math.sin(frame / 12) * settled : 1;
         return (
-          <div key={p.el.id + p.i} style={{ position: 'absolute', left: p.x - p.w / 2, top: p.y - p.h / 2, width: p.w, height: p.h, fontFamily: skin.font, ...skin.enter(k, p.i) }}>
-            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', ...panel.style }}>
-              <Body p={p} skin={skin} t={t} frame={frame} logoBase={logoBase} />
+          <div key={p.el.id + p.i} style={{ position: 'absolute', left: p.x - p.w / 2, top: p.y - p.h / 2, width: p.w, height: p.h, opacity: out, transform: `translateY(${float + (1 - out) * -36}px) scale(${breathe * (0.94 + 0.06 * out)})` }}>
+            <div style={{ position: 'absolute', inset: 0, fontFamily: skin.font, ...enter }}>
+              {p.el.focus && !BARE.has(p.el.kind) && (
+                <div style={{ position: 'absolute', inset: -14, borderRadius: 40, boxShadow: `0 0 ${30 + 18 * Math.sin(frame / 10)}px ${color}55`, opacity: settled }} />
+              )}
+              <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', ...panel.style }}>
+                <Body p={p} skin={skin} t={t} frame={frame} logoBase={logoBase} />
+              </div>
+              {panel.overlay}
             </div>
-            {panel.overlay}
           </div>
         );
       })}
-    </>
+    </div>
   );
 };
+
+/** Sound cues for a designed scene: a pop when each piece appears (a thud for a stamp, ticks for a counter), a tick for each arrow. */
+export function sceneSounds(visual: SceneVisual, beat: TimedBeat): { frame: number; kind: 'pop' | 'thud' | 'tick' }[] {
+  const area = { l: 50, r: 1030, t: 640, b: 1440 };
+  const placed = placeElements(visual, area, beat);
+  const out: { frame: number; kind: 'pop' | 'thud' | 'tick' }[] = [];
+  for (const p of placed) {
+    out.push({ frame: p.appear, kind: p.el.kind === 'stamp' ? 'thud' : 'pop' });
+    if (p.el.kind === 'number' || p.el.kind === 'ring') for (let k = 1; k <= 6; k++) out.push({ frame: p.appear + 4 + k * 4, kind: 'tick' });
+  }
+  const byId = new Map(placed.map((q) => [q.el.id, q]));
+  for (const l of visual.links ?? []) {
+    const a = byId.get(l.from);
+    const b = byId.get(l.to);
+    if (a && b) out.push({ frame: l.on ? appearFrame(beat, { on: l.on }, 0) : Math.max(a.appear, b.appear) + 6, kind: 'tick' });
+  }
+  return out.filter((c) => c.frame < beat.start + beat.frames);
+}

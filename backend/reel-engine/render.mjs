@@ -25,7 +25,7 @@ if (mode === 'stills') {
 } else {
   await renderMedia({
     serveUrl, composition, inputProps, codec: 'h264', outputLocation: `${out}/${style ?? 'reel'}.mp4`, browserExecutable,
-    crf: 18, pixelFormat: 'yuv420p',
+    crf: 16, jpegQuality: 95, x264Preset: 'slow', pixelFormat: 'yuv420p',
     onProgress: ({ progress }) => { if (Math.round(progress * 100) % 10 === 0) process.stdout.write(`${Math.round(progress * 100)}% `); },
   });
 }

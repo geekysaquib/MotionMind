@@ -98,7 +98,10 @@ export class RemotionRenderer implements Renderer {
         composition,
         inputProps,
         codec: 'h264',
-        crf: 18,
+        crf: 16,
+        // Sharper frames than the default (80): text and thin lines stay clean after Instagram re-encodes the video.
+        jpegQuality: 95,
+        x264Preset: 'slow',
         pixelFormat: 'yuv420p',
         outputLocation: path.join(RENDERS_DIR, file),
         browserExecutable,

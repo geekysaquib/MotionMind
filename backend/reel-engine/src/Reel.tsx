@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { AbsoluteFill, Audio, Loop, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
-import { DEFAULT_CAPTION_STYLE, reelTiming, type ReelSpec } from './script';
+import { DEFAULT_CAPTION_STYLE, reelTiming, type ReelSpec, type TimedBeat } from './script';
+import { sceneSounds } from './styles/composer';
+import { SFX_VOLUME, sfxUrls, type SfxKind } from './sfx';
 import { kitFor } from './styles';
 import { logoUrlsOf, useLogosLoaded, zonesFor, type SceneProps } from './styles/common';
 
@@ -34,6 +36,7 @@ export const Reel: React.FC<ReelSpec> = (spec) => {
           </Sequence>
         ) : null,
       )}
+      {spec.soundDesign !== false && <SoundDesign timed={timed} storyFrames={storyFrames} />}
       {spec.sfx?.map((c, i) => {
         const from = Math.round(c.at * fps);
         if (from >= totalFrames) return null;
@@ -53,6 +56,36 @@ export const Reel: React.FC<ReelSpec> = (spec) => {
         <EndCardWrapper spec={spec} />
       </Sequence>
     </AbsoluteFill>
+  );
+};
+
+/** The built-in sound design: a whoosh into every scene, and the pops, ticks and thuds of the pieces Claude placed. */
+const SoundDesign: React.FC<{ timed: TimedBeat[]; storyFrames: number }> = ({ timed, storyFrames }) => {
+  const cues = useMemo(() => {
+    const out: { frame: number; kind: SfxKind }[] = [];
+    timed.forEach((b, i) => {
+      if (i > 0) out.push({ frame: Math.max(0, b.start - 4), kind: 'whoosh' });
+      if (b.visual) out.push(...sceneSounds(b.visual, b));
+    });
+    out.push({ frame: storyFrames - 2, kind: 'whoosh' });
+    // Never two of the same sound on one frame.
+    const seen = new Set<string>();
+    return out.filter((c) => {
+      const key = `${c.kind}:${c.frame}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [timed, storyFrames]);
+  const urls = sfxUrls();
+  return (
+    <>
+      {cues.map((c, i) => (
+        <Sequence key={`sd${i}`} from={c.frame} durationInFrames={c.kind === 'whoosh' ? 15 : 10}>
+          <Audio src={urls[c.kind]} volume={SFX_VOLUME[c.kind]} />
+        </Sequence>
+      ))}
+    </>
   );
 };
 

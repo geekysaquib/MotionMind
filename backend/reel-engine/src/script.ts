@@ -133,6 +133,8 @@ export type ReelSpec = {
   music?: { url: string; durationSec: number; volume: number };
   /** Sound effects: each plays once, starting `at` seconds into the reel. */
   sfx?: { url: string; durationSec: number; at: number; volume: number }[];
+  /** The built-in sound design (a whoosh per scene, pops, ticks and thuds as pieces appear). On unless false. */
+  soundDesign?: boolean;
   captions?: CaptionStyle;
 };
 
