@@ -1,18 +1,17 @@
-import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useOutletContext } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Plus, Trash2, Layers3 } from 'lucide-react';
 import type { Project, ReelBeat, ReelScript, ReelTone } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
-import { Alert, Button, Card, Spinner } from '../../components/ui';
+import { Alert, Button, Card } from '../../components/ui';
 import { errorText } from '../../lib/format';
-import { brandFor, specFromScript } from '../../components/reelSpec';
+import { AnimationPreview } from '../../components/AnimationPreview';
 import { cn } from '../../lib/cn';
 import { cleanRows, RowsEditor } from '../../components/RowsEditor';
 import { TermsEditor } from '../../components/TermsEditor';
 
-const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 
 const TONES: { id: ReelTone; label: string; swatch: string }[] = [
   { id: 'teal', label: 'Teal', swatch: 'bg-[#14B8A6]' },
@@ -33,7 +32,7 @@ function cleanKeywords(b: ReelBeat): ReelBeat {
 /** Storyboard stage: edit the script beat by beat (words, card, scene picture, colour, order) with the reel playing alongside. */
 export const StoryboardStagePage = observer(function StoryboardStagePage() {
   const project = useOutletContext<Project>();
-  const { projects, profile } = useStores();
+  const { projects } = useStores();
   const [draft, setDraft] = useState<ReelScript | null>(project.script);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +42,6 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
   useEffect(() => setDraft(project.script), [project.script]);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(project.script);
-  const spec = useMemo(() => (draft && draft.beats.length ? specFromScript(draft, brandFor(profile.profile)) : null), [draft, profile.profile]);
 
   if (!draft) {
     return (
@@ -184,17 +182,6 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
                 />
               ))}
             </div>
-            {b.visual && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-accent/[0.06] px-3 py-2 text-xs text-ink-300">
-                <span>
-                  Claude designed this scene: {b.visual.elements.map((e) => e.label || e.kind).slice(0, 5).join(', ')}
-                  {b.visual.links?.length ? `, with ${b.visual.links.length} arrow${b.visual.links.length > 1 ? 's' : ''}` : ''}.
-                </span>
-                <button type="button" className="font-semibold text-accent hover:underline" onClick={() => update(i, (x) => ({ ...x, visual: undefined }))}>
-                  Use the simple picture below instead
-                </button>
-              </div>
-            )}
             <RowsEditor rows={b.card.rows} index={i} onChange={(rows) => updateCard(i, { rows })} />
           </Card>
         ))}
@@ -202,11 +189,8 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
 
       <div className="xl:sticky xl:top-6 xl:self-start">
         <h3 className="mb-3 text-sm font-semibold text-ink-400">Preview {dirty && <span className="text-amber-600">(unsaved changes)</span>}</h3>
-        {spec && (
-          <Suspense fallback={<Spinner label="Loading the reel engine" />}>
-            <ReelPreview spec={spec} />
-          </Suspense>
-        )}
+        <AnimationPreview project={project} />
+        {dirty && <p className="mt-2 text-xs text-ink-400">The preview shows the saved animation. Changes to the words need a new animation on the Animate step.</p>}
       </div>
     </div>
   );

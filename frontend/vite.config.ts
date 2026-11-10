@@ -11,7 +11,6 @@ export default defineConfig({
     alias: {
       '@motionmind/shared': fileURLToPath(new URL('../shared/src/index.ts', import.meta.url)),
       // The reel engine is embedded in the web app for live previews (same code the renderer uses).
-      '@motionmind/reel-engine': fileURLToPath(new URL('../backend/reel-engine/src/public.ts', import.meta.url)),
     },
   },
   // The single .env lives in the repo root. Only VITE_* values are exposed to the browser.

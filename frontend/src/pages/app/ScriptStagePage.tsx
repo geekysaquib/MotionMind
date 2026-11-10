@@ -1,29 +1,25 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import type { Project } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
-import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
+import { Alert, Badge, Button, Card } from '../../components/ui';
 import { errorText, timeAgo } from '../../lib/format';
-import { brandFor, specFromScript } from '../../components/reelSpec';
+import { AnimationPreview } from '../../components/AnimationPreview';
 import { PasteScriptPanel } from './PasteScriptPanel';
 import { STYLES } from '@motionmind/shared';
 import { pickedStyle } from '../../lib/pickedStyle';
 
-// The player pulls in the whole reel engine, so it loads only on this page.
-const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 
 /** Script stage: Claude writes the reel script from the topic, and the embedded engine plays it. */
 export const ScriptStagePage = observer(function ScriptStagePage() {
   const project = useOutletContext<Project>();
-  const { projects, profile, aiMode } = useStores();
+  const { projects, aiMode } = useStores();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSample, setShowSample] = useState(false);
   const script = project.script;
   const style = pickedStyle(project);
-  const spec = useMemo(() => (script ? specFromScript(script, brandFor(profile.profile)) : null), [script, profile.profile]);
 
   async function write() {
     setBusy(true);
@@ -130,19 +126,7 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
 
       <div className="xl:sticky xl:top-6 xl:self-start">
         <h3 className="mb-3 text-sm font-semibold text-ink-400">Preview</h3>
-        {spec || showSample ? (
-          <Suspense fallback={<Spinner label="Loading the reel engine" />}>
-            <ReelPreview spec={spec ?? undefined} />
-          </Suspense>
-        ) : (
-          <div className="flex aspect-[9/16] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-line/15 p-6 text-center text-sm text-ink-400">
-            The reel plays here once Claude has written the script.
-            <Button variant="secondary" onClick={() => setShowSample(true)}>
-              Play the sample reel
-            </Button>
-          </div>
-        )}
-        {!spec && showSample && <p className="mt-2 text-xs text-ink-400">Sample: "Where is my Train", made with the same engine.</p>}
+        <AnimationPreview project={project} />
       </div>
     </div>
   );

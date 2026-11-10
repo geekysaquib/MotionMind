@@ -6,7 +6,7 @@ import { SessionTokens } from '../auth/session';
 import { DevTokenVerifier } from '../auth/verifiers';
 import { MemoryDataRepository } from '../data/repository';
 import { MemoryAudioStore } from '../voice/audioStore';
-import { reelSpecFor } from '../export/routes';
+import { htmlRenderFor } from '../export/routes';
 import { cleanFileName, sniffAudio } from './audioFormat';
 
 const secret = randomBytes(32).toString('base64');
@@ -183,17 +183,16 @@ describe('reel editor routes', () => {
     expect(b).toBeTruthy();
   });
 
-  it('puts the upload, pace and captions into the export spec', async () => {
+  it("lays the user's own recording under the animation when it is exported", async () => {
     const { app, data, audio, id } = await setup();
     const track = (await upload(app, id, 'voice', mp3())).json().track;
     await app.inject({ method: 'PUT', url: `/api/projects/${id}/editor`, headers: H, payload: { editor: editorFor(track) } });
-    const project = (await data.getProject('u1', id))!;
-    const { spec, withVoice } = await reelSpecFor({ data, audio } as never, 'u1', project);
+    let project = (await data.getProject('u1', id))!;
+    project = (await data.updateProject('u1', id, { script: { ...project.script!, animation: { html: '<html></html>', timingKey: 'x', writtenAt: 'now' } } }))!;
+    const { input, withVoice } = await htmlRenderFor({ data, audio } as never, 'u1', project);
     expect(withVoice).toBe(true);
-    expect(spec.voiceTrack).toMatchObject({ durationSec: 10, cuts: [3, 7] });
-    expect(spec.pace).toBe(1.1);
-    expect(spec.scenePace).toEqual([1, 0.9, 1]);
-    expect(spec.captions).toMatchObject({ size: 'medium' });
-    expect(spec.audioUrls).toBeUndefined();
+    expect(input.audio).toHaveLength(1);
+    expect(input.audio[0]).toMatchObject({ at: 0, from: 0, to: 10 });
+    expect(input.duration).toBeCloseTo(10 + 3, 1);
   });
 });

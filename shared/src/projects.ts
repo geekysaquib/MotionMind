@@ -90,40 +90,6 @@ export interface ReelBeat {
   /** 0 = hook, then 1..steps.length */
   chapter: number;
   card: { eyebrow: string; headline: string; tone: ReelTone; rows: ReelRow[] };
-  /** The scene picture Claude designed for this topic, in the chosen style. Without it the style draws the first row. */
-  visual?: SceneVisual;
-}
-
-/** Pieces Claude composes a scene from (same list as ELEMENT_KINDS in the reel engine). */
-export const ELEMENT_KINDS = ['card', 'phone', 'window', 'code', 'number', 'list', 'bars', 'ring', 'queue', 'stamp', 'logo', 'text'] as const;
-export type ElementKind = (typeof ELEMENT_KINDS)[number];
-
-export interface VisualElement {
-  id: string;
-  kind: ElementKind;
-  label?: string;
-  sub?: string;
-  icon?: string;
-  logo?: string;
-  value?: string;
-  items?: { text: string; value?: number; ok?: boolean }[];
-  /** Centre and width in percent of the scene area. */
-  x?: number;
-  y?: number;
-  w?: number;
-  tone?: ReelTone;
-  /** Appears when the narration says this word (or `at` seconds into the scene). */
-  on?: string;
-  at?: number;
-  focus?: boolean;
-}
-
-/** A scene as Claude designed it: pieces placed in the scene area, arrows between them, each appearing on a spoken word. */
-export interface SceneVisual {
-  elements: VisualElement[];
-  links?: { from: string; to: string; label?: string; on?: string; dashed?: boolean }[];
-  /** Live Map only: draw the scene over the city map. */
-  map?: boolean;
 }
 
 /** A reel script: what the voice says and what each on-screen card shows. The reel engine renders it. */
@@ -133,6 +99,8 @@ export interface ReelScript {
   style?: import('./styles').StyleId;
   /** The cover (thumbnail) settings. Missing means the defaults. */
   cover?: import('./cover').CoverSettings;
+  /** The animation Claude wrote for this reel (HyperFrames HTML), made on the Animate step. */
+  animation?: import('./animation').ReelAnimation;
   steps: string[];
   beats: ReelBeat[];
   /** Short forms used in the reel with what they stand for. The reel shows the full form whenever a beat uses one. */

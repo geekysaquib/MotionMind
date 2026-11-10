@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
 import { AudioLines, Upload, Mic, Gift } from 'lucide-react';
@@ -8,17 +8,16 @@ import { EmptyState } from '../../components/EmptyState';
 import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
 import { errorText, timeAgo } from '../../lib/format';
 import { log } from '../../lib/logger';
-import { brandFor, specFromScript } from '../../components/reelSpec';
+import { AnimationPreview } from '../../components/AnimationPreview';
 import { NarrationScript } from '../../components/NarrationScript';
 import { attachVoice, AudioFileError } from '../../lib/editorActions';
 import type { EditorUrls } from '../../services/claudeHttp';
 
-const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 
 /** Voice stage: your own recording, the free neural voice (no key), or ElevenLabs (server key); the preview plays the reel with the voiceover. */
 export const VoiceStagePage = observer(function VoiceStagePage() {
   const project = useOutletContext<Project>();
-  const { projects, profile, services, auth, aiMode } = useStores();
+  const { projects, services, auth, aiMode } = useStores();
   const api = services.claude(() => auth.session?.accessToken ?? null);
   const [voices, setVoices] = useState<{ id: string; name: string }[] | null>(null);
   const [voiceId, setVoiceId] = useState('');
@@ -26,7 +25,7 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
   const [audio, setAudio] = useState<{ voice: ReelVoice | null; urls: string[]; stale: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editorUrls, setEditorUrls] = useState<EditorUrls>({});
+  const [, setEditorUrls] = useState<EditorUrls>({});
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const [freeVoices, setFreeVoices] = useState<{ id: string; name: string }[]>([]);
@@ -64,10 +63,6 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
   }, [project.id, aiMode.mode]);
 
   const script = project.script;
-  const spec = useMemo(
-    () => (script ? specFromScript(script, brandFor(profile.profile), audio?.voice && !audio.stale ? { voice: audio.voice, urls: audio.urls } : undefined, { editor: project.editor, urls: editorUrls }) : null),
-    [script, profile.profile, audio, project.editor, editorUrls],
-  );
 
   async function upload(file: File | undefined) {
     if (!file || !script) return;
@@ -234,12 +229,8 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
       </div>
 
       <div className="xl:sticky xl:top-6 xl:self-start">
-        <h3 className="mb-3 text-sm font-semibold text-ink-400">Preview {spec?.audioUrls || spec?.voiceTrack ? 'with voice' : '(no voice yet)'}</h3>
-        {spec && (
-          <Suspense fallback={<Spinner label="Loading the reel engine" />}>
-            <ReelPreview spec={spec} />
-          </Suspense>
-        )}
+        <h3 className="mb-3 text-sm font-semibold text-ink-400">Preview</h3>
+        <AnimationPreview project={project} />
       </div>
     </div>
   );

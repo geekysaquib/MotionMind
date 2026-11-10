@@ -6,6 +6,7 @@ import type { ClaudeClient } from './ai/claude';
 import { registerClaudeRoutes } from './ai/routes';
 import { registerConnectorRoutes } from './connectors/routes';
 import { registerDiscoverRoutes } from './discover/routes';
+import { registerAnimationAssets, registerAnimationRoutes } from './animation/routes';
 import { registerCoverRoutes } from './cover/routes';
 import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
 import { registerVoiceRoutes } from './voice/routes';
@@ -75,6 +76,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
   app.get('/health', async () => ({ ok: true, mode: deps.mode }));
   registerRenderDownload(app, deps);
   registerLogoRoute(app, deps);
+  registerAnimationAssets(app);
   registerFootageFiles(app, deps);
 
   // Public
@@ -99,6 +101,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
       registerEditorRoutes(api, deps);
       registerExportRoutes(api, deps);
       registerCoverRoutes(api, deps);
+      registerAnimationRoutes(api, deps);
       registerFootageRoutes(api, deps);
     },
     { prefix: '/api' },

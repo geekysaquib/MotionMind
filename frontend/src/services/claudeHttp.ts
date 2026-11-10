@@ -1,4 +1,4 @@
-import type { AudioTrack, CoverSettings, Platform, Project, ReelEditor, ReelScript, ReelVoice, StyleId } from '@motionmind/shared';
+import type { AudioTrack, CoverSettings, Platform, Project, ReelAnimation, ReelEditor, ReelScript, ReelTimeline, ReelVoice, StyleId } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
 
@@ -91,6 +91,10 @@ export interface ClaudeService {
   /** The free neural voice (no key): its voices, and a voiceover made with one. */
   freeVoices(): Promise<{ voices: { id: string; name: string; language: string }[]; defaultVoiceId: string; available: boolean }>;
   generateFreeVoice(projectId: string, voiceId?: string): Promise<{ project: Project; urls: string[] }>;
+  /** Animate: Claude writes the reel as a HyperFrames composition in claude.ai; the user pastes it back. */
+  animationFor(projectId: string): Promise<{ animation: ReelAnimation | null; timeline: ReelTimeline | null; stale: boolean }>;
+  animationPrompt(projectId: string): Promise<string>;
+  importAnimation(projectId: string, text: string): Promise<Project>;
   /** Style: the look the reel is drawn in. */
   saveStyle(projectId: string, style: StyleId): Promise<Project>;
   /** Reel editor: upload voice/music, then save the editor state. */
@@ -131,6 +135,9 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     generateVoice: (projectId, voiceId, voiceName) => call(`/projects/${projectId}/voice`, 'POST', { voiceId, voiceName }),
     freeVoices: () => call('/voices/free'),
     generateFreeVoice: (projectId, voiceId) => call(`/projects/${projectId}/voice/free`, 'POST', { voiceId }),
+    animationFor: (projectId) => call(`/projects/${projectId}/animation`),
+    animationPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/animation/prompt`)).prompt,
+    importAnimation: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/animation/import`, 'POST', { text })).project,
     saveStyle: async (projectId, style) => (await call<{ project: Project }>(`/projects/${projectId}/style`, 'PUT', { style })).project,
     uploadAudio: (projectId, kind, file, fileName) => {
       const token = getToken();

@@ -6,7 +6,6 @@ import type { Project, ReelEditor, ReelScript } from '@motionmind/shared';
 import type { ClaudeService } from '../../services/claudeHttp';
 import { StoreContext } from '../../stores/RootStore';
 import { makeStore } from '../../test-utils';
-import { specFromScript } from '../../components/reelSpec';
 import { setAudioAnalyzer } from '../../lib/audioAnalysis';
 import { Timeline } from '../../components/Timeline';
 import { ReelEditorPage } from './ReelEditorPage';
@@ -236,16 +235,4 @@ describe('Timeline', () => {
   });
 });
 
-describe('specFromScript with the Reel editor', () => {
-  it('uses the uploaded recording and its pace instead of ElevenLabs audio', () => {
-    const spec = specFromScript(SCRIPT, undefined, undefined, { editor: { ...EDITOR, pace: 1.1 }, urls: { voice: 'blob:v' } });
-    expect(spec.voiceTrack).toMatchObject({ url: 'blob:v', cuts: [3, 7] });
-    expect(spec.pace).toBe(1.1);
-    expect(spec.captions).toBeTruthy();
-  });
 
-  it('ignores the recording when the cuts no longer match the scenes', () => {
-    const spec = specFromScript(SCRIPT, undefined, undefined, { editor: { ...EDITOR, upload: { ...EDITOR.upload!, cuts: [5] } }, urls: { voice: 'blob:v' } });
-    expect(spec.voiceTrack).toBeUndefined();
-  });
-});

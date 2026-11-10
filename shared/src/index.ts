@@ -6,3 +6,4 @@ export * from './editor';
 export * from './autoCuts';
 export * from './cover';
 export * from './footage';
+export * from './animation';

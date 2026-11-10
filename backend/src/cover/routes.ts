@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { COVER_SIZES, COVER_STYLES, MAX_HEADLINE, MAX_KICKER, type Project } from '@motionmind/shared';
+import { COVER_SIZES, COVER_STYLES, MAX_HEADLINE, MAX_KICKER, reelTimeline, type Project } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
-import { reelSpecFor } from '../export/routes';
+
 
 const coverSchema = z
   .object({
@@ -46,9 +46,11 @@ export function registerCoverRoutes(api: FastifyInstance, deps: AppDeps) {
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
     if (!project.script?.beats.length) return reply.code(400).send({ error: 'no_script', message: 'Write the script first.' });
     if (body.data.cover.scene >= project.script.beats.length) return reply.code(400).send({ error: 'invalid_cover', message: "That scene doesn't exist." });
-    const { spec } = await reelSpecFor(deps, req.userId, project, undefined, `${req.protocol}://${req.headers.host}`);
+    if (!project.script.animation) return reply.code(400).send({ error: 'no_animation', message: 'Make the animation first, on the Animate step.' });
+    // The cover is a frame of Claude's animation, late in the chosen scene once everything has come in.
+    const scene = reelTimeline(project.script, project.voice, project.editor).scenes[body.data.cover.scene]!;
     try {
-      const file = await deps.renderer.still({ ...spec, cover: body.data.cover }, body.data.format);
+      const file = await deps.renderer.still(project.script.animation.html, scene.start + (scene.end - scene.start) * 0.8);
       req.log.info({ projectId: project.id, file, style: body.data.cover.style, size: body.data.cover.size }, 'cover rendered');
       return { file, url: `/api/renders/${file}` };
     } catch (err) {

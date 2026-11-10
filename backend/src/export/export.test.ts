@@ -10,21 +10,23 @@ import { DevTokenVerifier } from '../auth/verifiers';
 import { MemoryDataRepository } from '../data/repository';
 import { MemoryAudioStore, voicePath } from '../voice/audioStore';
 import type { Renderer, RenderJob } from './renderer';
+import { localizeGsap, muxArgs, type HtmlRenderInput } from './hyperframes';
 
 const secret = randomBytes(32).toString('base64');
 const SCRIPT = {
   title: 'UPI',
   steps: ['App'],
   beats: [{ id: 'a', narration: 'Ek second.', keywords: [], chapter: 0, card: { eyebrow: 'UPI', headline: 'Fast', tone: 'teal', rows: [] } }],
+  animation: { html: '<!doctype html><html><body>reel</body></html>', timingKey: 'x', writtenAt: 'now' },
 };
 
 class FakeRenderer implements Renderer {
-  started: { userId: string; projectId: string; props: Record<string, unknown> }[] = [];
+  started: { userId: string; projectId: string; input: HtmlRenderInput }[] = [];
   job: RenderJob | null = null;
   platforms: (string | undefined)[] = [];
-  start(userId: string, projectId: string, props: Record<string, unknown>, platform?: string) {
+  start(userId: string, projectId: string, input: HtmlRenderInput, platform?: string) {
     this.platforms.push(platform);
-    this.started.push({ userId, projectId, props });
+    this.started.push({ userId, projectId, input });
     this.job = { id: 'j1', projectId, status: 'rendering', progress: 0.4, startedAt: 'now' };
     return this.job;
   }
@@ -64,14 +66,13 @@ describe('platforms', () => {
     expect(one.json().project.platforms).toEqual(['instagram']);
   });
 
-  it('are exported one video each, with the platform in the spec, and only for platforms the reel has', async () => {
+  it('are exported one video each, and only for platforms the reel has', async () => {
     const renderer = new FakeRenderer();
     const { app, data, id, H, uid } = await setup(renderer);
     const post = (payload?: unknown) => app.inject({ method: 'POST', url: `/api/projects/${id}/export`, headers: H, payload: payload as never });
     expect((await post({ platform: 'youtube' })).statusCode).toBe(200);
     expect((await post({ platform: 'instagram' })).statusCode).toBe(200);
     expect(renderer.platforms).toEqual(['youtube', 'instagram']);
-    expect((renderer.started[0]!.props as { platform: string }).platform).toBe('youtube');
     expect((await post({ platform: 'tiktok' })).json().error).toBe('invalid_platform');
     await data.updateProject(uid, id, { platforms: ['instagram'] });
     expect((await post({ platform: 'youtube' })).json().message).toMatch(/not set up for that platform/);
@@ -84,19 +85,21 @@ describe('platforms', () => {
 });
 
 describe('MP4 export', () => {
-  it('starts a render with the branded reel, including matching voiceover', async () => {
+  it("renders Claude's animation with the matching voiceover under it", async () => {
     const renderer = new FakeRenderer();
     const { app, data, audio, id, H, uid } = await setup(renderer);
-    await data.updateProfile(uid, { channelName: 'Decodify X', handle: 'decodify_x' });
     await audio.put(voicePath(uid, id, 0), Buffer.from('mp3'));
     await data.updateProject(uid, id, { voice: { voiceId: 'v', beats: [{ durationSec: 1, words: [] }], narrations: ['Ek second.'], createdAt: 'now' } });
     const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/export`, headers: H });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ withVoice: true, job: { status: 'rendering' } });
-    const props = renderer.started[0]!.props as { brand: { name: string; initials: string; handle: string }; audioUrls: string[]; style: string };
-    expect(props.brand).toMatchObject({ name: 'Decodify X', initials: 'DX', handle: '@decodify_x' });
-    expect(props.style).toBe('live-map');
-    expect(props.audioUrls[0]).toMatch(/^data:audio\/mpeg/);
+    const input = renderer.started[0]!.input;
+    expect(input.html).toContain('reel');
+    expect(input.audio).toHaveLength(1);
+    expect(input.audio[0]!.url).toMatch(/^data:audio\/mpeg/);
+    expect(input.audio[0]!.at).toBeCloseTo(0.15);
+    // 1 s of voice + lead and gap, then the 3 s end card.
+    expect(input.duration).toBeCloseTo(1 + 0.15 + 0.35 + 3, 2);
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/export`, headers: H })).json()).toMatchObject({ available: true, job: { progress: 0.4 } });
   });
 
@@ -105,7 +108,16 @@ describe('MP4 export', () => {
     const { app, data, id, H, uid } = await setup(renderer);
     await data.updateProject(uid, id, { voice: { voiceId: 'v', beats: [{ durationSec: 1, words: [] }], narrations: ['Old line.'], createdAt: 'now' } });
     expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/export`, headers: H })).json().withVoice).toBe(false);
-    expect(renderer.started[0]!.props.audioUrls).toBeUndefined();
+    expect(renderer.started[0]!.input.audio).toEqual([]);
+  });
+
+  it('needs the animation first', async () => {
+    const renderer = new FakeRenderer();
+    const { app, data, id, H, uid } = await setup(renderer);
+    await data.updateProject(uid, id, { script: { ...SCRIPT, animation: undefined } as never });
+    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/export`, headers: H });
+    expect(res.json()).toMatchObject({ error: 'no_animation' });
+    expect(renderer.started).toHaveLength(0);
   });
 
   it('explains that export runs locally when the server has no renderer', async () => {
@@ -138,5 +150,29 @@ describe('MP4 export', () => {
     const { app } = await setup(new FakeRenderer());
     expect((await app.inject({ method: 'GET', url: '/api/renders/..%2F..%2F.env' })).statusCode).toBe(404);
     expect((await app.inject({ method: 'GET', url: '/api/renders/00000000-0000-0000-0000-000000000000.mp4' })).statusCode).toBe(404);
+  });
+});
+
+describe('HyperFrames pipeline', () => {
+  it('swaps GSAP from any CDN for the local copy', () => {
+    const html = '<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>';
+    expect(localizeGsap(html, 'gsap.min.js')).toBe('<script src="gsap.min.js"></script><script src="gsap.min.js"></script>');
+  });
+
+  it('places each voice clip at its time, mixes them and levels the loudness', () => {
+    const args = muxArgs('v.mp4', [{ file: 'a0', clip: { url: 'x', at: 0.15 } }, { file: 'a1', clip: { url: 'y', at: 4.5, from: 2, to: 6 } }, { file: 'm', clip: { url: 'z', at: 0, volume: 0.2, loop: true } }], 12, 'out.mp4');
+    const graph = args[args.indexOf('-filter_complex') + 1]!;
+    expect(graph).toContain('[1:a]aresample=48000,adelay=150|150');
+    expect(graph).toContain('adelay=4500|4500');
+    expect(graph).toContain('volume=0.200');
+    expect(graph).toContain('amix=inputs=3');
+    expect(graph).toContain('loudnorm=I=-14');
+    expect(args).toContain('-stream_loop');
+    expect(args.slice(args.indexOf('-ss'), args.indexOf('-ss') + 4)).toEqual(['-ss', '2.000', '-t', '4.000']);
+    expect(args.at(-1)).toBe('out.mp4');
+  });
+
+  it('copies the silent video when there is no audio', () => {
+    expect(muxArgs('v.mp4', [], 5, 'o.mp4')).toEqual(['-y', '-loglevel', 'error', '-i', 'v.mp4', '-c:v', 'copy', '-movflags', '+faststart', '-t', '5.000', 'o.mp4']);
   });
 });

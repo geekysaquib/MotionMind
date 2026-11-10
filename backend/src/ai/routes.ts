@@ -14,6 +14,7 @@ const editSchema = z.object({ script: z.unknown() });
 // (Same zod version as the script schema, or the two cannot be combined.)
 const scriptWithLayout = scriptSchemaV4.extend({
   style: zv4.enum(STYLE_IDS).optional(),
+  animation: zv4.object({ html: zv4.string().max(2_000_000), style: zv4.enum(STYLE_IDS).optional(), timingKey: zv4.string().max(4000), writtenAt: zv4.string() }).optional(),
   cover: zv4
     .object({
       scene: zv4.number().int().min(0).max(60),
@@ -213,7 +214,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     const id = (req.params as { id: string }).id;
     const project = z.string().uuid().safeParse(id).success ? await deps.data.getProject(req.userId, id) : null;
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
-    const saved: ReelScript = { ...parsed.data, cover: parsed.data.cover as ReelScript['cover'], style: parsed.data.style, model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
+    const saved: ReelScript = { ...parsed.data, cover: parsed.data.cover as ReelScript['cover'], style: parsed.data.style, animation: parsed.data.animation, model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
     return {
       project: await deps.data.updateProject(req.userId, project.id, { script: saved, stage: project.stage === 'script' ? 'storyboard' : project.stage }),
     };

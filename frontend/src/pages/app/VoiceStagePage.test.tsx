@@ -6,7 +6,6 @@ import type { Project, ReelScript, ReelVoice } from '@motionmind/shared';
 import type { ClaudeService } from '../../services/claudeHttp';
 import { StoreContext } from '../../stores/RootStore';
 import { makeStore } from '../../test-utils';
-import { specFromScript } from '../../components/reelSpec';
 import { parseTranslation } from '../../lib/translate';
 import { VoiceStagePage } from './VoiceStagePage';
 
@@ -71,14 +70,14 @@ describe('VoiceStagePage', () => {
 
   it('makes the voiceover with the picked voice', async () => {
     const { generated } = await setup({ voice: null, urls: [], stale: false });
-    expect(screen.getByText('Preview (no voice yet)')).toBeTruthy();
+    expect(screen.getByText('Preview')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Voice'), { target: { value: 'v2' } });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Make the voiceover' }));
     });
     expect(generated).toEqual(['v2']);
     expect(screen.getByText('Matches the script')).toBeTruthy();
-    expect(screen.getByText('Preview with voice')).toBeTruthy();
+    expect(screen.getByText('Current voiceover')).toBeTruthy();
   });
 
   it('shows the narration script and copies it for text-to-speech', async () => {
@@ -155,17 +154,11 @@ describe('VoiceStagePage', () => {
   it('warns when the narration changed after recording and plays without it', async () => {
     await setup({ voice: VOICE, urls: ['u0', 'u1'], stale: true });
     expect(screen.getByText('Script changed since')).toBeTruthy();
-    expect(screen.getByText('Preview (no voice yet)')).toBeTruthy();
+    expect(screen.getByText('Preview')).toBeTruthy();
   });
 });
 
-describe('specFromScript with voice', () => {
-  it('attaches audio only when it matches the script scene for scene', () => {
-    expect(specFromScript(SCRIPT, undefined, { voice: VOICE, urls: ['a', 'b'] }).audioUrls).toEqual(['a', 'b']);
-    expect(specFromScript(SCRIPT, undefined, { voice: { ...VOICE, beats: [VOICE.beats[0]!] }, urls: ['a'] }).audioUrls).toBeUndefined();
-    expect(specFromScript(SCRIPT, undefined, { voice: VOICE, urls: ['a', ''] }).voice).toBeUndefined();
-  });
-});
+
 
 describe('parseTranslation', () => {
   it('reads a plain or fenced JSON list and checks the count', () => {

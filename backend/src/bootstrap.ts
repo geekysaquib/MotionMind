@@ -29,8 +29,8 @@ export async function createAppFromEnv(env: Env, opts: { logger: boolean }): Pro
     deps = { data: new SupabaseDataRepository(db), audio: new SupabaseAudioStore(db) };
   }
 
-  // MP4 export renders on this machine: it needs a headless Chrome and minutes of CPU.
-  const renderer = new (await import('./export/renderer')).RemotionRenderer();
+  // MP4 export renders Claude's animation on this machine with HyperFrames (headless Chrome) and FFmpeg.
+  const renderer = new (await import('./export/renderer')).HyperFramesRenderer();
 
   // Raw footage editing runs FFmpeg and whisper.cpp on this machine too.
   const { FootageStore, DEFAULT_FOOTAGE_DIR } = await import('./footage/store');

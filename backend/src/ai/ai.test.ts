@@ -332,7 +332,7 @@ describe('storyboard edits', () => {
   });
 });
 
-describe('Scripts written before the style engine', () => {
+describe('Script prompt and older scripts', () => {
   it('still load: the old 3D fields (world, theme, scene, shot) are dropped', async () => {
     const { parsePastedScript } = await import('./reelPrompt');
     const old = { ...SCRIPT, world: 'iso', theme: 'lab', beats: SCRIPT.beats.map((b) => ({ ...b, shot: 'tower', scene: { props: [{ id: 'you', kind: 'phone' }] } })) };
@@ -343,10 +343,11 @@ describe('Scripts written before the style engine', () => {
     expect(parsed.beats[0]!.shot).toBeUndefined();
   });
 
-  it('asks Claude to design every scene, for the default style when none was picked', async () => {
+  it('writes for an Indian audience, in the default style when none was picked', async () => {
     const { manualReelPrompt } = await import('./reelPrompt');
     const prompt = manualReelPrompt({ topic: 'UPI', durationSec: 30, language: 'en', niche: null, channelName: null });
-    expect(prompt).toContain('DESIGN THE PICTURE');
+    expect(prompt).toContain('Your audience is Indian');
+    expect(prompt).toContain('₹');
     expect(prompt).toContain('"Live Map" style');
     expect(prompt).not.toContain('isometric');
   });
@@ -369,8 +370,7 @@ describe('Scripts written before the style engine', () => {
     const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: JSON.stringify(designed), style: 'whiteboard' } });
     expect(res.statusCode).toBe(200);
     expect(res.json().project.script.style).toBe('whiteboard');
-    expect(res.json().project.script.beats[0].visual.elements[0]).toMatchObject({ kind: 'card', label: 'Load balancer', on: 'npci' });
-    const bad = { ...SCRIPT, beats: [{ ...SCRIPT.beats[0], visual: { elements: [{ id: 'x', kind: 'hologram' }] } }] };
-    expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: JSON.stringify(bad) } })).statusCode).toBe(400);
+    // Fields of the old scene designer are dropped.
+    expect(res.json().project.script.beats[0].visual).toBeUndefined();
   });
 });

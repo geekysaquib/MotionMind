@@ -1,5 +1,4 @@
 import { describe, expect, it } from '@jest/globals';
-import { STYLE_IDS as ENGINE_STYLE_IDS } from '../../backend/reel-engine/src/script';
 import { DEFAULT_STYLE, STYLE_IDS, STYLES, styleOf, suggestStyles } from './styles';
 
 const script = (title: string, narration = 'x') => ({
@@ -8,8 +7,7 @@ const script = (title: string, narration = 'x') => ({
 });
 
 describe('styles', () => {
-  it('lists the same styles as the reel engine, each with a full catalog entry', () => {
-    expect([...STYLE_IDS]).toEqual([...ENGINE_STYLE_IDS]);
+  it('has a full catalog entry for every style', () => {
     for (const id of STYLE_IDS) expect(STYLES[id]).toMatchObject({ id, name: expect.any(String), description: expect.any(String) });
   });
 

@@ -1,0 +1,94 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { STYLES, styleOf, type ReelScript, type ReelTimeline, type StyleId } from '@motionmind/shared';
+
+// The Animate prompt: everything claude.ai needs to write the whole reel as one HyperFrames composition
+// (HTML + CSS + a seekable GSAP timeline), timed to the voice, in the chosen style.
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+
+/** The style's full rulebook (lemo-opuscar rulebooks are MIT, LemoLab; Live Map is Motion Mind's own). */
+export function rulebook(style: StyleId): string {
+  try {
+    return readFileSync(path.join(here, 'rulebooks', `${style}.md`), 'utf8');
+  } catch {
+    return STYLES[style].description;
+  }
+}
+
+/** The GSAP build the composition must load (the renderer and the preview swap it for a local copy). */
+export const GSAP_URL = 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js';
+
+export interface AnimationBrief {
+  script: ReelScript;
+  timeline: ReelTimeline;
+  style?: StyleId | null;
+  channelName: string;
+  handle: string;
+  language: 'en' | 'hi' | 'hinglish';
+  /** Where company logos can be loaded from, like http://localhost:8787/api/logo/irctc.co.in */
+  logoBase: string;
+  platform: 'instagram' | 'youtube' | 'both';
+}
+
+const LANG: Record<AnimationBrief['language'], string> = { en: 'English', hi: 'Hindi (Devanagari)', hinglish: 'Hinglish (Latin script)' };
+
+export function animationPrompt(b: AnimationBrief): string {
+  const st = styleOf(b.style);
+  const t = b.timeline;
+  const scenes = t.scenes.map((s) => {
+    const beat = b.script.beats[s.index]!;
+    return {
+      scene: s.index + 1,
+      start: s.start,
+      end: s.end,
+      step: beat.chapter > 0 ? b.script.steps[beat.chapter - 1] ?? '' : 'Hook',
+      eyebrow: beat.card.eyebrow,
+      headline: beat.card.headline,
+      rows: beat.card.rows,
+      narration: s.narration,
+      words: s.words.map((w) => [w.w, w.start, w.end]),
+    };
+  });
+  const cta = b.platform === 'youtube' ? 'Subscribe karo' : b.platform === 'both' ? 'Follow / Subscribe karo' : 'Follow karo';
+  return `You are a world-class motion designer making a premium Instagram Reel for an Indian audience. Write the WHOLE reel as one HyperFrames composition: a single HTML file with CSS, inline SVG and one GSAP timeline. Motion Mind renders it frame by frame at 1080x1920, 30 fps, and adds the voiceover itself. You design and animate everything you see: no templates, no stock assets, no generic shapes. Every scene must SHOW what the narration says at that moment, specific to this topic.
+
+# The reel
+Title: ${b.script.title}
+Channel: ${b.channelName} (${b.handle})
+Language of on-screen text and captions: ${LANG[b.language]}
+Total length: ${t.duration.toFixed(2)} s. Story scenes end at ${t.storyEnd.toFixed(2)} s; then an end card (${cta}, the channel name and ${b.handle}) until ${t.duration.toFixed(2)} s.
+Timing source: ${t.source === 'estimate' ? 'ESTIMATED (no voice yet)' : 'the real voiceover'}. Times are seconds from the start of the video.
+Short forms: ${JSON.stringify(b.script.glossary ?? [])}
+Brands: ${JSON.stringify(b.script.brands ?? [])} — a brand's logo is an <img> from ${b.logoBase}/api/logo/<domain>?name=<name> (for example ${b.logoBase}/api/logo/irctc.co.in?name=IRCTC); keep it on a white rounded tile.
+
+Scenes (words = [word, start, end]; animate each thing as its word is spoken):
+${JSON.stringify(scenes)}
+
+# The style: ${st.name}
+${st.description}
+Follow this style rulebook. It was written for landscape films and sometimes for other languages; keep its look, colour logic, type, motion and native moves, but lay everything out for a 1080x1920 vertical phone screen and write all text in the reel's language. Ignore anything about its own engine or demo.
+
+<rulebook>
+${rulebook(st.id)}
+</rulebook>
+
+# Quality bar (premium, not a slideshow)
+- A designed piece for every scene: real objects of the topic (phones with the actual app screen, servers, queues of people, tickets, money, maps, trains...) drawn in inline SVG/CSS in the style, with depth, light and shadow. Vary the composition scene to scene.
+- Motion with intent: things enter on their spoken word with eased, overshooting moves; arrows draw on; packets travel; numbers count up; the camera (a wrapper you scale/translate) pushes, pans and glides; transitions between scenes are designed (wipes, match moves, whips), never hard cuts or plain fades. Nothing is ever fully still.
+- Typography is big and readable on a phone: headlines 72–110 px, labels ≥ 32 px, captions ≥ 56 px. Keep text inside x 60–1020 and leave the top 120 px and bottom 260 px free of anything important (app buttons cover them).
+- Captions are part of the design: show the narration words in short chunks (3–5 words) in the style's caption look, each word highlighted exactly between its start and end time, keywords in the accent.
+- Headline per scene (the card's headline, *starred* words highlighted) and the step progress, styled per the rulebook.
+- Indian context: ₹, lakh/crore, Indian apps, places and everyday moments, as in the script.
+
+# HyperFrames rules (the render fails without these)
+1. One file. Start with <!doctype html>. In <head>: <meta charset="UTF-8">, <meta name="viewport" content="width=1080, height=1920">, and exactly this script: <script src="${GSAP_URL}"></script>. You may load Google Fonts with <link>; no other external files, images or scripts (logos only from the URL above).
+2. html, body: margin 0, width 1080px, height 1920px, overflow hidden, a background colour.
+3. Root: <div id="root" data-composition-id="main" data-start="0" data-duration="${t.duration.toFixed(2)}" data-width="1080" data-height="1920"> holding everything.
+4. Each scene is a <section class="clip" data-start="START" data-duration="LENGTH" data-track-index="0"> using the scene's start and (end − start) from the list above (the end card too). Elements outside a clip's time are hidden by the runtime. A .clip is position:absolute; inset:0. Overlays that span the whole reel (captions layer, progress bar) get class="clip" data-start="0" data-duration="${t.duration.toFixed(2)}" data-track-index="1".
+5. One GSAP timeline, created paused, with every tween placed at absolute times (position parameter in seconds), then registered: window.__timelines = window.__timelines || {}; const tl = gsap.timeline({ paused: true }); ... ; window.__timelines["main"] = tl; Child timelines added to it must NOT be paused. Use repeat on looping idle motion (pings, floating) only inside the scene's time span.
+6. Deterministic: no Math.random (use a seeded function), no Date, no fetch, no timers, no requestAnimationFrame, no CSS animations or transitions (GSAP only), no video or audio elements. The page must look right at any time it is seeked to.
+
+Answer with only the complete HTML file in one \`\`\`html code block, nothing else.`;
+}

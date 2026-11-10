@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
 import { Clapperboard, Music2, Type, Upload, SlidersHorizontal, Volume2 } from 'lucide-react';
@@ -22,15 +22,14 @@ import {
 } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
-import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
+import { Alert, Badge, Button, Card } from '../../components/ui';
 import { Timeline } from '../../components/Timeline';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
 import { attachMusic, attachSfx, attachVoice, AudioFileError } from '../../lib/editorActions';
 import type { EditorUrls } from '../../services/claudeHttp';
-import { brandFor, specFromScript } from '../../components/reelSpec';
+import { AnimationPreview } from '../../components/AnimationPreview';
 
-const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 
 const input = 'mt-1 block w-full rounded-lg border border-line/15 bg-transparent px-3 py-2 text-sm text-ink-100';
 
@@ -58,15 +57,15 @@ function Seg<T extends string>({ label, value, options, onChange }: { label: str
 /** Reel editor: manage the voice (upload, scene breaks, pace), the words on screen, music and captions, with a live preview. */
 export const ReelEditorPage = observer(function ReelEditorPage() {
   const project = useOutletContext<Project>();
-  const { projects, profile, services, auth, toasts, aiMode } = useStores();
+  const { projects, services, auth, toasts, aiMode } = useStores();
   const api = services.claude(() => auth.session?.accessToken ?? null);
   const [draft, setDraft] = useState<ReelEditor>(() => normalizeEditor(project.editor, Boolean(project.voice)));
   const [script, setScript] = useState<ReelScript | null>(project.script);
-  const [urls, setUrls] = useState<EditorUrls | null>(null);
+  const [, setUrls] = useState<EditorUrls | null>(null);
   const [scene, setScene] = useState(0);
   const [busy, setBusy] = useState<'save' | 'voice' | 'music' | 'sfx' | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [elevenAudio, setElevenAudio] = useState<{ voice: Project['voice']; urls: string[]; stale: boolean } | null>(null);
+  const [, setElevenAudio] = useState<{ voice: Project['voice']; urls: string[]; stale: boolean } | null>(null);
   const voiceFile = useRef<HTMLInputElement>(null);
   const musicFile = useRef<HTMLInputElement>(null);
   const sfxFile = useRef<HTMLInputElement>(null);
@@ -94,13 +93,6 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
   const upload = draft.upload;
   const mismatch = Boolean(upload && beats.length > 0 && upload.cuts.length !== beats.length - 1);
 
-  const spec = useMemo(
-    () =>
-      script && urls
-        ? specFromScript(script, brandFor(profile.profile), elevenAudio?.voice && !elevenAudio.stale ? { voice: elevenAudio.voice, urls: elevenAudio.urls } : undefined, { editor: mismatch ? { ...draft, upload: null } : draft, urls })
-        : null,
-    [script, urls, draft, mismatch, profile.profile, elevenAudio],
-  );
 
   if (!script) {
     return (
@@ -454,14 +446,8 @@ export const ReelEditorPage = observer(function ReelEditorPage() {
       </div>
 
       <div className="xl:sticky xl:top-6 xl:self-start">
-        <h3 className="mb-3 text-sm font-semibold text-ink-400">Live preview</h3>
-        {!spec ? (
-          <Spinner label="Loading" />
-        ) : (
-          <Suspense fallback={<Spinner label="Loading the reel engine" />}>
-            <ReelPreview spec={spec} />
-          </Suspense>
-        )}
+        <h3 className="mb-3 text-sm font-semibold text-ink-400">Preview (saved settings)</h3>
+        <AnimationPreview project={project} />
       </div>
     </div>
   );
