@@ -21,8 +21,8 @@ const TIPS = [
   { title: 'Ask “how does it work?”', text: 'Questions make better reels than subjects. “How does a Soundbox know the money arrived?” beats “UPI”.' },
   { title: 'Approve the research first', text: 'The script is written from the research you approve, so check the facts marked “estimate” before you move on.' },
   { title: 'Pick a different style', text: 'On the Style step, try a look you have not used lately: Live Map, Whiteboard, Dark Keynote, Transit Map or Newsroom.' },
-  { title: 'Slow down the hard scenes', text: 'In the reel editor you can set the pace of one scene, so a busy card stays on screen a little longer.' },
-  { title: 'Translate the voice script', text: 'On the Voice step, switch the script to Hindi or English, copy it into your text-to-speech tool, and upload the recording.' },
+  { title: 'Leave a pause between scenes', text: 'When you record, stop for a breath between scenes. Motion Mind uses those pauses to find where each scene starts.' },
+  { title: 'A quiet room beats editing', text: 'A clean recording lets the auto-fit hear every word, so the animation lands exactly when you say it.' },
 ];
 
 /** Home: start a reel, pick up where you left off, and see all your reels at a glance. */
@@ -45,7 +45,7 @@ export const DashboardPage = observer(function DashboardPage() {
     { done: Boolean(profile.profile?.handle), label: `Claim your handle${profile.profile?.handle ? ` (@${profile.profile.handle})` : ''}`, to: '/app/settings' },
     { done: s.total > 0, label: 'Create your first reel', to: '/app?new=1' },
     { done: active.some((p) => p.script), label: 'Get a script written', to: resume ? `/app/projects/${resume.id}/script` : '/app?new=1' },
-    { done: active.some((p) => p.editor?.upload || p.voice), label: 'Add a voice to a reel', to: resume ? `/app/projects/${resume.id}/voice` : '/app?new=1' },
+    { done: active.some((p) => p.editor?.upload), label: 'Add a voice to a reel', to: resume ? `/app/projects/${resume.id}/voice` : '/app?new=1' },
     { done: s.completed > 0, label: 'Export your first reel', to: resume ? `/app/projects/${resume.id}/export` : '/app?new=1' },
   ];
   const doneCount = setup.filter((x) => x.done).length;

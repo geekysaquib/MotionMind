@@ -3,29 +3,17 @@ import { z } from 'zod';
 import { z as zv4 } from 'zod/v4';
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
-import { ClaudeError, claudeClient, CLAUDE_MODEL, type ClaudeClient } from './claude';
 import { manualReelPrompt, manualResearchPrompt, parsePastedScript, parseResearch, PastedScriptError, type ReelBrief } from './reelPrompt';
 import { reelScriptSchema as scriptSchemaV4, type Research } from './reelSchema';
 import { STYLE_IDS, type StyleId, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
 
-const askSchema = z.object({ prompt: z.string().trim().min(1, 'Ask Claude something.').max(12000) });
 const editSchema = z.object({ script: z.unknown() });
 // The storyboard carries the chosen style and the cover; the schema Claude writes to does not.
 // (Same zod version as the script schema, or the two cannot be combined.)
 const scriptWithLayout = scriptSchemaV4.extend({
   style: zv4.enum(STYLE_IDS).optional(),
   animation: zv4.object({ html: zv4.string().max(2_000_000), style: zv4.enum(STYLE_IDS).optional(), timingKey: zv4.string().max(4000), writtenAt: zv4.string() }).optional(),
-  cover: zv4
-    .object({
-      scene: zv4.number().int().min(0).max(60),
-      headline: zv4.string().max(120),
-      kicker: zv4.string().max(40),
-      style: zv4.enum(['bold', 'center', 'split']),
-      size: zv4.enum(['reel', 'feed', 'square']),
-      tone: zv4.enum(['red', 'teal', 'purple', 'blue', 'amber']).nullable().optional(),
-      brand: zv4.boolean(),
-    })
-    .optional(),
+  cover: zv4.object({ scene: zv4.number().int().min(0).max(60) }).optional(),
 });
 const importSchema = z.object({ text: z.string().min(1, "Paste Claude's answer first.").max(100_000), style: z.enum(STYLE_IDS).optional() });
 /** The style picked before the script: the prompt designs every scene for it, and the script is saved with it. */
@@ -37,41 +25,8 @@ const styleOf = (v: unknown) => {
 /** Model label for scripts written in claude.ai and pasted in. */
 export const PASTED_MODEL = 'claude.ai (pasted)';
 
-/** Signed-in only: Claude, on the server's own Anthropic key. Users never set up keys. */
+/** Signed-in only: research, script and style, all through copy and paste with claude.ai. */
 export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
-  const makeClient = deps.claude ?? ((key: string) => claudeClient(key, deps.fetchImpl));
-  let client: ClaudeClient | null = null;
-
-  function claudeOr503(reply: FastifyReply): ClaudeClient | null {
-    if (!deps.anthropicApiKey) {
-      reply.code(503).send({ error: 'claude_not_configured', message: "Claude isn't set up on the server yet (ANTHROPIC_API_KEY)." });
-      return null;
-    }
-    client ??= makeClient(deps.anthropicApiKey);
-    return client;
-  }
-
-  const sendClaudeError = (err: unknown, reply: FastifyReply) => {
-    if (err instanceof ClaudeError) return reply.code(err.status).send({ error: err.code, message: err.message });
-    throw err;
-  };
-
-  api.get('/claude/status', async () => ({ connected: Boolean(deps.anthropicApiKey), model: CLAUDE_MODEL }));
-
-  api.post('/claude/ask', async (req, reply) => {
-    const body = askSchema.safeParse(req.body);
-    if (!body.success) return reply.code(400).send({ error: 'invalid_prompt', message: firstIssue(body.error) });
-    const claude = claudeOr503(reply);
-    if (!claude) return reply;
-    try {
-      const started = Date.now();
-      const res = await claude.ask(body.data.prompt);
-      return { reply: res, ms: Date.now() - started };
-    } catch (err) {
-      return sendClaudeError(err, reply);
-    }
-  });
-
   async function projectFor(req: FastifyRequest, reply: FastifyReply): Promise<Project | null> {
     const id = (req.params as { id: string }).id;
     const project = z.string().uuid().safeParse(id).success ? await deps.data.getProject(req.userId, id) : null;
@@ -121,22 +76,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   }
 
   // ---------- Research ----------
-  // Option 1: Claude searches the web on the server's key.
-  api.post('/projects/:id/research', async (req, reply) => {
-    const project = await projectFor(req, reply);
-    if (!project) return reply;
-    const claude = claudeOr503(reply);
-    if (!claude) return reply;
-    try {
-      const { research, model, searches } = await claude.research({ topic: project.topic! });
-      req.log.info({ projectId: project.id, searches, facts: research.facts.length }, 'research done');
-      return { project: await saveResearch(req.userId, project, research, model) };
-    } catch (err) {
-      return sendClaudeError(err, reply);
-    }
-  });
-
-  // Option 2: run the prompt in claude.ai (with web search on) and paste the answer back.
+  // Run the prompt in claude.ai (with web search on) and paste the answer back.
   api.get('/projects/:id/research/prompt', async (req, reply) => {
     const project = await projectFor(req, reply);
     if (!project) return reply;
@@ -165,22 +105,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   });
 
   // ---------- Script ----------
-  // Option 1: the server calls Claude with its API key.
-  api.post('/projects/:id/script', async (req, reply) => {
-    const project = await projectFor(req, reply);
-    if (!project) return reply;
-    const claude = claudeOr503(reply);
-    if (!claude) return reply;
-    try {
-      const style = styleOf((req.body as { style?: unknown } | undefined)?.style);
-      const { script, model } = await claude.writeReel(await briefFor(req.userId, project, style));
-      return { project: await saveScript(req.userId, project, script, model, style) };
-    } catch (err) {
-      return sendClaudeError(err, reply);
-    }
-  });
-
-  // Option 2: no API key needed. The user runs this prompt in claude.ai and pastes the answer back.
+  // The user runs this prompt in claude.ai and pastes the answer back.
   api.get('/projects/:id/script/prompt', async (req, reply) => {
     const project = await projectFor(req, reply);
     if (!project) return reply;

@@ -1,37 +1,11 @@
-import type { AudioTrack, CoverSettings, Platform, Project, ReelAnimation, ReelEditor, ReelScript, ReelTimeline, ReelVoice, StyleId } from '@motionmind/shared';
+import type { AudioTrack, CoverSettings, Platform, Project, ReelAnimation, ReelEditor, ReelScript, ReelTimeline, StyleId } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
 
-export interface ClaudeStatus {
-  connected: boolean;
-  model: string;
-}
-
-export interface ClaudeAnswer {
-  reply: { text: string; model: string; inputTokens: number; outputTokens: number };
-  ms: number;
-}
-
-export interface Connector {
-  id: 'claude' | 'elevenlabs';
-  name: string;
-  purpose: string;
-  connected: boolean;
-  detail: string | null;
-}
-
-export interface ElevenLabsCheck {
-  ok: boolean;
-  detail: string;
-  voices?: { id: string; name: string }[];
-}
-
-/** Playable URLs for the editor's uploaded voice and music. */
+/** Playable URLs for the uploaded voice and music. */
 export interface EditorUrls {
   voice?: string;
   music?: string;
-  /** Playable URL of each sound effect, by its storage path. */
-  sfx?: Record<string, string>;
 }
 
 export interface RenderJob {
@@ -63,56 +37,41 @@ export interface TrendIdea {
   why: string;
 }
 
+/** What the app asks of the API for a reel. Everything that needs Claude is a prompt to copy into claude.ai and an answer to paste back. */
 export interface ClaudeService {
-  /** Discover: what people are reading right now, and reel ideas made from it. */
+  /** Discover: what people are reading right now, and reel ideas made from it (prompt, then the pasted answer). */
   trending(lang: 'en' | 'hi'): Promise<Trending>;
   trendingPrompt(lang: 'en' | 'hi'): Promise<string>;
-  trendingIdeas(lang: 'en' | 'hi'): Promise<{ date: string; ideas: TrendIdea[] }>;
   importTrendingIdeas(text: string): Promise<TrendIdea[]>;
-  /** The app's connectors (Claude, ElevenLabs), all on server keys. */
-  connectors(): Promise<Connector[]>;
-  testElevenLabs(): Promise<ElevenLabsCheck>;
-  status(): Promise<ClaudeStatus>;
-  ask(prompt: string): Promise<ClaudeAnswer>;
-  /** Claude writes the project's reel script; returns the updated project. */
-  writeScript(projectId: string, style?: StyleId | null): Promise<Project>;
-  /** For claude.ai: the prompt to copy, then the answer to paste back. */
+  /** Script: the prompt to copy, then the answer to paste back. */
   scriptPrompt(projectId: string, style?: StyleId | null): Promise<string>;
   importScript(projectId: string, text: string, style?: StyleId | null): Promise<Project>;
-  /** Research: Claude searches the web (API), or the same through claude.ai, then the user approves it. */
-  research(projectId: string): Promise<Project>;
+  /** Research: the prompt to copy, the answer to paste back, then the user approves it. */
   researchPrompt(projectId: string): Promise<string>;
   importResearch(projectId: string, text: string): Promise<Project>;
   approveResearch(projectId: string): Promise<Project>;
-  /** Voice (ElevenLabs on the server key). */
-  voices(): Promise<{ voices: { id: string; name: string }[]; defaultVoiceId: string | null }>;
-  voiceFor(projectId: string): Promise<{ voice: ReelVoice | null; urls: string[]; stale: boolean }>;
-  generateVoice(projectId: string, voiceId?: string, voiceName?: string): Promise<{ project: Project; urls: string[] }>;
-  /** The free neural voice (no key): its voices, and a voiceover made with one. */
-  freeVoices(): Promise<{ voices: { id: string; name: string; language: string }[]; defaultVoiceId: string; available: boolean }>;
-  generateFreeVoice(projectId: string, voiceId?: string): Promise<{ project: Project; urls: string[] }>;
   /** Animate: Claude writes the reel as a HyperFrames composition in claude.ai; the user pastes it back. */
   animationFor(projectId: string): Promise<{ animation: ReelAnimation | null; timeline: ReelTimeline | null; stale: boolean }>;
   animationPrompt(projectId: string): Promise<string>;
   importAnimation(projectId: string, text: string): Promise<Project>;
-  /** Style: the look the reel is drawn in. */
+  /** Style: the rulebook Claude animates with. */
   saveStyle(projectId: string, style: StyleId): Promise<Project>;
-  /** Reel editor: upload voice/music, then save the editor state. */
-  uploadAudio(projectId: string, kind: 'voice' | 'music' | 'sfx', file: Blob, fileName: string): Promise<{ track: Pick<AudioTrack, 'path' | 'fileName' | 'mime'>; url: string }>;
+  /** Voice: upload the recording and the music, save how they are cut, and fit the script's words to the voice. */
+  uploadAudio(projectId: string, kind: 'voice' | 'music', file: Blob, fileName: string): Promise<{ track: Pick<AudioTrack, 'path' | 'fileName' | 'mime'>; url: string }>;
   editorFor(projectId: string): Promise<{ editor: ReelEditor | null; urls: EditorUrls }>;
   saveEditor(projectId: string, editor: ReelEditor): Promise<{ project: Project; urls: EditorUrls }>;
-  /** Export: render the MP4 (only on a local server). */
-  /** Cover (thumbnail): save its settings with the script, and render the image (PNG or JPG) on this machine. */
+  fitVoice(projectId: string): Promise<{ project: Project; urls: EditorUrls; fit: 'speech' | 'loudness'; note: string | null }>;
+  /** Cover (thumbnail): save the scene, and take the frame on this machine. */
   saveCover(projectId: string, cover: CoverSettings): Promise<Project>;
-  renderCover(projectId: string, cover: CoverSettings, format: 'png' | 'jpeg'): Promise<{ file: string; url: string }>;
+  renderCover(projectId: string, cover: CoverSettings): Promise<{ file: string; url: string }>;
+  /** Export: render the MP4 (only on a local server). */
   startExport(projectId: string, platform?: Platform): Promise<{ job: RenderJob; withVoice: boolean }>;
-  /** `jobs` has the latest export of each platform; `job` is the first platform's (older servers send only that). */
+  /** `jobs` has the latest export of each platform; `job` is the first platform's. */
   exportStatus(projectId: string): Promise<{ available: boolean; job: RenderJob | null; jobs?: Partial<Record<Platform, RenderJob | null>> }>;
   /** Storyboard: save the user's edits to the script. */
   saveScript(projectId: string, script: ReelScript): Promise<Project>;
 }
 
-/** Claude always runs on the API, on the server's Anthropic key. */
 export function httpClaudeService(baseUrl: string, getToken: () => string | null, fetchImpl: typeof fetch = fetch): ClaudeService {
   async function call<T>(path: string, method = 'GET', body?: unknown) {
     const token = getToken();
@@ -120,21 +79,11 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     return apiRequest<T>(baseUrl, path, { method, body, token, fetchImpl });
   }
   return {
-    connectors: async () => (await call<{ connectors: Connector[] }>('/connectors')).connectors,
-    testElevenLabs: async () => (await call<{ result: ElevenLabsCheck }>('/connectors/elevenlabs/test', 'POST')).result,
-    status: () => call<ClaudeStatus>('/claude/status'),
-    ask: (prompt) => call<ClaudeAnswer>('/claude/ask', 'POST', { prompt }),
-    writeScript: async (projectId, style) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'POST', style ? { style } : undefined)).project,
     scriptPrompt: async (projectId, style) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt${style ? `?style=${style}` : ''}`)).prompt,
     importScript: async (projectId, text, style) => (await call<{ project: Project }>(`/projects/${projectId}/script/import`, 'POST', style ? { text, style } : { text })).project,
-    research: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research`, 'POST')).project,
     researchPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt`)).prompt,
     importResearch: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/research/import`, 'POST', { text })).project,
-    voices: () => call('/voices'),
-    voiceFor: (projectId) => call(`/projects/${projectId}/voice`),
-    generateVoice: (projectId, voiceId, voiceName) => call(`/projects/${projectId}/voice`, 'POST', { voiceId, voiceName }),
-    freeVoices: () => call('/voices/free'),
-    generateFreeVoice: (projectId, voiceId) => call(`/projects/${projectId}/voice/free`, 'POST', { voiceId }),
+    approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,
     animationFor: (projectId) => call(`/projects/${projectId}/animation`),
     animationPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/animation/prompt`)).prompt,
     importAnimation: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/animation/import`, 'POST', { text })).project,
@@ -149,17 +98,16 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
         raw: { data: file, contentType: 'application/octet-stream', headers: { 'X-File-Name': encodeURIComponent(fileName) } },
       });
     },
-    trending: (lang) => call(`/discover/trending?lang=${lang}`),
-    trendingPrompt: async (lang) => (await call<{ prompt: string }>(`/discover/prompt?lang=${lang}`)).prompt,
-    trendingIdeas: (lang) => call(`/discover/ideas`, 'POST', { lang }),
-    importTrendingIdeas: async (text) => (await call<{ ideas: TrendIdea[] }>(`/discover/import`, 'POST', { text })).ideas,
     editorFor: (projectId) => call(`/projects/${projectId}/editor`),
     saveEditor: (projectId, editor) => call(`/projects/${projectId}/editor`, 'PUT', { editor }),
+    fitVoice: (projectId) => call(`/projects/${projectId}/voice/fit`, 'POST'),
     saveCover: async (projectId, cover) => (await call<{ project: Project }>(`/projects/${projectId}/cover`, 'PUT', { cover })).project,
-    renderCover: (projectId, cover, format) => call(`/projects/${projectId}/cover/render`, 'POST', { cover, format }),
+    renderCover: (projectId, cover) => call(`/projects/${projectId}/cover/render`, 'POST', { cover }),
     startExport: (projectId, platform) => call(`/projects/${projectId}/export`, 'POST', platform ? { platform } : undefined),
     exportStatus: (projectId) => call(`/projects/${projectId}/export`),
     saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,
-    approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,
+    trending: (lang) => call(`/discover/trending?lang=${lang}`),
+    trendingPrompt: async (lang) => (await call<{ prompt: string }>(`/discover/prompt?lang=${lang}`)).prompt,
+    importTrendingIdeas: async (text) => (await call<{ ideas: TrendIdea[] }>(`/discover/import`, 'POST', { text })).ideas,
   };
 }

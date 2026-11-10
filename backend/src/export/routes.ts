@@ -4,25 +4,21 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { PLATFORM_IDS, reelTimeline, type Platform, type Project } from '@motionmind/shared';
 import type { AppDeps } from '../app';
-import { voicePath } from '../voice/audioStore';
 import type { AudioClip, HtmlRenderInput } from './hyperframes';
 
 /**
  * What the renderer needs for a project: Claude's composition, its length, and the audio to lay under it
- * (the generated voice, one clip per scene, or the user's own recording; plus the music).
+ * (the user's own recording, and the music).
  */
-export async function htmlRenderFor(deps: AppDeps, userId: string, project: Project): Promise<{ input: HtmlRenderInput; withVoice: boolean }> {
+export async function htmlRenderFor(deps: AppDeps, project: Project): Promise<{ input: HtmlRenderInput; withVoice: boolean }> {
   const script = project.script!;
-  const timeline = reelTimeline(script, project.voice, project.editor);
+  const timeline = reelTimeline(script, project.editor);
   const editor = project.editor;
   const audio: AudioClip[] = [];
   if (timeline.source === 'recording' && editor?.upload) {
     const [url] = await deps.audio.urls([editor.upload.track.path]);
     const up = editor.upload;
     if (url) audio.push({ url, at: 0, from: up.trimStart ?? 0, to: up.trimEnd ?? up.track.durationSec });
-  } else if (timeline.source === 'voice' && project.voice) {
-    const urls = await deps.audio.urls(project.voice.beats.map((_, i) => voicePath(userId, project.id, i)));
-    urls.forEach((url, i) => url && audio.push({ url, at: timeline.scenes[i]!.start + 0.15 }));
   }
   if (editor?.music) {
     const [url] = await deps.audio.urls([editor.music.track.path]);
@@ -51,7 +47,7 @@ export function registerExportRoutes(api: FastifyInstance, deps: AppDeps) {
     if (!asked.success) return reply.code(400).send({ error: 'invalid_platform', message: 'Pick Instagram or YouTube Shorts.' });
     const platform = asked.data.platform ?? project.platforms[0] ?? 'instagram';
     if (!project.platforms.includes(platform)) return reply.code(400).send({ error: 'invalid_platform', message: 'This reel is not set up for that platform. Add it on the Topic page first.' });
-    const { input, withVoice } = await htmlRenderFor(deps, req.userId, project);
+    const { input, withVoice } = await htmlRenderFor(deps, project);
     const job = deps.renderer.start(req.userId, project.id, input, platform);
     req.log.info({ projectId: project.id, jobId: job.id, withVoice, platform }, 'export started');
     return { job, withVoice, platform };

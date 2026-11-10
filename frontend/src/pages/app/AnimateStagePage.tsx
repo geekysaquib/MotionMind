@@ -33,18 +33,13 @@ export const AnimateStagePage = observer(function AnimateStagePage() {
       .then(setState)
       .catch((e) => setError(errorText(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id, script?.animation?.writtenAt, project.voice?.createdAt, project.editor?.updatedAt]);
+  }, [project.id, script?.animation?.writtenAt, project.editor?.updatedAt]);
 
-  // The voice under the preview: the generated clips at their scene times, or the user's own recording.
+  // The voice under the preview: the user's own recording.
   useEffect(() => {
     const tl = state?.timeline;
     if (!tl) return;
-    if (tl.source === 'voice')
-      api
-        .voiceFor(project.id)
-        .then((v) => setClips(v.urls.map((url, i) => ({ url, at: (tl.scenes[i]?.start ?? 0) + 0.15 })).filter((c) => c.url)))
-        .catch(() => setClips([]));
-    else if (tl.source === 'recording')
+    if (tl.source === 'recording')
       api
         .editorFor(project.id)
         .then((r) => setClips(r.urls.voice ? [{ url: r.urls.voice, at: 0, from: project.editor?.upload?.trimStart ?? 0 }] : []))

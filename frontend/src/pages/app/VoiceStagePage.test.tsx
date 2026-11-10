@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it } from '@jest/globals';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { observer } from 'mobx-react-lite';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom';
-import type { Project, ReelScript, ReelVoice } from '@motionmind/shared';
+import { narrationKey, type Project, type ReelEditor, type ReelScript } from '@motionmind/shared';
 import type { ClaudeService } from '../../services/claudeHttp';
 import { StoreContext } from '../../stores/RootStore';
 import { makeStore } from '../../test-utils';
-import { parseTranslation } from '../../lib/translate';
+import { setAudioAnalyzer } from '../../lib/audioAnalysis';
 import { VoiceStagePage } from './VoiceStagePage';
 
 const SCRIPT: ReelScript = {
@@ -17,33 +17,34 @@ const SCRIPT: ReelScript = {
     { id: 'b', narration: 'NPCI.', keywords: [], chapter: 1, card: { eyebrow: 'NPCI', headline: 'Switch', tone: 'blue', rows: [] } },
   ],
 };
-const VOICE: ReelVoice = {
-  voiceId: 'v2',
-  voiceName: 'Diya',
-  narrations: ['Ek second.', 'NPCI.'],
-  beats: [
-    { durationSec: 1.2, words: [{ start: 0, end: 0.4 }, { start: 0.5, end: 1 }] },
-    { durationSec: 0.8, words: [{ start: 0, end: 0.6 }] },
-  ],
-  createdAt: '2026-11-04T10:00:00Z',
-};
+const NARR = ['Ek second.', 'NPCI.'];
 
-async function setup(initial: { voice: ReelVoice | null; urls: string[]; stale: boolean }, aiMode: 'keys' | 'paste' = 'keys') {
-  const store = await makeStore({ signedIn: true, aiMode });
+const peaks = Array.from({ length: 100 }, (_, i) => (i < 40 || (i >= 60 && i < 90) ? 60 : 1));
+
+async function setup(opts: { editor?: ReelEditor | null; fitFails?: boolean } = {}) {
+  const store = await makeStore({ signedIn: true });
   const created = await store.projects.create({ title: 'UPI', topic: 'UPI', durationSec: 30, qualityTier: 'draft', platforms: ['instagram'] });
-  store.projects.upsert({ ...created, script: SCRIPT });
-  const generated: string[] = [];
+  store.projects.upsert({ ...created, script: SCRIPT, editor: opts.editor ?? null });
+  const calls: string[] = [];
+  const upload = { track: { path: 'u/v.mp3', fileName: 'v.mp3', mime: 'audio/mpeg', durationSec: 5, peaks }, cuts: [3] };
+  const fitted = { ...upload, cuts: [2.9], wordTimes: [[0, 0.4], [0.5, 1], [3, 3.5]] as [number, number][], fitKey: narrationKey(NARR), fit: 'speech' as const };
   store.services.claude = () =>
     ({
-      voices: async () => ({ voices: [{ id: 'v1', name: 'Aarav' }, { id: 'v2', name: 'Diya' }], defaultVoiceId: 'v1' }),
-      voiceFor: async () => initial,
       editorFor: async () => ({ editor: null, urls: {} }),
-      ask: async () => ({ reply: { text: '```json\n["In one second.", "NPCI sits between."]\n```', model: 'm', inputTokens: 1, outputTokens: 1 }, ms: 1 }),
-      saveScript: async (_id: string, script: ReelScript) => ({ ...created, script }) as Project,
-      generateVoice: async (_id: string, voiceId?: string) => {
-        generated.push(voiceId ?? '');
-        return { project: { ...created, script: SCRIPT, voice: { ...VOICE, voiceId: voiceId! } } as Project, urls: ['u0', 'u1'] };
+      uploadAudio: async () => {
+        calls.push('upload');
+        return { track: upload.track, url: 'x' };
       },
+      saveEditor: async (_id: string, editor: ReelEditor) => {
+        calls.push('save');
+        return { project: { ...created, script: SCRIPT, editor } as Project, urls: { voice: 'v.mp3' } };
+      },
+      fitVoice: async () => {
+        calls.push('fit');
+        if (opts.fitFails) throw new Error('no speech');
+        return { project: { ...created, script: SCRIPT, editor: { upload: fitted, music: null } } as Project, urls: { voice: 'v.mp3' }, fit: 'speech' as const, note: null };
+      },
+      animationFor: async () => ({ animation: null, timeline: null, stale: false }),
     }) as unknown as ClaudeService;
   const Layout = observer(() => <Outlet context={store.projects.byId(created.id)} />);
   await act(async () => {
@@ -59,112 +60,65 @@ async function setup(initial: { voice: ReelVoice | null; urls: string[]; stale: 
       </StoreContext.Provider>,
     );
   });
-  return { generated, store, id: created.id };
+  return { calls, store, fitted };
 }
 
 describe('VoiceStagePage', () => {
   afterEach(async () => {
+    setAudioAnalyzer(null);
     await act(async () => {});
     cleanup();
   });
 
-  it('makes the voiceover with the picked voice', async () => {
-    const { generated } = await setup({ voice: null, urls: [], stale: false });
-    expect(screen.getByText('Preview')).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Voice'), { target: { value: 'v2' } });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Make the voiceover' }));
-    });
-    expect(generated).toEqual(['v2']);
-    expect(screen.getByText('Matches the script')).toBeTruthy();
-    expect(screen.getByText('Current voiceover')).toBeTruthy();
+  it('offers only your own recording: no generated voices', async () => {
+    await setup();
+    expect(screen.getByText('Your voiceover')).toBeTruthy();
+    expect(screen.queryByText(/ElevenLabs/i)).toBeNull();
+    expect(screen.queryByText(/free voice/i)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Upload your voiceover' })).toBeTruthy();
   });
 
-  it('shows the narration script and copies it for text-to-speech', async () => {
+  it('shows the lines to record and copies them with the closing line last', async () => {
     const writes: string[] = [];
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t: string) => void writes.push(t) } });
-    const { store } = await setup({ voice: null, urls: [], stale: false });
+    const { store } = await setup();
     await act(async () => {
       store.profile.profile = { ...store.profile.profile!, channelName: 'Decodifyx', handle: 'decodify_x', language: 'en' };
     });
-    expect(screen.getByText('Your narration script')).toBeTruthy();
-    expect(screen.getByText('NPCI.')).toBeTruthy();
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy the whole script' }));
     });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Copy scene 2' }));
-    });
-    // The script always ends with the follow message, after the last scene.
-    expect(writes).toEqual(['Ek second.\n\nNPCI.\n\nFollow Decodifyx for more explainers like this.', 'NPCI.']);
+    expect(writes).toEqual(['Ek second.\n\nNPCI.\n\nFollow Decodifyx for more explainers like this.']);
     expect(screen.getByText('Closing line · always last')).toBeTruthy();
   });
 
-  it('ends the voice script with the handle when there is no channel name, in Hindi when Hindi is shown', async () => {
-    const writes: string[] = [];
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t: string) => void writes.push(t) } });
-    const { store } = await setup({ voice: null, urls: [], stale: false }, 'paste');
+  it('uploads the recording, then fits the script to it', async () => {
+    setAudioAnalyzer(async () => ({ durationSec: 5, peaks }));
+    const { calls } = await setup();
+    const file = new File([new Uint8Array(10)], 'v.mp3', { type: 'audio/mpeg' });
     await act(async () => {
-      store.profile.profile = { ...store.profile.profile!, channelName: null, handle: 'decodify_x', language: 'hinglish' };
+      fireEvent.change(screen.getByLabelText('Voiceover file'), { target: { files: [file] } });
     });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Copy the whole script' }));
-    });
-    expect(writes.at(-1)).toMatch(/Aise aur videos ke liye @decodify_x ko follow karo\.$/);
-    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'hi' } });
-    fireEvent.change(screen.getByLabelText('Translated lines'), { target: { value: '["एक सेकंड।", "एनपीसीआई।"]' } });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Use this translation' }));
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Copy the whole script' }));
-    });
-    expect(writes.at(-1)).toBe('एक सेकंड।\n\nएनपीसीआई।\n\nऐसे और वीडियो के लिए @decodify_x को फ़ॉलो करें।');
+    expect(calls).toEqual(['upload', 'save', 'fit']);
+    expect(screen.getByText('Fitted to the script')).toBeTruthy();
+    expect(screen.getByText(/fitted to the words I heard/)).toBeTruthy();
   });
 
-  it('translates the script with Claude in key mode, then uses it in the reel', async () => {
-    const { store, id } = await setup({ voice: null, urls: [], stale: false });
-    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'hi' } });
+  it('keeps the recording when the fit fails, and says what to do', async () => {
+    setAudioAnalyzer(async () => ({ durationSec: 5, peaks }));
+    const { calls } = await setup({ fitFails: true });
+    const file = new File([new Uint8Array(10)], 'v.mp3', { type: 'audio/mpeg' });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Translate with Claude' }));
+      fireEvent.change(screen.getByLabelText('Voiceover file'), { target: { files: [file] } });
     });
-    expect(screen.getByText('NPCI sits between.')).toBeTruthy();
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Use in the reel' }));
-    });
-    expect(store.projects.byId(id)!.script!.beats.map((b) => b.narration)).toEqual(['In one second.', 'NPCI sits between.']);
+    expect(calls).toEqual(['upload', 'save', 'fit']);
+    expect(screen.getByRole('button', { name: 'Fit the script again' })).toBeTruthy();
+    expect(screen.getByText('no speech')).toBeTruthy();
   });
 
-  it('in copy-paste mode gives a prompt and takes the pasted translation', async () => {
-    await setup({ voice: null, urls: [], stale: false }, 'paste');
-    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'en' } });
-    expect(screen.queryByRole('button', { name: 'Translate with Claude' })).toBeNull();
-    fireEvent.change(screen.getByLabelText('Translated lines'), { target: { value: '["Only one"]' } });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Use this translation' }));
-    });
-    expect(screen.getByText(/Expected 2 lines/)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText('Translated lines'), { target: { value: '["One.", "Two."]' } });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Use this translation' }));
-    });
-    expect(screen.getByText('Two.')).toBeTruthy();
-  });
-
-  it('warns when the narration changed after recording and plays without it', async () => {
-    await setup({ voice: VOICE, urls: ['u0', 'u1'], stale: true });
-    expect(screen.getByText('Script changed since')).toBeTruthy();
-    expect(screen.getByText('Preview')).toBeTruthy();
-  });
-});
-
-
-
-describe('parseTranslation', () => {
-  it('reads a plain or fenced JSON list and checks the count', () => {
-    expect(parseTranslation('Sure!\n```json\n["a","b"]\n```', 2)).toEqual(['a', 'b']);
-    expect(parseTranslation('["a"]', 1)).toEqual(['a']);
-    expect(() => parseTranslation('["a"]', 2)).toThrow(/Expected 2 lines/);
-    expect(() => parseTranslation('nope', 1)).toThrow();
+  it('marks the fit out of date when the narration changed after it', async () => {
+    const up = { track: { path: 'u/v.mp3', fileName: 'v.mp3', mime: 'audio/mpeg', durationSec: 5, peaks }, cuts: [3], fitKey: narrationKey(['Old line.', 'NPCI.']), fit: 'speech' as const };
+    await setup({ editor: { upload: up, music: null } });
+    expect(screen.getByText('Script changed since the fit')).toBeTruthy();
   });
 });

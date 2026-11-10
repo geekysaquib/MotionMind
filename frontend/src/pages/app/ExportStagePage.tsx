@@ -32,7 +32,7 @@ function PlatformCard({ platform, project, job, withVoice, available, onStart }:
             <PlatformIcon platform={platform} className="h-5 w-5" /> {meta.label}
           </h3>
           <p className="mt-1 text-sm text-ink-400">
-            1080 × 1920 H.264 MP4 at 30 fps. {platform === 'youtube' ? 'Text keeps clear of the Shorts title and buttons, and the end card says subscribe.' : 'The end card says follow.'} Uses the voiceover if it matches the script.
+            1080 × 1920 H.264 MP4 at 30 fps. Uses your recording and the timing fitted to it.
           </p>
           {available && (
             <div className="mt-4">
@@ -80,7 +80,7 @@ function PlatformCard({ platform, project, job, withVoice, available, onStart }:
   );
 }
 
-/** Export stage: renders the final 1080x1920 MP4 for each chosen platform with Remotion on the machine running the API. */
+/** Export stage: renders the final 1080x1920 MP4 for each chosen platform with HyperFrames and FFmpeg on the machine running the API. */
 export const ExportStagePage = observer(function ExportStagePage() {
   const project = useOutletContext<Project>();
   const { services, auth } = useStores();
@@ -155,7 +155,7 @@ export const ExportStagePage = observer(function ExportStagePage() {
         {available && platforms.length > 1 && (
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-ink-400">This reel is for Instagram Reels and YouTube Shorts. Each gets its own video.</p>
+              <p className="text-sm text-ink-400">This reel is for Instagram Reels and YouTube Shorts. Both get the same video, in their own file.</p>
               <Button variant="secondary" icon={<Film className="h-4 w-4" />} disabled={running} onClick={() => void startAll()}>
                 Export both
               </Button>

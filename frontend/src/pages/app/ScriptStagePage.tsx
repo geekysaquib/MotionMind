@@ -1,11 +1,8 @@
-import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
 import type { Project } from '@motionmind/shared';
-import { useStores } from '../../stores/RootStore';
-import { Alert, Badge, Button, Card } from '../../components/ui';
-import { errorText, timeAgo } from '../../lib/format';
+import { Badge, Card } from '../../components/ui';
+import { timeAgo } from '../../lib/format';
 import { AnimationPreview } from '../../components/AnimationPreview';
 import { PasteScriptPanel } from './PasteScriptPanel';
 import { STYLES } from '@motionmind/shared';
@@ -15,23 +12,8 @@ import { pickedStyle } from '../../lib/pickedStyle';
 /** Script stage: Claude writes the reel script from the topic, and the embedded engine plays it. */
 export const ScriptStagePage = observer(function ScriptStagePage() {
   const project = useOutletContext<Project>();
-  const { projects, aiMode } = useStores();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const script = project.script;
+    const script = project.script;
   const style = pickedStyle(project);
-
-  async function write() {
-    setBusy(true);
-    setError(null);
-    try {
-      await projects.writeScript(project.id, style);
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -53,7 +35,7 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
           </div>
           {script && style && script.style && script.style !== style && <p className="mt-2 text-xs text-amber-700">This script was designed for another style. Write it again for the best fit.</p>}
         </Card>
-        {aiMode.paste && script ? (
+        {script ? (
           <details className="group card overflow-hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 text-sm font-semibold">
               <span>Replace the script with a new answer from claude.ai</span>
@@ -63,34 +45,8 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
               <PasteScriptPanel project={project} />
             </div>
           </details>
-        ) : aiMode.paste ? (
-          <PasteScriptPanel project={project} />
         ) : (
-        <Card>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-semibold">Write with Claude</h2>
-              <p className="mt-1 text-sm text-ink-400">
-                Uses the server's Claude API key. Claude writes the hook, the step-by-step explanation and the on-screen cards for <span className="text-ink-100">{project.topic ?? 'this topic'}</span>, about {project.durationSec}s long.
-              </p>
-            </div>
-            <Button icon={<Sparkles className="h-4 w-4" />} loading={busy} disabled={!project.topic} onClick={() => void write()}>
-              {script ? 'Rewrite with Claude' : 'Write with Claude'}
-            </Button>
-          </div>
-          {!project.topic && <div className="mt-4"><Alert tone="info">Add a topic on the Topic tab first.</Alert></div>}
-          {error && (
-            <div className="mt-4">
-              <Alert>
-                {error}{' '}
-                <Link to="/app/settings/diagnostics" className="font-semibold underline">
-                  See the log
-                </Link>
-              </Alert>
-            </div>
-          )}
-          {busy && <p className="mt-4 text-sm text-ink-400">Claude is writing. This usually takes 20 to 60 seconds.</p>}
-        </Card>
+          <PasteScriptPanel project={project} />
         )}
 
         {script && (

@@ -12,12 +12,10 @@ import { SettingsPage } from './pages/app/SettingsPage';
 import { ProfileSettings } from './pages/app/ProfileSettings';
 import { AccountSettings } from './pages/app/AccountSettings';
 import { DiagnosticsSettings } from './pages/app/DiagnosticsSettings';
-import { ConnectorsSettings } from './pages/app/ConnectorsSettings';
 import { ScriptStagePage } from './pages/app/ScriptStagePage';
 import { ResearchStagePage } from './pages/app/ResearchStagePage';
 import { StoryboardStagePage } from './pages/app/StoryboardStagePage';
 import { VoiceStagePage } from './pages/app/VoiceStagePage';
-import { ReelEditorPage } from './pages/app/ReelEditorPage';
 import { ExportStagePage } from './pages/app/ExportStagePage';
 import { StyleStagePage } from './pages/app/StyleStagePage';
 import { AnimateStagePage } from './pages/app/AnimateStagePage';
@@ -61,7 +59,8 @@ export const routes = [
           { path: 'graphics', element: <StyleStagePage /> },
           { path: 'animate', element: <AnimateStagePage /> },
           { path: 'voice', element: <VoiceStagePage /> },
-          { path: 'editor', element: <ReelEditorPage /> },
+          // The Reel editor became part of the Voice step; old links land there.
+          { path: 'editor', element: <Navigate to="../voice" replace relative="path" /> },
           { path: 'export', element: <ExportStagePage /> },
         ],
       },
@@ -70,9 +69,6 @@ export const routes = [
         element: <SettingsPage />,
         children: [
           { index: true, element: <ProfileSettings /> },
-          { path: 'connectors', element: <ConnectorsSettings /> },
-          // Old link from before connectors existed.
-          { path: 'claude', element: <Navigate to="/app/settings/connectors" replace /> },
           { path: 'account', element: <AccountSettings /> },
           { path: 'diagnostics', element: <DiagnosticsSettings /> },
         ],

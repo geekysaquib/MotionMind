@@ -7,7 +7,7 @@ import { config } from '../config';
 import { HtmlReelPlayer, type PlayerClip } from './HtmlReelPlayer';
 import { Spinner } from './ui';
 
-/** Claude's animation for a project and the voice clips that go under it, loaded from the API. */
+/** Claude's animation for a project and the recording that goes under it, loaded from the API. */
 export function useAnimationPreview(project: Project) {
   const { services, auth } = useStores();
   const api = services.claude(() => auth.session?.accessToken ?? null);
@@ -23,18 +23,13 @@ export function useAnimationPreview(project: Project) {
       .then(setState)
       .catch(setError);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id, project.script?.animation?.writtenAt, project.voice?.createdAt, project.editor?.updatedAt]);
+  }, [project.id, project.script?.animation?.writtenAt, project.editor?.updatedAt]);
 
-  // The voice under the preview: the generated clips at their scene times, or the user's own recording.
+  // The voice under the preview: the user's own recording.
   useEffect(() => {
     const tl = state?.timeline;
     if (!tl) return;
-    if (tl.source === 'voice')
-      Promise.resolve()
-        .then(() => api.voiceFor(project.id))
-        .then((v) => setClips(v.urls.map((url, i) => ({ url, at: (tl.scenes[i]?.start ?? 0) + 0.15 })).filter((c) => c.url)))
-        .catch(() => setClips([]));
-    else if (tl.source === 'recording')
+    if (tl.source === 'recording')
       Promise.resolve()
         .then(() => api.editorFor(project.id))
         .then((r) => setClips(r.urls.voice ? [{ url: r.urls.voice, at: 0, from: project.editor?.upload?.trimStart ?? 0 }] : []))

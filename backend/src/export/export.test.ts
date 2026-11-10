@@ -8,7 +8,7 @@ import { ConsoleMailer } from '../auth/mailer';
 import { SessionTokens } from '../auth/session';
 import { DevTokenVerifier } from '../auth/verifiers';
 import { MemoryDataRepository } from '../data/repository';
-import { MemoryAudioStore, voicePath } from '../voice/audioStore';
+import { MemoryAudioStore } from '../voice/audioStore';
 import type { Renderer, RenderJob } from './renderer';
 import { localizeGsap, muxArgs, type HtmlRenderInput } from './hyperframes';
 
@@ -85,28 +85,34 @@ describe('platforms', () => {
 });
 
 describe('MP4 export', () => {
-  it("renders Claude's animation with the matching voiceover under it", async () => {
+  it("renders Claude's animation with the user's recording under it, trimmed, and the music", async () => {
     const renderer = new FakeRenderer();
     const { app, data, audio, id, H, uid } = await setup(renderer);
-    await audio.put(voicePath(uid, id, 0), Buffer.from('mp3'));
-    await data.updateProject(uid, id, { voice: { voiceId: 'v', beats: [{ durationSec: 1, words: [] }], narrations: ['Ek second.'], createdAt: 'now' } });
+    await audio.put(`${uid}/${id}/voice-1.mp3`, Buffer.from('mp3'));
+    await audio.put(`${uid}/${id}/music-1.mp3`, Buffer.from('mp3'));
+    await data.updateProject(uid, id, {
+      editor: {
+        upload: { track: { path: `${uid}/${id}/voice-1.mp3`, fileName: 'v.mp3', mime: 'audio/mpeg', durationSec: 6 }, cuts: [], trimStart: 0.5, trimEnd: 5.5 },
+        music: { track: { path: `${uid}/${id}/music-1.mp3`, fileName: 'm.mp3', mime: 'audio/mpeg', durationSec: 30 }, volume: 0.2 },
+      },
+    });
     const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/export`, headers: H });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ withVoice: true, job: { status: 'rendering' } });
     const input = renderer.started[0]!.input;
     expect(input.html).toContain('reel');
-    expect(input.audio).toHaveLength(1);
+    expect(input.audio).toHaveLength(2);
+    expect(input.audio[0]).toMatchObject({ at: 0, from: 0.5, to: 5.5 });
     expect(input.audio[0]!.url).toMatch(/^data:audio\/mpeg/);
-    expect(input.audio[0]!.at).toBeCloseTo(0.15);
-    // 1 s of voice + lead and gap, then the 3 s end card.
-    expect(input.duration).toBeCloseTo(1 + 0.15 + 0.35 + 3, 2);
+    expect(input.audio[1]).toMatchObject({ loop: true, volume: 0.2 });
+    // The scene runs from the trimmed recording (5 s), then the 3 s end card.
+    expect(input.duration).toBeCloseTo(5 + 3, 2);
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/export`, headers: H })).json()).toMatchObject({ available: true, job: { progress: 0.4 } });
   });
 
-  it('leaves out voiceover that no longer matches the narration', async () => {
+  it('exports silent, with an estimated length, when there is no recording yet', async () => {
     const renderer = new FakeRenderer();
-    const { app, data, id, H, uid } = await setup(renderer);
-    await data.updateProject(uid, id, { voice: { voiceId: 'v', beats: [{ durationSec: 1, words: [] }], narrations: ['Old line.'], createdAt: 'now' } });
+    const { app, id, H } = await setup(renderer);
     expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/export`, headers: H })).json().withVoice).toBe(false);
     expect(renderer.started[0]!.input.audio).toEqual([]);
   });

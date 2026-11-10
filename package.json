@@ -17,7 +17,6 @@
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.4.0",
     "@fastify/cors": "10.1.0",
     "@fontsource-variable/google-sans": "^5.3.2",
     "@supabase/supabase-js": "2.118.0",
@@ -27,7 +26,6 @@
     "lucide-react": "0.460.0",
     "mobx": "6.16.1",
     "mobx-react-lite": "4.1.1",
-    "msedge-tts": "2.1.1",
     "nodemailer": "6.9.16",
     "react": "18.3.1",
     "react-dom": "18.3.1",

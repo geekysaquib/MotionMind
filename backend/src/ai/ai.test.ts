@@ -5,7 +5,6 @@ import { ConsoleMailer } from '../auth/mailer';
 import { SessionTokens } from '../auth/session';
 import { DevTokenVerifier } from '../auth/verifiers';
 import { MemoryDataRepository } from '../data/repository';
-import { ClaudeError, claudeClient, CLAUDE_MODEL, type ClaudeClient } from './claude';
 import type { ReelScript } from './reelSchema';
 
 const secret = randomBytes(32).toString('base64');
@@ -32,153 +31,20 @@ const RESEARCH = {
   ],
 };
 
-async function setup(fake: Partial<ClaudeClient> = {}, serverKey: string | null = 'sk-ant-server-123456') {
-  const anthropicApiKey = serverKey ?? undefined;
+async function setup() {
   const data = new MemoryDataRepository();
-  const seen: { apiKey: string }[] = [];
-  const app = await buildApp({
-    data,
-    sessions: new SessionTokens(secret),
-    mailer: new ConsoleMailer(false),
-    verifier: new DevTokenVerifier(),
-    authSecret: secret,
-    anthropicApiKey,
-    webOrigin: 'http://localhost:5173',
-    mode: 'memory',
-    claude: (apiKey) => {
-      seen.push({ apiKey });
-      return {
-        ask: async (prompt) => ({ text: `echo: ${prompt}`, model: CLAUDE_MODEL, inputTokens: 10, outputTokens: 5 }),
-        writeReel: async () => ({ script: SCRIPT, model: CLAUDE_MODEL }),
-        research: async () => ({ research: RESEARCH, model: CLAUDE_MODEL, searches: 3 }),
-        ...fake,
-      };
-    },
-  });
-  return { app, data, seen };
+  const app = await buildApp({ data, sessions: new SessionTokens(secret), mailer: new ConsoleMailer(false), verifier: new DevTokenVerifier(), authSecret: secret, webOrigin: 'http://localhost:5173', mode: 'memory' });
+  return { app, data };
 }
 
-describe('Claude routes', () => {
-  it('report whether Claude is set up on the server', async () => {
-    expect((await (await setup()).app.inject({ method: 'GET', url: '/api/claude/status', headers: H })).json()).toEqual({ connected: true, model: CLAUDE_MODEL });
-    expect((await (await setup({}, null)).app.inject({ method: 'GET', url: '/api/claude/status', headers: H })).json()).toEqual({ connected: false, model: CLAUDE_MODEL });
-  });
-
-  it("ask Claude with the server's key, never a user's", async () => {
-    const { app, seen } = await setup();
-    const res = await app.inject({ method: 'POST', url: '/api/claude/ask', headers: H, payload: { prompt: 'hi' } });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().reply).toMatchObject({ text: 'echo: hi', model: CLAUDE_MODEL });
-    await app.inject({ method: 'POST', url: '/api/claude/ask', headers: { authorization: 'Bearer dev:u2' }, payload: { prompt: 'again' } });
-    expect(seen).toEqual([{ apiKey: 'sk-ant-server-123456' }]);
-    expect((await app.inject({ method: 'POST', url: '/api/claude/ask', headers: H, payload: { prompt: '  ' } })).statusCode).toBe(400);
-    expect((await app.inject({ method: 'POST', url: '/api/claude/ask', payload: { prompt: 'hi' } })).statusCode).toBe(401);
-  });
-
-  it('say clearly when the server has no Anthropic key', async () => {
-    const { app } = await setup({}, null);
-    const res = await app.inject({ method: 'POST', url: '/api/claude/ask', headers: H, payload: { prompt: 'hi' } });
-    expect(res.statusCode).toBe(503);
-    expect(res.json().error).toBe('claude_not_configured');
-  });
-
-  it('pass Claude errors through with their status and message', async () => {
-    const { app } = await setup({
-      ask: async () => {
-        throw new ClaudeError("The server's Anthropic API key was rejected. Check ANTHROPIC_API_KEY.", 'claude_key_rejected', 502);
-      },
-    });
-    const res = await app.inject({ method: 'POST', url: '/api/claude/ask', headers: H, payload: { prompt: 'hi' } });
-    expect(res.statusCode).toBe(502);
-    expect(res.json().error).toBe('claude_key_rejected');
-  });
-
-  it('write and save a reel script for a project, and move it to the Script stage', async () => {
-    const { app } = await setup();
-    const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'How UPI works', durationSec: 60, qualityTier: 'standard' } });
-    const id = created.json().project.id;
-    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
-    expect(res.statusCode).toBe(200);
-    const project = res.json().project;
-    expect(project).toMatchObject({ stage: 'script', status: 'in_progress' });
-    expect(project.script).toMatchObject({ title: SCRIPT.title, model: CLAUDE_MODEL, beats: SCRIPT.beats });
-    expect(project.script.writtenAt).toEqual(expect.any(String));
-    const again = await app.inject({ method: 'GET', url: `/api/projects/${id}`, headers: H });
-    expect(again.json().project.script.title).toBe(SCRIPT.title);
-  });
-
-  it("won't write a script without a topic, for someone else's project, or a bad id", async () => {
-    const { app } = await setup();
-    const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'Empty', topic: null, durationSec: 30, qualityTier: 'draft' } });
-    const id = created.json().project.id;
-    expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H })).json().error).toBe('no_topic');
-    expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: { authorization: 'Bearer dev:u2' } })).statusCode).toBe(404);
-    expect((await app.inject({ method: 'POST', url: '/api/projects/nope/script', headers: H })).statusCode).toBe(404);
-  });
-});
-
-describe('claudeClient (real SDK, fake network)', () => {
-  function fakeAnthropic(status: number, body: unknown) {
-    const calls: { url: string; headers: Headers; body: Record<string, unknown> }[] = [];
-    const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
-      const req = new Request(input, init);
-      calls.push({ url: req.url, headers: req.headers, body: JSON.parse((await req.text()) || '{}') });
-      return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'request-id': 'req_1' } });
-    }) as unknown as typeof fetch;
-    return { fetchImpl, calls };
-  }
-  const message = (content: unknown[], stop = 'end_turn') => ({
-    id: 'msg_1',
-    type: 'message',
-    role: 'assistant',
-    model: CLAUDE_MODEL,
-    content,
-    stop_reason: stop,
-    stop_sequence: null,
-    usage: { input_tokens: 12, output_tokens: 7 },
-  });
-
-  it('sends the key, model and fallback beta, and returns the text', async () => {
-    const api = fakeAnthropic(200, message([{ type: 'text', text: 'Connected to Motion Mind.' }]));
-    const reply = await claudeClient('sk-ant-xyz', api.fetchImpl).ask('hello');
-    expect(reply).toEqual({ text: 'Connected to Motion Mind.', model: CLAUDE_MODEL, inputTokens: 12, outputTokens: 7 });
-    const call = api.calls[0]!;
-    expect(call.url).toContain('/v1/messages');
-    // The SDK sends the key as x-api-key or as a bearer token depending on its version.
-    expect([call.headers.get('x-api-key'), call.headers.get('authorization')]).toContainEqual(expect.stringContaining('sk-ant-xyz'));
-    expect(call.headers.get('anthropic-beta')).toContain('server-side-fallback-2026-07-01');
-    expect(call.body).toMatchObject({ model: CLAUDE_MODEL, fallbacks: 'default' });
-  });
-
-  it('turns a rejected key into a clear error', async () => {
-    const api = fakeAnthropic(401, { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } });
-    await expect(claudeClient('bad', api.fetchImpl).ask('hello')).rejects.toMatchObject({ code: 'claude_key_rejected', status: 502 });
-  });
-
-  it('reports a refusal instead of returning empty text', async () => {
-    const api = fakeAnthropic(200, message([], 'refusal'));
-    await expect(claudeClient('k', api.fetchImpl).ask('x')).rejects.toMatchObject({ code: 'claude_refused' });
-  });
-
-  it('parses a structured reel script', async () => {
-    const api = fakeAnthropic(200, message([{ type: 'text', text: JSON.stringify(SCRIPT) }]));
-    const out = await claudeClient('k', api.fetchImpl).writeReel({ topic: 'How UPI works', durationSec: 60, language: 'hinglish', niche: 'Tech', channelName: 'Samjho' });
-    expect(out.script).toEqual(SCRIPT);
-    const body = api.calls[0]!.body as { output_config: { format: { type: string } }; messages: { content: string }[] };
-    expect(body.output_config.format.type).toBe('json_schema');
-    expect(body.messages[0]!.content).toContain('How UPI works');
-    expect(body.messages[0]!.content).toContain('Hinglish');
-  });
-});
-
-describe('script from claude.ai (no API key)', () => {
+describe('script from claude.ai', () => {
   async function projectId(app: Awaited<ReturnType<typeof setup>>['app']) {
     const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'How UPI works', durationSec: 45, qualityTier: 'standard' } });
     return created.json().project.id as string;
   }
 
-  it('gives a ready-to-copy prompt with the topic, length and JSON format, even without a server key', async () => {
-    const { app } = await setup({}, null);
+  it('gives a ready-to-copy prompt with the topic, length and JSON format', async () => {
+    const { app } = await setup();
     const id = await projectId(app);
     const res = await app.inject({ method: 'GET', url: `/api/projects/${id}/script/prompt`, headers: H });
     expect(res.statusCode).toBe(200);
@@ -190,7 +56,7 @@ describe('script from claude.ai (no API key)', () => {
   });
 
   it('imports a pasted answer, fenced or not, and saves it like a written script', async () => {
-    const { app } = await setup({}, null);
+    const { app } = await setup();
     const id = await projectId(app);
     const pasted = `Here is your reel:\n\`\`\`json\n${JSON.stringify(SCRIPT, null, 2)}\n\`\`\`\nHope it helps!`;
     const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: pasted } });
@@ -199,7 +65,7 @@ describe('script from claude.ai (no API key)', () => {
   });
 
   it('explains what is wrong with a bad paste and saves nothing', async () => {
-    const { app } = await setup({}, null);
+    const { app } = await setup();
     const id = await projectId(app);
     const post = (text: string) => app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text } });
     expect((await post('sorry, I cannot help')).json().message).toMatch(/doesn't look like a script/);
@@ -217,37 +83,22 @@ describe('research', () => {
     return created.json().project.id as string;
   }
 
-  it('researches with Claude, saves facts and sources unapproved, and moves to the Research stage', async () => {
+  it('feeds only approved research into the script prompt', async () => {
     const { app } = await setup();
     const id = await projectId(app);
-    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/research`, headers: H });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().project).toMatchObject({ stage: 'research', research: { summary: RESEARCH.summary, approvedAt: null, model: CLAUDE_MODEL } });
-    expect(res.json().project.research.sources).toHaveLength(2);
-  });
-
-  it('feeds only approved research into the script', async () => {
-    const briefs: unknown[] = [];
-    const { app } = await setup({
-      writeReel: async (brief) => {
-        briefs.push(brief.research ?? null);
-        return { script: SCRIPT, model: CLAUDE_MODEL };
-      },
-    });
-    const id = await projectId(app);
-    await app.inject({ method: 'POST', url: `/api/projects/${id}/research`, headers: H });
-    await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
-    expect(briefs[0]).toBeNull();
+    await app.inject({ method: 'POST', url: `/api/projects/${id}/research/import`, headers: H, payload: { text: JSON.stringify(RESEARCH) } });
+    const prompt = async () => (await app.inject({ method: 'GET', url: `/api/projects/${id}/script/prompt`, headers: H })).json().prompt as string;
+    expect(await prompt()).not.toContain(RESEARCH.summary);
     const approved = await app.inject({ method: 'POST', url: `/api/projects/${id}/research/approve`, headers: H });
     expect(approved.json().project.research.approvedAt).toEqual(expect.any(String));
-    await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
-    expect(briefs[1]).toMatchObject({ summary: RESEARCH.summary });
+    const after = await prompt();
+    expect(after).toContain(RESEARCH.summary);
+    expect(after).toContain('NPCI runs the UPI switch (verified)');
   });
 
-  it('works without a server key through claude.ai: prompt, paste, approve', async () => {
-    const { app } = await setup({}, null);
+  it('works through claude.ai: prompt, paste, approve', async () => {
+    const { app } = await setup();
     const id = await projectId(app);
-    expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/research`, headers: H })).statusCode).toBe(503);
     const prompt = (await app.inject({ method: 'GET', url: `/api/projects/${id}/research/prompt`, headers: H })).json().prompt as string;
     expect(prompt).toContain('Research this topic for a reel: How UPI works');
     expect(prompt).toContain('"facts"');
@@ -267,40 +118,16 @@ describe('research', () => {
   });
 });
 
-describe('claudeClient.research (real SDK, fake network)', () => {
-  it('resumes a paused turn and parses the final JSON answer', async () => {
-    const bodies: Record<string, unknown>[] = [];
-    let call = 0;
-    const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
-      const req = new Request(input, init);
-      bodies.push(JSON.parse(await req.text()));
-      call++;
-      const msg = (content: unknown[], stop: string) => ({ id: `m${call}`, type: 'message', role: 'assistant', model: CLAUDE_MODEL, content, stop_reason: stop, stop_sequence: null, usage: { input_tokens: 1, output_tokens: 1 } });
-      const body =
-        call === 1
-          ? msg([{ type: 'server_tool_use', id: 'srv_1', name: 'web_search', input: { query: 'UPI NPCI' } }], 'pause_turn')
-          : msg([{ type: 'text', text: '```json\n' + JSON.stringify(RESEARCH) + '\n```' }], 'end_turn');
-      return new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
-    }) as unknown as typeof fetch;
-    const out = await claudeClient('k', fetchImpl).research({ topic: 'How UPI works' });
-    expect(out.research.summary).toBe(RESEARCH.summary);
-    expect(out.searches).toBe(1);
-    expect(bodies).toHaveLength(2);
-    expect((bodies[0]!.tools as { type: string }[])[0]!.type).toBe('web_search_20260209');
-    expect((bodies[1]!.messages as unknown[]).length).toBe(2);
-  });
-});
-
 describe('storyboard edits', () => {
   it('saves an edited script, keeps who wrote it, marks it edited and moves to Storyboard', async () => {
     const { app } = await setup();
     const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'How UPI works', durationSec: 60, qualityTier: 'standard' } });
     const id = created.json().project.id;
-    await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
+    await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: JSON.stringify(SCRIPT) } });
     const edited = { ...SCRIPT, title: 'UPI in 1 second', beats: [SCRIPT.beats[1], SCRIPT.beats[0]] };
     const res = await app.inject({ method: 'PUT', url: `/api/projects/${id}/script`, headers: H, payload: { script: edited } });
     expect(res.statusCode).toBe(200);
-    expect(res.json().project).toMatchObject({ stage: 'storyboard', script: { title: 'UPI in 1 second', model: CLAUDE_MODEL, editedAt: expect.any(String) } });
+    expect(res.json().project).toMatchObject({ stage: 'storyboard', script: { title: 'UPI in 1 second', model: 'claude.ai (pasted)', editedAt: expect.any(String) } });
     expect(res.json().project.script.beats[0].id).toBe('npci');
   });
 
@@ -308,7 +135,7 @@ describe('storyboard edits', () => {
     const { app } = await setup();
     const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'x', durationSec: 60, qualityTier: 'standard' } });
     const id = created.json().project.id;
-    await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
+    await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: JSON.stringify(SCRIPT) } });
     const picked = await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: H, payload: { style: 'whiteboard' } });
     expect(picked.statusCode).toBe(200);
     expect(picked.json().project).toMatchObject({ stage: 'script', script: { style: 'whiteboard' } });
@@ -317,7 +144,7 @@ describe('storyboard edits', () => {
     expect((await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: { authorization: 'Bearer dev:u2' }, payload: { style: 'newsroom' } })).statusCode).toBe(404);
     const saved = await app.inject({ method: 'PUT', url: `/api/projects/${id}/script`, headers: H, payload: { script: { ...SCRIPT, style: 'newsroom' } } });
     expect(saved.json().project.script.style).toBe('newsroom');
-    const rewritten = await app.inject({ method: 'POST', url: `/api/projects/${id}/script`, headers: H });
+    const rewritten = await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: JSON.stringify(SCRIPT) } });
     expect(rewritten.json().project.script.style).toBe('newsroom');
   });
 

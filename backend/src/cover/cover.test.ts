@@ -14,7 +14,7 @@ const H = { authorization: 'Bearer dev:user-a' };
 const B = { authorization: 'Bearer dev:user-b' };
 const beat = (id: string) => ({ id, narration: 'Ek second.', keywords: [], chapter: 0, card: { eyebrow: 'UPI', headline: 'Fast', tone: 'teal' as const, rows: [] } });
 const SCRIPT: ReelScript = { title: 'How UPI works', steps: ['App'], beats: [beat('a'), beat('b')], animation: { html: '<!doctype html><html></html>', timingKey: 'x', writtenAt: 'now' } };
-const COVER: CoverSettings = { scene: 1, headline: 'How *UPI* works', kicker: 'Explained', style: 'center', size: 'feed', tone: 'purple', brand: true };
+const COVER: CoverSettings = { scene: 1 };
 
 class FakeRenderer implements Renderer {
   stills: { html: string; at: number }[] = [];
@@ -57,12 +57,11 @@ describe('cover settings', () => {
     expect(sb.json().project.script.cover).toEqual(COVER);
   });
 
-  it('refuse a missing headline, an unknown style or size, a scene that does not exist, and other users', async () => {
+  it('refuse an unknown scene, extra fields, and other users', async () => {
     const { app, id } = await setup();
     const put = (cover: unknown, headers = H) => app.inject({ method: 'PUT', url: `/api/projects/${id}/cover`, headers, payload: { cover } });
-    expect((await put({ ...COVER, headline: '  ' })).json().message).toBe('Write a headline for the cover.');
-    expect((await put({ ...COVER, style: 'wild' })).statusCode).toBe(400);
-    expect((await put({ ...COVER, size: 'huge' })).statusCode).toBe(400);
+    expect((await put({ ...COVER, headline: 'x' })).statusCode).toBe(400);
+    expect((await put({ scene: -1 })).statusCode).toBe(400);
     expect((await put({ ...COVER, scene: 5 })).json().message).toBe("That scene doesn't exist.");
     expect((await put(COVER, B)).statusCode).toBe(404);
     const empty = await setup(undefined, false);

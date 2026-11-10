@@ -1,48 +1,55 @@
 import { describe, expect, it } from '@jest/globals';
 import { AnimationError, END_CARD_SEC, extractAnimation, reelTimeline, timingKey } from './animation';
-import type { ReelVoice } from './projects';
+import { narrationKey } from './alignScript';
+const beat = (id: string, narration: string) => ({ id, narration, keywords: [], chapter: 0, card: { eyebrow: '', headline: 'h', tone: 'teal' as const, rows: [] } });const SCRIPT = { beats: [beat('a', 'Subah dus baje Tatkal khulta hai.'), beat('b', 'Load balancer baant deta hai.')] };
 
-const beat = (id: string, narration: string) => ({ id, narration, keywords: [], chapter: 0, card: { eyebrow: '', headline: 'h', tone: 'teal' as const, rows: [] } });
-const SCRIPT = { beats: [beat('a', 'Subah dus baje Tatkal khulta hai.'), beat('b', 'Load balancer baant deta hai.')] };
-const VOICE: ReelVoice = {
-  voiceId: 'v',
-  narrations: SCRIPT.beats.map((b) => b.narration),
-  createdAt: 'now',
-  beats: [
-    { durationSec: 2, words: [0, 1, 2, 3, 4, 5].map((i) => ({ start: i * 0.3, end: i * 0.3 + 0.25 })) },
-    { durationSec: 1.5, words: [0, 1, 2, 3, 4].map((i) => ({ start: i * 0.25, end: i * 0.25 + 0.2 })) },
-  ],
-};
+const NARR = SCRIPT.beats.map((x) => x.narration);
+const track = { path: 'p', fileName: 'v.mp3', mime: 'audio/mpeg', durationSec: 12 };
 const HTML = '<!doctype html><html><head><script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script></head><body><div id="root" data-composition-id="main" data-start="0" data-duration="9"></div><script>window.__timelines = window.__timelines || {}; window.__timelines["main"] = gsap.timeline({ paused: true });</script></body></html>';
 
 describe('reelTimeline', () => {
-  it('times every scene and word from the generated voice, with a short gap, then the end card', () => {
-    const t = reelTimeline(SCRIPT, VOICE);
-    expect(t.source).toBe('voice');
-    expect(t.scenes[0]).toMatchObject({ start: 0, end: 2.5 });
-    expect(t.scenes[1]!.start).toBe(2.5);
-    expect(t.scenes[0]!.words[0]).toEqual({ w: 'Subah', start: 0.15, end: 0.4 });
-    expect(t.scenes[1]!.words[0]!.start).toBeCloseTo(2.65);
+  it('estimates the timing while there is no recording, then adds the 3 s end card', () => {
+    const t = reelTimeline(SCRIPT);
+    expect(t.source).toBe('estimate');
+    expect(t.scenes[0]!.start).toBe(0);
+    expect(t.scenes[1]!.start).toBeCloseTo(t.scenes[0]!.end);
     expect(t.duration).toBeCloseTo(t.storyEnd + END_CARD_SEC);
   });
 
-  it('estimates the timing without a voice, and ignores a voice made for other words', () => {
-    expect(reelTimeline(SCRIPT).source).toBe('estimate');
-    expect(reelTimeline(SCRIPT, { ...VOICE, narrations: ['old', 'lines'] }).source).toBe('estimate');
-  });
-
-  it("uses the user's own recording and its scene breaks", () => {
-    const editor = { voiceSource: 'upload', upload: { track: { path: 'p', fileName: 'v.mp3', mime: 'audio/mpeg', durationSec: 12 }, cuts: [5.5], trimStart: 0.5 } } as never;
-    const t = reelTimeline(SCRIPT, VOICE, editor);
+  it("uses the user's own recording and its scene breaks, relative to the trimmed start", () => {
+    const t = reelTimeline(SCRIPT, { upload: { track, cuts: [5.5], trimStart: 0.5 }, music: null });
     expect(t.source).toBe('recording');
     expect(t.scenes.map((s) => [s.start, s.end])).toEqual([
       [0, 5],
       [5, 11.5],
     ]);
+    // Without a fit the words are spread over their scene.
+    expect(t.scenes[0]!.words).toHaveLength(6);
+  });
+
+  it('puts every word where the auto-fit found it, shifted by the trim', () => {
+    // Scene 1's words come before the break at 4.5 s of the file, scene 2's after it.
+    const wordTimes = Array.from({ length: 11 }, (_, i) => { const t = i < 6 ? 1 + i * 0.5 : 5 + (i - 6) * 0.5; return [t, t + 0.4] as [number, number]; });
+    const editor = { upload: { track, cuts: [4.5], trimStart: 0.5, wordTimes, fitKey: narrationKey(NARR) }, music: null };
+    const t = reelTimeline(SCRIPT, editor);
+    expect(t.scenes[0]!.words[0]).toEqual({ w: 'Subah', start: 0.5, end: 0.9 });
+    expect(t.scenes[1]!.words[0]!.start).toBeCloseTo(4.5, 2);
+    expect(t.scenes[1]!.words.length).toBe(5);
+  });
+
+  it('ignores a fit made for other words', () => {
+    const wordTimes = Array.from({ length: 11 }, (_, i) => [1 + i * 0.5, 1.4 + i * 0.5] as [number, number]);
+    const stale = { upload: { track, cuts: [4.5], wordTimes, fitKey: 'old' }, music: null };
+    const t = reelTimeline(SCRIPT, stale);
+    expect(t.scenes[0]!.words[0]!.start).toBeCloseTo(0.1);
+  });
+
+  it('ignores a recording whose breaks do not match the scenes', () => {
+    expect(reelTimeline(SCRIPT, { upload: { track, cuts: [3, 6] }, music: null }).source).toBe('estimate');
   });
 
   it('changes its key when the timing changes', () => {
-    expect(timingKey(reelTimeline(SCRIPT, VOICE))).not.toBe(timingKey(reelTimeline(SCRIPT)));
+    expect(timingKey(reelTimeline(SCRIPT, { upload: { track, cuts: [5.5] }, music: null }))).not.toBe(timingKey(reelTimeline(SCRIPT)));
   });
 });
 

@@ -1,5 +1,5 @@
-// The Reel editor's saved state: the user's own voiceover and how it is cut into scenes, the pace of
-// the voice, background music and caption style. Everything here is stored on the project (`editor`).
+// The voice step's saved state: the user's own recording of the narration, how it is cut into scenes and fitted to
+// the script's words, and background music. Everything here is stored on the project (`editor`).
 
 /** An audio file kept in storage for a project: the user's voiceover or the background music. */
 export interface AudioTrack {
@@ -13,128 +13,47 @@ export interface AudioTrack {
 }
 
 export const PEAKS_PER_SEC = 20;
-/** Slowest and fastest voice speed (1 = as recorded). Scene speed is multiplied with the reel's pace. */
-export const PACE_MIN = 0.7;
-export const PACE_MAX = 1.5;
 /** A scene can't be shorter than this in the uploaded recording. */
 export const MIN_SCENE_SEC = 0.3;
 export const MAX_AUDIO_SEC = 300;
-/** Sound effects: how many a reel can have, how long each can be, and how loud they start. */
-export const MAX_SFX = 12;
-export const MAX_SFX_SEC = 30;
-export const DEFAULT_SFX_VOLUME = 0.8;
 
-/** A short sound (a whoosh, a pop, a ding) placed at a moment of the reel. */
-export interface SfxClip {
+/** The user's recording of the whole narration, and how the script is fitted to it. */
+export interface VoiceUpload {
   track: AudioTrack;
-  /** Seconds from the start of the reel. */
-  at: number;
-  volume: number;
+  /** Where each scene after the first starts in the recording, in seconds. One fewer than there are scenes. */
+  cuts: number[];
+  closingAt?: number | null;
+  trimStart?: number | null;
+  trimEnd?: number | null;
+  /** Start and end of every word of the script's narration, in order, in seconds of the recording (set by the auto-fit). */
+  wordTimes?: [number, number][];
+  /** The script's words the fit was made for (`narrationKey`); when the narration changes, the fit is out of date. */
+  fitKey?: string;
+  /** The words heard in the recording (start and end in seconds), kept so the words can be re-fitted when a scene break is moved by hand. */
+  speech?: [number, number][];
+  /** How the fit was made: from the words heard in the recording, or from its loudness only. */
+  fit?: 'speech' | 'loudness';
 }
-
-export type CaptionSize = 'small' | 'medium' | 'large';
-export type CaptionPosition = 'bottom' | 'middle';
-export type CaptionLook = 'box' | 'plain';
-
-/** Same shape as the reel engine's CaptionStyle (the engine doesn't import this package). */
-export interface CaptionStyle {
-  size: CaptionSize;
-  position: CaptionPosition;
-  look: CaptionLook;
-}
-
-export const DEFAULT_CAPTIONS: CaptionStyle = { size: 'medium', position: 'bottom', look: 'box' };
 
 export interface ReelEditor {
-  /** Which voice plays: the user's own upload or the ElevenLabs voiceover. */
-  voiceSource: 'upload' | 'elevenlabs';
-  /**
-   * The uploaded voiceover (one file for the whole reel) and where each scene after the first starts in it, in
-   * seconds. There is one cut fewer than there are scenes.
-   */
-  upload: { track: AudioTrack; cuts: number[]; closingAt?: number | null; trimStart?: number | null; trimEnd?: number | null } | null;
-  /** Speed of the voice for the whole reel. 1 = as recorded. */
-  pace: number;
-  /** Extra speed for single scenes, multiplied with `pace`. Missing entries mean 1. */
-  scenePace: number[];
+  upload: VoiceUpload | null;
   music: { track: AudioTrack; volume: number } | null;
-  /** Sound effects placed on the reel's timeline. Missing means none. */
-  sfx?: SfxClip[];
-  captions: CaptionStyle;
   updatedAt?: string;
 }
 
-export const DEFAULT_EDITOR: ReelEditor = {
-  voiceSource: 'upload',
-  upload: null,
-  pace: 1,
-  scenePace: [],
-  music: null,
-  sfx: [],
-  captions: DEFAULT_CAPTIONS,
-};
+export const DEFAULT_EDITOR: ReelEditor = { upload: null, music: null };
 
 export const DEFAULT_MUSIC_VOLUME = 0.18;
 
-export function clampPace(n: unknown): number {
-  const v = typeof n === 'number' && Number.isFinite(n) ? n : 1;
-  return Math.round(Math.min(PACE_MAX, Math.max(PACE_MIN, v)) * 100) / 100;
+/** Fills in anything a saved editor is missing, and drops fields of the old editor, so older projects open cleanly. */
+export function normalizeEditor(raw: Partial<ReelEditor> | null | undefined): ReelEditor {
+  if (!raw) return { ...DEFAULT_EDITOR };
+  return { upload: raw.upload ?? null, music: raw.music ?? null, ...(raw.updatedAt ? { updatedAt: raw.updatedAt } : {}) };
 }
 
-/** Fills in anything a saved editor is missing, so older or empty projects open cleanly. */
-export function normalizeEditor(raw: Partial<ReelEditor> | null | undefined, hasElevenLabsVoice = false): ReelEditor {
-  const base: ReelEditor = { ...DEFAULT_EDITOR, voiceSource: hasElevenLabsVoice ? 'elevenlabs' : 'upload' };
-  if (!raw) return base;
-  return {
-    ...base,
-    ...raw,
-    pace: clampPace(raw.pace ?? 1),
-    scenePace: (raw.scenePace ?? []).map(clampPace),
-    sfx: (raw.sfx ?? []).slice(0, MAX_SFX),
-    captions: { ...DEFAULT_CAPTIONS, ...raw.captions },
-  };
-}
-
-/** True when the uploaded voice is chosen and its cuts fit the script's scenes. */
+/** True when a recording is saved and its cuts fit the script's scenes. */
 export function usesUploadedVoice(editor: ReelEditor | null | undefined, beatCount: number): boolean {
-  return Boolean(editor && editor.voiceSource === 'upload' && editor.upload && editor.upload.cuts.length === beatCount - 1);
-}
-
-/** Pieces of the reel engine's ReelSpec that come from the editor, with playback URLs filled in. */
-export interface EditorSpecParts {
-  pace?: number;
-  scenePace?: number[];
-  voiceTrack?: { url: string; durationSec: number; cuts: number[]; closingAt?: number; trimStart?: number; trimEnd?: number; peaks?: number[] };
-  music?: { url: string; durationSec: number; volume: number };
-  sfx?: { url: string; durationSec: number; at: number; volume: number }[];
-  captions?: CaptionStyle;
-}
-
-export function editorSpecParts(editor: ReelEditor | null | undefined, beatCount: number, urls: { voice?: string; music?: string; sfx?: Record<string, string> }): EditorSpecParts {
-  if (!editor) return {};
-  const out: EditorSpecParts = {
-    pace: clampPace(editor.pace),
-    scenePace: Array.from({ length: beatCount }, (_, i) => clampPace(editor.scenePace[i] ?? 1)),
-    captions: { ...DEFAULT_CAPTIONS, ...editor.captions },
-  };
-  if (usesUploadedVoice(editor, beatCount) && urls.voice) {
-    const up = editor.upload!;
-    out.voiceTrack = { url: urls.voice, durationSec: up.track.durationSec, cuts: up.cuts, ...(up.track.peaks?.length ? { peaks: up.track.peaks } : {}) };
-    const w = trimWindow(up);
-    if (w.start > 0.01) out.voiceTrack.trimStart = w.start;
-    if (w.end < up.track.durationSec - 0.01) out.voiceTrack.trimEnd = w.end;
-    const r = closingRange(up.cuts, w.end, w.start);
-    if (up.closingAt != null && up.closingAt >= r.lo && up.closingAt <= r.hi) out.voiceTrack.closingAt = up.closingAt;
-  }
-  if (editor.music && urls.music) {
-    out.music = { url: urls.music, durationSec: editor.music.track.durationSec, volume: Math.min(1, Math.max(0, editor.music.volume)) };
-  }
-  const clips = (editor.sfx ?? []).flatMap((c) => {
-    const url = urls.sfx?.[c.track.path];
-    return url ? [{ url, durationSec: c.track.durationSec, at: Math.max(0, c.at), volume: Math.min(1, Math.max(0, c.volume)) }] : [];
-  });
-  if (clips.length) out.sfx = clips;
-  return out;
+  return Boolean(editor?.upload && editor.upload.cuts.length === beatCount - 1);
 }
 
 /**

@@ -43,7 +43,7 @@ describe('Animate step', () => {
     expect(prompt).toContain('Indian audience');
   });
 
-  it("saves Claude's pasted animation with the script, and marks it stale when the voice changes", async () => {
+  it("saves Claude's pasted animation with the script, and marks it stale when the recording changes", async () => {
     const { app, data, id } = await setup();
     await data.updateProject('u1', id, { script: SCRIPT as never });
     const bad = await app.inject({ method: 'POST', url: `/api/projects/${id}/animation/import`, headers: H, payload: { text: 'no html here' } });
@@ -52,7 +52,7 @@ describe('Animate step', () => {
     expect(ok.statusCode).toBe(200);
     expect(ok.json().project.script.animation).toMatchObject({ html: HTML, style: 'whiteboard' });
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/animation`, headers: H })).json().stale).toBe(false);
-    await data.updateProject('u1', id, { voice: { voiceId: 'v', narrations: [SCRIPT.beats[0]!.narration], createdAt: 'now', beats: [{ durationSec: 3, words: [] }] } });
+    await data.updateProject('u1', id, { editor: { upload: { track: { path: 'u1/x/voice.mp3', fileName: 'v.mp3', mime: 'audio/mpeg', durationSec: 9 }, cuts: [] }, music: null } });
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/animation`, headers: H })).json().stale).toBe(true);
     // A storyboard save keeps the animation.
     const saved = (await data.getProject('u1', id))!.script!;

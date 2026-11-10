@@ -8,7 +8,7 @@ import { Reveal } from '../../components/motion';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
 import { cn } from '../../lib/cn';
-import { ClaudeIcon, WikipediaIcon } from '../../components/BrandIcons';
+import { WikipediaIcon } from '../../components/BrandIcons';
 import type { TrendIdea, Trending } from '../../services/claudeHttp';
 import { ClaudeAiPanel } from './PasteScriptPanel';
 
@@ -31,17 +31,15 @@ function loadIdeas(lang: Lang): { date: string; ideas: TrendIdea[] } | null {
 
 /**
  * Discover > Trending now: what people read on Wikipedia yesterday (a real signal, with the source and the numbers),
- * and reel ideas Claude makes from it: one click with the server's key, or copy and paste with a Claude subscription.
+ * and reel ideas Claude makes from it: by copy and paste through claude.ai.
  */
 export const TrendingPanel = observer(function TrendingPanel() {
-  const { services, auth, aiMode } = useStores();
+  const { services, auth } = useStores();
   const api = services.claude(() => auth.session?.accessToken ?? null);
   const [lang, setLang] = useState<Lang>('en');
   const [trending, setTrending] = useState<Trending | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(() => loadIdeas('en'));
-  const [busy, setBusy] = useState(false);
-  const [ideaError, setIdeaError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setTrending(null);
@@ -65,19 +63,6 @@ export const TrendingPanel = observer(function TrendingPanel() {
       /* the ideas stay for this visit */
     }
     log.info('discover', 'Trending ideas ready', { lang, count: ideas.length });
-  }
-
-  async function askClaude() {
-    setBusy(true);
-    setIdeaError(null);
-    try {
-      const r = await api.trendingIdeas(lang);
-      keep(r.date, r.ideas);
-    } catch (e) {
-      setIdeaError(errorText(e));
-    } finally {
-      setBusy(false);
-    }
   }
 
   return (
@@ -135,8 +120,7 @@ export const TrendingPanel = observer(function TrendingPanel() {
         </Card>
 
         <div className="space-y-5">
-          {aiMode.paste ? (
-            <ClaudeAiPanel
+          <ClaudeAiPanel
               title="Turn these into reel ideas in claude.ai"
               placeholder='{ "ideas": [ { "topic": "...", "hook": "...", "seconds": 45, "why": "..." } ] }'
               disabled={!trending}
@@ -147,16 +131,6 @@ export const TrendingPanel = observer(function TrendingPanel() {
                 keep(trending?.date ?? new Date().toISOString().slice(0, 10), ideas);
               }}
             />
-          ) : (
-            <Card>
-              <h3 className="font-semibold">Turn these into reel ideas</h3>
-              <p className="mt-1 text-sm text-ink-400">Claude picks the pages worth explaining and writes a topic and an opening hook for each.</p>
-              <Button className="mt-3" loading={busy} disabled={!trending} icon={<ClaudeIcon className="h-4 w-4" />} onClick={() => void askClaude()}>
-                {saved ? 'Make new ideas' : 'Make reel ideas'}
-              </Button>
-              {ideaError && <div className="mt-3"><Alert>{ideaError}</Alert></div>}
-            </Card>
-          )}
 
           {saved && (
             <div>

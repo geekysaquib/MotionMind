@@ -9,7 +9,6 @@ export interface AudioStore {
   urls(paths: string[]): Promise<string[]>;
 }
 
-export const voicePath = (userId: string, projectId: string, i: number) => `${userId}/${projectId}/beat_${i}.mp3`;
 
 /** Tests and demo mode: audio kept in RAM, served as data URLs. */
 export class MemoryAudioStore implements AudioStore {

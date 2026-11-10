@@ -19,7 +19,7 @@ export function registerAnimationRoutes(api: FastifyInstance, deps: AppDeps) {
     return z.string().uuid().safeParse(id).success ? deps.data.getProject(userId, id) : null;
   }
 
-  const timelineOf = (p: Project) => reelTimeline(p.script!, p.voice, p.editor);
+  const timelineOf = (p: Project) => reelTimeline(p.script!, p.editor);
 
   api.get('/projects/:id/animation', async (req, reply) => {
     const project = await owned(req.userId, (req.params as { id: string }).id);

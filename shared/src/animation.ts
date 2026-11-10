@@ -1,5 +1,6 @@
 import type { ReelEditor } from './editor';
-import type { ReelScript, ReelVoice } from './projects';
+import { narrationKey, wordsOf } from './alignScript';
+import type { ReelScript } from './projects';
 import type { StyleId } from './styles';
 
 // The reel's animation is written by Claude (in claude.ai, by copy and paste) as one HyperFrames HTML file:
@@ -31,11 +32,10 @@ export interface ReelTimeline {
   storyEnd: number;
   /** Total length of the video, end card included. */
   duration: number;
-  /** Where the timing comes from. */
-  source: 'voice' | 'recording' | 'estimate';
+  /** Where the timing comes from: the user's recording, or an estimate while there is none. */
+  source: 'recording' | 'estimate';
 }
 
-const GAP = 0.35;
 const LEAD = 0.15;
 const WPS = 2.7;
 export const END_CARD_SEC = 3;
@@ -54,14 +54,12 @@ function spread(words: string[], from: number, to: number) {
 }
 
 /**
- * When every scene and word happens in the finished reel: from the generated voice (one clip per scene, played
- * one after another with a short gap), from the user's own recording and its scene breaks, or estimated from the
- * word count when there is no voice yet.
+ * When every scene and word happens in the finished reel: from the user's own recording (its scene breaks and the
+ * word times found by the auto-fit), or estimated from the word count while there is no recording yet.
  */
-export function reelTimeline(script: Pick<ReelScript, 'beats'>, voice?: ReelVoice | null, editor?: ReelEditor | null): ReelTimeline {
+export function reelTimeline(script: Pick<ReelScript, 'beats'>, editor?: ReelEditor | null): ReelTimeline {
   const narr = script.beats.map((b) => b.narration);
-  const matches = voice && voice.beats.length === script.beats.length && JSON.stringify(voice.narrations) === JSON.stringify(narr);
-  const upload = editor?.voiceSource === 'upload' && editor.upload && editor.upload.cuts.length === script.beats.length - 1 ? editor.upload : null;
+  const upload = editor?.upload && editor.upload.cuts.length === script.beats.length - 1 ? editor.upload : null;
   const scenes: SceneTiming[] = [];
   let source: ReelTimeline['source'] = 'estimate';
   if (upload) {
@@ -69,28 +67,29 @@ export function reelTimeline(script: Pick<ReelScript, 'beats'>, voice?: ReelVoic
     const t0 = upload.trimStart ?? 0;
     const end = upload.closingAt ?? upload.trimEnd ?? upload.track.durationSec;
     const edges = [t0, ...upload.cuts, end].map((x) => x - t0);
+    const total = script.beats.reduce((n, b) => n + wordsOf(b.narration).length, 0);
+    const fitted = upload.wordTimes && upload.wordTimes.length === total && upload.fitKey === narrationKey(narr) ? upload.wordTimes : null;
+    let at = 0;
     script.beats.forEach((b, i) => {
-      const words = b.narration.split(/\s+/).filter(Boolean);
-      scenes.push({ index: i, start: r2(edges[i]!), end: r2(edges[i + 1]!), narration: b.narration, words: spread(words, edges[i]! + 0.1, edges[i + 1]! - 0.15) });
+      const words = wordsOf(b.narration);
+      const start = edges[i]!;
+      const stop = edges[i + 1]!;
+      const timed = fitted
+        ? words.map((w, j) => {
+            const [ws, we] = fitted[at + j]!;
+            const s0 = Math.min(Math.max(ws - t0, start), stop);
+            return { w, start: r2(s0), end: r2(Math.min(Math.max(we - t0, s0 + 0.05), stop)) };
+          })
+        : spread(words, start + 0.1, stop - 0.15);
+      at += words.length;
+      scenes.push({ index: i, start: r2(start), end: r2(stop), narration: b.narration, words: timed });
     });
   } else {
     let t = 0;
     script.beats.forEach((b, i) => {
-      const words = b.narration.split(/\s+/).filter(Boolean);
-      const v = matches ? voice!.beats[i] : undefined;
-      if (v) source = 'voice';
-      const len = v ? v.durationSec + LEAD + GAP : words.length / WPS + 0.6;
-      let timed: SceneTiming['words'];
-      if (v && v.words.length) {
-        // The voice's words (often in Devanagari) mapped onto the narration's words by position.
-        const m = v.words.length;
-        timed = words.map((w, j) => {
-          const a = v.words[Math.min(m - 1, Math.floor((j * m) / words.length))]!;
-          const z = v.words[Math.min(m - 1, Math.floor(((j + 1) * m) / words.length) - 1)] ?? a;
-          return { w, start: r2(t + LEAD + a.start), end: r2(t + LEAD + Math.max(a.end, z.end)) };
-        });
-      } else timed = spread(words, t + LEAD, t + len - GAP);
-      scenes.push({ index: i, start: r2(t), end: r2(t + len), narration: b.narration, words: timed });
+      const words = wordsOf(b.narration);
+      const len = words.length / WPS + 0.6;
+      scenes.push({ index: i, start: r2(t), end: r2(t + len), narration: b.narration, words: spread(words, t + LEAD, t + len - 0.35) });
       t += len;
     });
   }

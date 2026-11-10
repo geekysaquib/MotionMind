@@ -19,15 +19,15 @@ async function setup(over: Partial<ClaudeService> = {}, script: ReelScript = SCR
   const created = await store.projects.create({ title: 'Soundbox', topic: 'x', durationSec: 30, qualityTier: 'draft' });
   const project: Project = { ...created, script };
   store.projects.upsert(project);
-  const calls = { saved: [] as CoverSettings[], rendered: [] as { cover: CoverSettings; format: string }[] };
+  const calls = { saved: [] as CoverSettings[], rendered: [] as { cover: CoverSettings }[] };
   store.services.claude = () =>
     ({
       saveCover: async (_id: string, cover: CoverSettings) => {
         calls.saved.push(cover);
         return { ...project, script: { ...script, cover } };
       },
-      renderCover: async (_id: string, cover: CoverSettings, format: string) => {
-        calls.rendered.push({ cover, format });
+      renderCover: async (_id: string, cover: CoverSettings) => {
+        calls.rendered.push({ cover });
         return { file: 'f.png', url: '/api/renders/f.png' };
       },
       ...over,
@@ -44,15 +44,15 @@ describe('CoverMaker', () => {
     cleanup();
   });
 
-  it('starts from the busiest scene and makes the cover from a frame of the animation', async () => {
+  it('starts from the first scene and makes the cover from a frame of the animation', async () => {
     const calls = await setup();
-    expect((screen.getByLabelText('Scene') as HTMLSelectElement).value).toBe('1');
-    fireEvent.change(screen.getByLabelText('Scene'), { target: { value: '0' } });
+    expect((screen.getByLabelText('Scene') as HTMLSelectElement).value).toBe('0');
+    fireEvent.change(screen.getByLabelText('Scene'), { target: { value: '1' } });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Make the cover' }));
     });
-    expect(calls.saved[0]!.scene).toBe(0);
-    expect(calls.rendered[0]).toMatchObject({ format: 'png', cover: { scene: 0 } });
+    expect(calls.saved[0]!.scene).toBe(1);
+    expect(calls.rendered[0]).toMatchObject({ cover: { scene: 1 } });
     expect(screen.getByRole('img', { name: 'Reel cover' })).toBeTruthy();
     expect(screen.getByText('Download PNG')).toBeTruthy();
   });

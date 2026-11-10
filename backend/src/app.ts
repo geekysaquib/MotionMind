@@ -1,15 +1,11 @@
 import Fastify, { type FastifyInstance } from 'fastify';
-import type { FreeVoice } from './voice/freeVoice';
 import cors from '@fastify/cors';
 import { registerAccountRoutes } from './account/routes';
-import type { ClaudeClient } from './ai/claude';
 import { registerClaudeRoutes } from './ai/routes';
-import { registerConnectorRoutes } from './connectors/routes';
 import { registerDiscoverRoutes } from './discover/routes';
 import { registerAnimationAssets, registerAnimationRoutes } from './animation/routes';
 import { registerCoverRoutes } from './cover/routes';
 import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
-import { registerVoiceRoutes } from './voice/routes';
 import { registerEditorRoutes } from './editor/routes';
 import type { Renderer } from './export/renderer';
 import { registerExportRoutes, registerRenderDownload } from './export/routes';
@@ -39,22 +35,12 @@ export interface AppDeps {
   logger?: boolean;
   /** Where browser log reports go. Defaults to one console line each. */
   clientLogSink?: (report: ClientLogReport) => void;
-  /** The server's Anthropic key (ANTHROPIC_API_KEY). Users never set up keys. */
-  anthropicApiKey?: string;
-  /** The server's ElevenLabs key (ELEVENLABS_API_KEY), for voiceover. */
-  elevenLabsApiKey?: string;
-  /** ELEVENLABS_VOICE_ID: the voice used when the user doesn't pick one. */
-  defaultVoiceId?: string;
   /** Where voiceover MP3s are stored. Defaults to memory (tests, demo). */
   audio: AudioStore;
   /** MP4 export (Remotion), rendered on the machine running the API. Absent in tests. */
   renderer?: Renderer;
   /** Raw footage editing (FFmpeg, whisper.cpp) on the machine running the API. Absent: the routes answer 501. */
   footage?: FootageDeps;
-  /** The free neural voice (no key). Absent: the free-voice route answers 503. */
-  freeVoice?: FreeVoice;
-  /** Builds the Claude client. Tests pass a fake. */
-  claude?: (apiKey: string) => ClaudeClient;
 }
 
 declare module 'fastify' {
@@ -95,9 +81,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
       });
       registerAccountRoutes(api, deps);
       registerClaudeRoutes(api, deps);
-      registerConnectorRoutes(api, deps);
       registerDiscoverRoutes(api, deps);
-      registerVoiceRoutes(api, deps);
       registerEditorRoutes(api, deps);
       registerExportRoutes(api, deps);
       registerCoverRoutes(api, deps);

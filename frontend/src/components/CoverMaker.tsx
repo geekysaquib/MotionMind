@@ -31,7 +31,7 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
     try {
       const cover = { ...saved, scene };
       projects.upsert(await api.saveCover(project.id, cover));
-      const r = await api.renderCover(project.id, cover, 'png');
+      const r = await api.renderCover(project.id, cover);
       setUrl(`${config.apiUrl}${r.url}`);
       log.info('cover', 'Cover made', { projectId: project.id, scene });
     } catch (e) {

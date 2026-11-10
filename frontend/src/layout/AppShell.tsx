@@ -3,7 +3,6 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { ChevronRight, Compass, FolderClosed, FolderOpen, LayoutDashboard, LogOut, Plus, Scissors, Settings } from 'lucide-react';
 import { useStores } from '../stores/RootStore';
 import { FloatingIcons } from '../components/FloatingIcons';
-import { ClaudeIcon } from '../components/BrandIcons';
 import { Logo } from '../components/Logo';
 import { DemoBanner } from '../components/DemoBanner';
 import { ProgressRing } from '../components/motion';
@@ -39,7 +38,7 @@ function useCrumbs(): { label: string; to?: string }[] {
 }
 
 export const AppShell = observer(function AppShell() {
-  const { profile, auth, aiMode, projects } = useStores();
+  const { profile, auth, projects } = useStores();
   const nav = useNavigate();
   const crumbs = useCrumbs();
   const { pathname } = useLocation();
@@ -104,17 +103,6 @@ export const AppShell = observer(function AppShell() {
               ))}
             </ul>
           </div>
-
-          <NavLink to="/app/settings/connectors" className="mt-3 block rounded-xl border border-line/[0.09] bg-ink-800/60 p-3 transition hover:border-mint-500/40" title="Change how you work with AI">
-            <div className="flex items-center gap-2 text-xs font-semibold text-ink-300">
-              <ClaudeIcon className="h-3.5 w-3.5" /> AI mode
-            </div>
-            <div className="mt-1.5 font-display text-base font-bold">{aiMode.paste ? 'Copy and paste' : 'API keys'}</div>
-            <div className="mt-0.5 flex items-center justify-between text-xs text-ink-400">
-              <span>{aiMode.paste ? 'Uses your Claude subscription' : 'One click, server keys'}</span>
-              <span className="font-semibold text-accent">Change</span>
-            </div>
-          </NavLink>
 
           <div className="mt-3 flex items-center gap-2.5 border-t border-line/[0.08] px-1 pt-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-[11px] font-bold text-white">{initials}</div>

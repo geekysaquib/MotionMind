@@ -10,7 +10,6 @@ import {
   ClipboardCopy,
   Clapperboard,
   FileSearch,
-  KeyRound,
   Languages,
   Layers3,
   Mic,
@@ -24,7 +23,7 @@ import { BRAND } from '@motionmind/shared';
 import { useStores } from '../stores/RootStore';
 import { Logo, LogoMark } from '../components/Logo';
 import { CountUp, Reveal, Typewriter } from '../components/motion';
-import { ClaudeIcon, ElevenLabsIcon, InstagramIcon, WikipediaIcon, YouTubeIcon } from '../components/BrandIcons';
+import { ClaudeIcon, InstagramIcon, WikipediaIcon, YouTubeIcon } from '../components/BrandIcons';
 import { FloatingIcons } from '../components/FloatingIcons';
 
 const STEPS = [
@@ -33,17 +32,17 @@ const STEPS = [
   { icon: PenLine, title: 'Write the script', text: 'A hook, the explanation in steps, and a payoff, in Hindi, Hinglish or English.', sample: '9 scenes · 52 seconds spoken' },
   { icon: Layers3, title: 'Storyboard', text: 'Every line becomes a scene. Edit the words and the picture: steps, numbers, items or a note.', sample: 'Phone → NPCI → Bank → Soundbox' },
   { icon: Boxes, title: 'Pick a style', text: 'A live city map, a whiteboard, a dark keynote stage, a metro map or a newsroom. Your own reel, previewed in each.', sample: '5 styles, never the same look' },
-  { icon: Mic, title: 'Add the voice', text: 'Copy the narration into any text-to-speech tool, or upload your own recording. Set the pace per scene.', sample: 'Captions follow every word' },
+  { icon: Mic, title: 'Add the voice', text: 'Read the narration in your own voice and upload it. Motion Mind fits every scene and word to your recording.', sample: 'Captions follow every word' },
   { icon: Clapperboard, title: 'Export', text: 'A 1080 × 1920 MP4 for Instagram Reels, YouTube Shorts or both, with safe margins for each app and your branded end card.', sample: 'Ready to post' },
 ];
 
 const FEATURES = [
   { icon: Boxes, tone: 'bg-mint-600', title: 'Graphics that follow your topic', text: 'Vaccines, payments, trains, chips: each scene draws the objects the narration talks about, on a world that fits the subject.' },
   { icon: BadgeCheck, tone: 'bg-violet-600', title: 'Facts you can trust', text: 'Research keeps its sources. You approve it before the script is written from it.' },
-  { icon: Languages, tone: 'bg-coral-500', title: 'Made for Indian audiences', text: 'Hindi, Hinglish or English narration. Translate the voice script in one click.' },
+  { icon: Languages, tone: 'bg-coral-500', title: 'Made for Indian audiences', text: 'Scripts written for Indian viewers: Hinglish, Hindi or English, with examples and numbers they know.' },
   { icon: ShieldCheck, tone: 'bg-mint-500', title: 'You approve every stage', text: 'Go back and change any step without starting over. Nothing is locked in.' },
-  { icon: Captions, tone: 'bg-violet-500', title: 'Captions with timing', text: 'Words highlight as they are spoken. Choose size, position and style.' },
-  { icon: AudioLines, tone: 'bg-mint-600', title: 'A real reel editor', text: 'Drag scene breaks on the waveform, set the pace for the whole reel or one scene, add music.' },
+  { icon: Captions, tone: 'bg-violet-500', title: 'Captions with timing', text: 'Every word is timed to your voice, so the animation lands exactly when you say it.' },
+  { icon: AudioLines, tone: 'bg-mint-600', title: 'Fine-tune on a waveform', text: 'Drag a scene break or trim the silence if the auto-fit is a little off, and add quiet background music.' },
 ];
 
 const TOPICS = [
@@ -109,7 +108,7 @@ export const LandingPage = observer(function LandingPage() {
             <a href="#how" className="hover:text-ink-100">How it works</a>
             <a href="#features" className="hover:text-ink-100">Features</a>
             <a href="#platforms" className="hover:text-ink-100">Instagram &amp; YouTube</a>
-            <a href="#ways" className="hover:text-ink-100">Two ways to work</a>
+            <a href="#ways" className="hover:text-ink-100">How Claude fits in</a>
             <a href="#faq" className="hover:text-ink-100">FAQ</a>
           </nav>
           <div className="ml-auto flex items-center gap-2">
@@ -181,8 +180,7 @@ export const LandingPage = observer(function LandingPage() {
           <span className="hidden h-4 w-px bg-line/15 sm:block" />
           <span className="text-xs font-medium uppercase tracking-wider">Powered by</span>
           <span className="inline-flex items-center gap-2 text-ink-100"><ClaudeIcon className="h-5 w-5" /> Claude</span>
-          <span className="inline-flex items-center gap-2 text-ink-100"><ElevenLabsIcon className="h-5 w-5" /> ElevenLabs</span>
-          <span className="inline-flex items-center gap-2 text-ink-100"><WikipediaIcon className="h-5 w-5" /> Wikipedia trends</span>
+                    <span className="inline-flex items-center gap-2 text-ink-100"><WikipediaIcon className="h-5 w-5" /> Wikipedia trends</span>
         </div>
       </section>
 
@@ -264,7 +262,7 @@ export const LandingPage = observer(function LandingPage() {
             <h2 className="mt-3 max-w-2xl font-display text-4xl font-bold tracking-tight">Make it for Instagram, YouTube Shorts, or both.</h2>
             <p className="mt-3 max-w-2xl text-ink-400">Each app covers the screen with its own buttons and captions. Motion Mind lays the text out for the one you pick and renders a separate video for each.</p>
           </Reveal>
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
+          <div className="mt-10 grid gap-5 md:max-w-xl">
             {[
               { name: 'Instagram Reels', logo: <InstagramIcon className="h-9 w-9" />, cta: 'follow', points: ['Captions sit above the Reels caption area', 'End card: follow @yourhandle', 'Cover with 4:5 and 1:1 profile-grid guides'] },
               { name: 'YouTube Shorts', logo: <YouTubeIcon className="h-9 w-9" />, cta: 'subscribe', points: ['Text kept clear of the Shorts title and buttons', 'End card: subscribe @yourhandle', 'The voice script closes with a subscribe line'] },
@@ -294,32 +292,19 @@ export const LandingPage = observer(function LandingPage() {
       <section id="ways" className="border-y border-line/[0.06] bg-ink-900 py-20">
         <div className="mx-auto max-w-6xl px-5">
           <Reveal>
-            <p className="text-sm font-semibold uppercase tracking-wider text-accent">Two ways to work</p>
-            <h2 className="mt-3 max-w-2xl font-display text-4xl font-bold tracking-tight">Use your Claude subscription, or one-click with keys.</h2>
-            <p className="mt-3 max-w-2xl text-ink-400">Switch any time in Settings. Every screen shows only the way you picked.</p>
+            <p className="text-sm font-semibold uppercase tracking-wider text-accent">How Claude fits in</p>
+            <h2 className="mt-3 max-w-2xl font-display text-4xl font-bold tracking-tight">Claude writes it in claude.ai. Nothing to set up.</h2>
+            <p className="mt-3 max-w-2xl text-ink-400">Research, script and animation are each a prompt you copy and an answer you paste back.</p>
           </Reveal>
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
+          <div className="mt-10 grid gap-5 md:max-w-xl">
             <Reveal className="card card-hover p-7">
               <ClipboardCopy className="h-7 w-7 text-accent" />
               <h3 className="mt-4 font-display text-xl font-bold">Copy and paste</h3>
               <p className="mt-1 text-sm text-ink-400">No key, nothing to set up.</p>
               <ol className="mt-5 space-y-3 text-sm">
-                {['Copy the ready-made prompt for research, the script or a translation.', 'Run it in claude.ai with your own subscription.', 'Paste the answer back. It is checked and saved.'].map((t, i) => (
+                {['Copy the ready-made prompt for research, the script or the animation.', 'Run it in claude.ai with your own subscription.', 'Paste the answer back. It is checked and saved.'].map((t, i) => (
                   <li key={t} className="flex gap-3">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-mint-400/15 text-xs font-bold text-accent">{i + 1}</span>
-                    {t}
-                  </li>
-                ))}
-              </ol>
-            </Reveal>
-            <Reveal delay={120} className="card card-hover p-7">
-              <KeyRound className="h-7 w-7 text-violet-600" />
-              <h3 className="mt-4 font-display text-xl font-bold">API keys</h3>
-              <p className="mt-1 text-sm text-ink-400">One click, for whoever runs the studio.</p>
-              <ol className="mt-5 space-y-3 text-sm">
-                {['Claude researches the topic with web search and writes the script.', 'Translate the narration into Hindi or English.', 'ElevenLabs can speak every scene, with captions timed to the words.'].map((t, i) => (
-                  <li key={t} className="flex gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-xs font-bold text-violet-600">{i + 1}</span>
                     {t}
                   </li>
                 ))}

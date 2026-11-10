@@ -1,23 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { COVER_SIZES, COVER_STYLES, MAX_HEADLINE, MAX_KICKER, reelTimeline, type Project } from '@motionmind/shared';
+import { reelTimeline, type Project } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 
+const coverSchema = z.object({ scene: z.number().int().min(0).max(60) }).strict();
 
-const coverSchema = z
-  .object({
-    scene: z.number().int().min(0).max(60),
-    headline: z.string().trim().min(1, 'Write a headline for the cover.').max(MAX_HEADLINE),
-    kicker: z.string().trim().max(MAX_KICKER),
-    style: z.enum(COVER_STYLES),
-    size: z.enum(Object.keys(COVER_SIZES) as [keyof typeof COVER_SIZES, ...(keyof typeof COVER_SIZES)[]]),
-    tone: z.enum(['red', 'teal', 'purple', 'blue', 'amber']).nullable().optional(),
-    brand: z.boolean(),
-  })
-  .strict();
-
-const renderSchema = z.object({ cover: coverSchema, format: z.enum(['png', 'jpeg']).default('png') });
+const renderSchema = z.object({ cover: coverSchema });
 
 const unavailable = { error: 'export_unavailable', message: 'Making the cover runs on your PC. Open Motion Mind from your computer with npm run dev.' };
 
@@ -48,10 +37,10 @@ export function registerCoverRoutes(api: FastifyInstance, deps: AppDeps) {
     if (body.data.cover.scene >= project.script.beats.length) return reply.code(400).send({ error: 'invalid_cover', message: "That scene doesn't exist." });
     if (!project.script.animation) return reply.code(400).send({ error: 'no_animation', message: 'Make the animation first, on the Animate step.' });
     // The cover is a frame of Claude's animation, late in the chosen scene once everything has come in.
-    const scene = reelTimeline(project.script, project.voice, project.editor).scenes[body.data.cover.scene]!;
+    const scene = reelTimeline(project.script, project.editor).scenes[body.data.cover.scene]!;
     try {
       const file = await deps.renderer.still(project.script.animation.html, scene.start + (scene.end - scene.start) * 0.8);
-      req.log.info({ projectId: project.id, file, style: body.data.cover.style, size: body.data.cover.size }, 'cover rendered');
+      req.log.info({ projectId: project.id, file, scene: body.data.cover.scene }, 'cover rendered');
       return { file, url: `/api/renders/${file}` };
     } catch (err) {
       req.log.error({ err }, 'cover render failed');
