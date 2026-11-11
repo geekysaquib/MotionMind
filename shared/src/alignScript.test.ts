@@ -163,6 +163,13 @@ describe('alignBySentences', () => {
     expect(fit.cuts[1]).toBeLessThanOrEqual(9);
     expect(fit.wordTimes).toHaveLength(N.join(' ').split(/\s+/).length);
   });
+  it('keeps the words in step with the voice inside a scene: the comma pause falls between the words either side of it', () => {
+    const fit = alignBySentences(N, runs, { start: 0, end: 10.2 })!;
+    // Words: Ek do teen. Chaar paanch chhe. | Saat aath, nau das. | Gyarah.
+    expect(fit.wordTimes[7]![1]).toBeLessThanOrEqual(6.55); // aath,
+    expect(fit.wordTimes[8]![0]).toBeGreaterThanOrEqual(6.6); // nau
+    expect(fit.wordTimes[3]![0]).toBeGreaterThanOrEqual(2.4); // Chaar starts after the sentence pause
+  });
   it('allows for a closing line after the script, and gives up without enough pauses', () => {
     const withTail = [...runs, { start: 10.5, end: 12.5 }];
     const fit = alignBySentences(N, withTail, { start: 0, end: 12.6 })!;

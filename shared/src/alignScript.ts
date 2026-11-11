@@ -260,20 +260,23 @@ export function alignBySentences(narrations: string[], rawRuns: SpeechRun[], win
   const sum = flat.reduce((a, b) => a + b, 0);
   const cum: number[] = [];
   let acc = 0;
-  for (let j = 0; j < S - 1; j++) cum.push((acc += flat[j]!) / sum);
+  for (let j = 0; j < S; j++) cum.push((acc += flat[j]!) / sum);
   // Which sentence ends are scene ends.
   const sceneEnd = new Set<number>();
   let at = -1;
   for (let k = 0; k < sentences.length - 1; k++) sceneEnd.add((at += sentences[k]!.length));
 
-  let best: { cost: number; pick: number[] } | null = null;
+  let best: { cost: number; pick: number[]; tail: boolean } | null = null;
   for (const share of [1, 0.95, 0.9, 0.85, 0.8, 0.75]) {
+    // With less than all of the speech in the script, the end of the script is a pause too, and a closing line follows it.
+    const B = share < 1 ? S : S - 1;
+    if (gaps.length < B) continue;
     // `share` of the speech is the script; the rest is a closing line after it.
     const scale = (total * share) / S;
     const cost = (j: number, g: (typeof gaps)[number]) => Math.abs(g.tau - cum[j]! * total * share) / scale - 0.5 * Math.min(1, g.pause / 0.5);
     const dp: number[][] = [];
     const from: number[][] = [];
-    for (let j = 0; j < S - 1; j++) {
+    for (let j = 0; j < B; j++) {
       dp.push(gaps.map(() => Infinity));
       from.push(gaps.map(() => -1));
       gaps.forEach((g, i) => {
@@ -292,24 +295,68 @@ export function alignBySentences(narrations: string[], rawRuns: SpeechRun[], win
     }
     let bi = -1;
     let bv = Infinity;
-    dp[S - 2]!.forEach((v, i) => {
+    dp[B - 1]!.forEach((v, i) => {
       if (v < bv) (bv = v), (bi = i);
     });
-    if (bi < 0 || (best && bv >= best.cost)) continue;
+    if (bi < 0 || (best && bv / B >= best.cost)) continue;
     const pick: number[] = [];
-    for (let j = S - 2; j >= 0; j--) {
+    for (let j = B - 1; j >= 0; j--) {
       pick[j] = bi;
       bi = from[j]![bi]!;
     }
-    best = { cost: bv, pick };
+    best = { cost: bv / B, pick, tail: share < 1 };
   }
   if (!best) return null;
-  const cutTimes: number[] = [];
-  for (const j of [...sceneEnd].sort((a, b) => a - b)) {
-    const g = gaps[best.pick[j]!]!;
-    cutTimes.push(Math.max(g.before, g.after - 0.12));
-  }
+  // Where every sentence ends: the pause that was picked for it.
+  const endTimes = best.pick.map((i) => {
+    const g = gaps[i]!;
+    return Math.max(g.before, g.after - 0.12);
+  });
+  const cutTimes = [...sceneEnd].sort((a, b) => a - b).map((j) => endTimes[j]!);
   const cuts: number[] = [];
   cutTimes.forEach((t, k) => cuts.push(r2(Math.max(t, (cuts[k - 1] ?? win.start) + MIN_SCENE_SEC))));
-  return { cuts, wordTimes: placeWords(narrations, runs, [win.start, ...cuts, win.end]) };
+
+  // Inside each sentence, commas are short pauses too: pin the clauses to them, so the words stay in step with the voice.
+  const clauses: string[] = [];
+  const edges: number[] = [win.start];
+  const sentenceTexts = narrations.flatMap((n) => {
+    const list = sentencesOf(n);
+    return list.length ? list : [n];
+  });
+  sentenceTexts.forEach((text, j) => {
+    const a = j === 0 ? win.start : endTimes[j - 1]!;
+    const b = j === S - 1 && !best!.tail ? win.end : endTimes[j]!;
+    const ws = wordsOf(text);
+    const breaks = ws.map((w, i) => (i < ws.length - 1 && /[,;:،]$/.test(w) ? i : -1)).filter((i) => i >= 0);
+    const inner = gaps.filter((g, gi) => g.before > a && g.after < b && !best!.pick.includes(gi));
+    const chosen: number[] = [];
+    if (breaks.length && inner.length >= breaks.length) {
+      const weightsBefore = (i: number) => ws.slice(0, i + 1).reduce((acc, w) => acc + weightOf(w), 0);
+      const sum2 = ws.reduce((acc, w) => acc + weightOf(w), 0) || 1;
+      let from = a;
+      for (const bi of breaks) {
+        const target = a + ((b - a) * weightsBefore(bi)) / sum2;
+        const pool = inner.filter((g) => g.after > from + 0.2 && Math.abs((g.before + g.after) / 2 - target) < (b - a) * 0.3);
+        const near = pool.sort((x, y) => Math.abs((x.before + x.after) / 2 - target) - Math.abs((y.before + y.after) / 2 - target))[0];
+        if (!near) {
+          chosen.length = 0;
+          break;
+        }
+        chosen.push(Math.max(near.before, near.after - 0.12));
+        from = near.after;
+      }
+      if (chosen.length !== breaks.length) chosen.length = 0;
+    }
+    if (chosen.length) {
+      let prev = 0;
+      breaks.forEach((bi, k) => {
+        clauses.push(ws.slice(prev, bi + 1).join(' '));
+        edges.push(chosen[k]!);
+        prev = bi + 1;
+      });
+      clauses.push(ws.slice(prev).join(' '));
+    } else clauses.push(text);
+    edges.push(b);
+  });
+  return { cuts, wordTimes: placeWords(clauses, runs, edges) };
 }
