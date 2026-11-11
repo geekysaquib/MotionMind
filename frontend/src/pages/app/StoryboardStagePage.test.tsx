@@ -18,10 +18,10 @@ const SCRIPT: ReelScript = {
   ],
 };
 
-async function setup() {
+async function setup(recorded = false) {
   const store = await makeStore({ signedIn: true });
   const created = await store.projects.create({ title: 'UPI', topic: 'How UPI works', durationSec: 30, qualityTier: 'draft' });
-  const withScript: Project = { ...created, script: SCRIPT };
+  const withScript: Project = { ...created, script: SCRIPT, editor: recorded ? { upload: { track: { path: 'p', fileName: 'v.mp3', mime: 'audio/mpeg', durationSec: 10 }, cuts: [5] }, music: null } : null };
   store.projects.items = [withScript];
   const saved: ReelScript[] = [];
   store.services.claude = () =>
@@ -106,5 +106,17 @@ describe('StoryboardStagePage', () => {
     const rows = saved.at(-1)!.beats[0]!.card.rows;
     expect(rows[0]).toEqual({ kind: 'chips', items: [{ text: 'Cash' }, { text: 'Cheque', strike: true, tone: 'red' }] });
     expect(rows).toHaveLength(2);
+  });
+
+  it('warns about a narration edit only when a recording exists, and not for card edits', async () => {
+    await setup(false);
+    fireEvent.change(screen.getAllByLabelText(/Narration/)[0]!, { target: { value: 'Ek pal mein payment.' } });
+    expect(screen.queryByText(/You changed a narration line after recording/)).toBeNull();
+    cleanup();
+    await setup(true);
+    fireEvent.change(screen.getAllByLabelText(/Eyebrow|Headline/)[0]!, { target: { value: 'Changed card text' } });
+    expect(screen.queryByText(/You changed a narration line after recording/)).toBeNull();
+    fireEvent.change(screen.getAllByLabelText(/Narration/)[0]!, { target: { value: 'Ek pal mein payment.' } });
+    expect(screen.getByText(/You changed a narration line after recording/)).toBeTruthy();
   });
 });

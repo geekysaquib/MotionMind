@@ -1,6 +1,6 @@
 import type { ReelEditor } from './editor';
 
-export const STAGES = ['topic', 'research', 'graphics', 'script', 'storyboard', 'voice', 'final'] as const;
+export const STAGES = ['topic', 'research', 'graphics', 'script', 'voice', 'storyboard', 'final'] as const;
 export type Stage = (typeof STAGES)[number];
 export type ProjectStatus = 'draft' | 'in_progress' | 'completed' | 'archived';
 export type QualityTier = 'draft' | 'standard' | 'premium' | 'cinematic';

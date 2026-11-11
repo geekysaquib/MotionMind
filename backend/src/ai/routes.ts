@@ -142,7 +142,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
     const saved: ReelScript = { ...parsed.data, cover: parsed.data.cover as ReelScript['cover'], style: parsed.data.style, animation: parsed.data.animation, model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
     return {
-      project: await deps.data.updateProject(req.userId, project.id, { script: saved, stage: project.stage === 'script' ? 'storyboard' : project.stage }),
+      project: await deps.data.updateProject(req.userId, project.id, { script: saved, stage: project.stage === 'script' || project.stage === 'voice' ? 'storyboard' : project.stage }),
     };
   });
 

@@ -36,7 +36,7 @@ async function setup(tools?: Partial<MediaTools>) {
   });
   const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'UPI', durationSec: 30, qualityTier: 'draft' } });
   const id = created.json().project.id as string;
-  await data.updateProject('u1', id, { script: SCRIPT as never, stage: 'storyboard' });
+  await data.updateProject('u1', id, { script: SCRIPT as never, stage: 'script' });
   return { app, data, audio, id };
 }
 

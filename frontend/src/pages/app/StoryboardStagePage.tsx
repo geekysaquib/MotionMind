@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Plus, Trash2, Layers3 } from 'lucide-react';
 import type { Project, ReelBeat, ReelScript, ReelTone } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
@@ -42,6 +42,8 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
   useEffect(() => setDraft(project.script), [project.script]);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(project.script);
+  // A recording was fitted to the narration as it is saved: changing a line changes what was recorded.
+  const narrationChanged = Boolean(draft && project.script && project.editor?.upload && draft.beats.map((b) => b.narration.trim()).join('') !== project.script.beats.map((b) => b.narration.trim()).join(''));
 
   if (!draft) {
     return (
@@ -113,6 +115,17 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
               </Button>
             </div>
           </div>
+          {narrationChanged && (
+            <div className="mt-4">
+              <Alert tone="info">
+                You changed a narration line after recording. The recording no longer matches these words: after you save, go to the{' '}
+                <Link to={`/app/projects/${project.id}/voice`} className="font-semibold underline">
+                  Voice step
+                </Link>{' '}
+                and record or generate the changed lines again, then fit the script. Card, short-form and brand edits don't affect the voice.
+              </Alert>
+            </div>
+          )}
           <div className="mt-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">Header steps</span>
             <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">

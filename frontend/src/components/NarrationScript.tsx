@@ -148,11 +148,11 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
           </ol>
           {!changed ? (
             <p className="mt-3 text-xs text-ink-400">
-              Want to change a line? Edit it on the{' '}
+              Want to change a line? You can edit it on the{' '}
               <Link to={`/app/projects/${project.id}/storyboard`} className="text-accent hover:underline">
                 Storyboard
-              </Link>{' '}
-              first. If you change a line after recording, the fit is marked out of date and you can fit again.
+              </Link>
+              , but do it before you record: if you change a line after recording, the fit is marked out of date and you need to record that line again and fit.
             </p>
           ) : (
             <p className="mt-3 text-xs text-ink-400">

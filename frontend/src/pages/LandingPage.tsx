@@ -29,10 +29,10 @@ import { FloatingIcons } from '../components/FloatingIcons';
 const STEPS = [
   { icon: Sparkles, title: 'Pick a topic', text: 'Type a question, or start from an idea. Choose the length and the quality.', sample: '“How does a Soundbox know the money arrived?”' },
   { icon: FileSearch, title: 'Research it', text: 'Sources are searched and every claim is marked verified, single-source or conflicting.', sample: '12 facts · 9 verified · 7 sources' },
-  { icon: PenLine, title: 'Write the script', text: 'A hook, the explanation in steps, and a payoff, in Hindi, Hinglish or English.', sample: '9 scenes · 52 seconds spoken' },
-  { icon: Layers3, title: 'Storyboard', text: 'Every line becomes a scene. Edit the words and the picture: steps, numbers, items or a note.', sample: 'Phone → NPCI → Bank → Soundbox' },
   { icon: Boxes, title: 'Pick a style', text: 'A live city map, a whiteboard, a dark keynote stage, a metro map or a newsroom. Your own reel, previewed in each.', sample: '5 styles, never the same look' },
+  { icon: PenLine, title: 'Write the script', text: 'A hook, the explanation in steps, and a payoff, in Hindi, Hinglish or English.', sample: '9 scenes · 52 seconds spoken' },
   { icon: Mic, title: 'Add the voice', text: 'Read the narration in your own voice and upload it. Motion Mind fits every scene and word to your recording.', sample: 'Captions follow every word' },
+  { icon: Layers3, title: 'Storyboard', text: 'Polish every scene: the card, the picture, short forms and brands, steps, numbers, items or a note.', sample: 'Phone → NPCI → Bank → Soundbox' },
   { icon: Clapperboard, title: 'Export', text: 'A 1080 × 1920 MP4 for Instagram Reels, YouTube Shorts or both, with safe margins for each app and your branded end card.', sample: 'Ready to post' },
 ];
 
