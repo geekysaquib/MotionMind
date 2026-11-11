@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { alignScript, clipToLoud, placeWords, sceneStartsFromWords, MAX_AUDIO_SEC, MIN_SCENE_SEC, narrationKey, runsFromPeaks, STAGES, trimWindow, type Project, type ReelEditor, type SpeechRun } from '@motionmind/shared';
+import { alignBySentences, alignScript, clipToLoud, placeWords, sceneStartsFromWords, MAX_AUDIO_SEC, MIN_SCENE_SEC, narrationKey, runsFromPeaks, STAGES, trimWindow, type Project, type ReelEditor, type SpeechRun } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 import { cleanFileName, sniffAudio } from './audioFormat';
@@ -198,8 +198,12 @@ export function registerEditorRoutes(api: FastifyInstance, deps: AppDeps) {
     // Matching the heard words to the script's words places a scene exactly where it is spoken, even when text-to-speech
     // leaves no pause between scenes. Pauses and loudness are the fallback.
     const loud = runsFromPeaks(up.track.peaks ?? []);
-    const starts = heardWords.length ? sceneStartsFromWords(narrations, heardWords, loud, { start: win.start, end }) : null;
-    const result = starts ? { cuts: starts, wordTimes: placeWords(narrations, runs, [win.start, ...starts, end]) } : alignScript(narrations, runs, { start: win.start, end });
+    // Text-to-speech and careful readers pause after every sentence, and a scene always ends at a sentence end: matching the
+    // sentences to those pauses is the most reliable fit. Without enough pauses, the words whisper heard place each scene;
+    // failing that, the pauses and the speech proportion do.
+    const bySentences = alignBySentences(narrations, loud, { start: win.start, end });
+    const starts = bySentences ? null : heardWords.length ? sceneStartsFromWords(narrations, heardWords, loud, { start: win.start, end }) : null;
+    const result = bySentences ?? (starts ? { cuts: starts, wordTimes: placeWords(narrations, runs, [win.start, ...starts, end]) } : alignScript(narrations, runs, { start: win.start, end }));
     if (!result) return reply.code(400).send({ error: 'no_speech', message: "I couldn't hear any speech in that recording. Check the file and upload it again." });
     const upload = { ...up, cuts: result.cuts, wordTimes: result.wordTimes, fitKey: narrationKey(narrations), fit, speech: fit === 'speech' ? runs.map((r) => [r.start, r.end] as [number, number]).slice(0, 6000) : undefined };
     const problem = checkUpload(upload, narrations.length);

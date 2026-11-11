@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { alignScript, clipToLoud, narrationKey, placeWords, runsFromPeaks, wordsOf, type SpeechRun } from './alignScript';
+import { alignBySentences, alignScript, clipToLoud, narrationKey, placeWords, runsFromPeaks, wordsOf, type SpeechRun } from './alignScript';
 
 const NARR = ['Subah dus baje Tatkal khulta hai.', 'Load balancer requests ko baant deta hai.', 'Bas.'];
 const WIN = { start: 0, end: 20 };
@@ -141,5 +141,32 @@ describe('clipToLoud', () => {
     expect(clipToLoud(words, loud)).toEqual([{ start: 0.1, end: 2.85 }]);
     expect(clipToLoud(words, [])).toEqual(words);
     expect(clipToLoud(words, [{ start: 9, end: 10 }])).toEqual(words);
+  });
+});
+
+describe('alignBySentences', () => {
+  const N = ['Ek do teen. Chaar paanch chhe.', 'Saat aath, nau das.', 'Gyarah.'];
+  // Text-to-speech: a pause after every sentence (0.5 s), and a shorter one (0.25 s) at the comma.
+  const runs: SpeechRun[] = [
+    { start: 0, end: 2 },
+    { start: 2.5, end: 5 }, // scene 1 ends here
+    { start: 5.5, end: 6.5 },
+    { start: 6.75, end: 8.5 }, // comma inside scene 2
+    { start: 9, end: 10 },
+  ];
+  it('puts each scene break at the pause after a sentence, not at a comma', () => {
+    const fit = alignBySentences(N, runs, { start: 0, end: 10.2 })!;
+    expect(fit.cuts).toHaveLength(2);
+    expect(fit.cuts[0]).toBeGreaterThan(5);
+    expect(fit.cuts[0]).toBeLessThanOrEqual(5.5);
+    expect(fit.cuts[1]).toBeGreaterThan(8.5);
+    expect(fit.cuts[1]).toBeLessThanOrEqual(9);
+    expect(fit.wordTimes).toHaveLength(N.join(' ').split(/\s+/).length);
+  });
+  it('allows for a closing line after the script, and gives up without enough pauses', () => {
+    const withTail = [...runs, { start: 10.5, end: 12.5 }];
+    const fit = alignBySentences(N, withTail, { start: 0, end: 12.6 })!;
+    expect(fit.cuts[1]).toBeLessThanOrEqual(9);
+    expect(alignBySentences(N, [{ start: 0, end: 10 }], { start: 0, end: 10.2 })).toBeNull();
   });
 });

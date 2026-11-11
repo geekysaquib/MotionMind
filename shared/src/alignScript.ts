@@ -233,3 +233,83 @@ export function placeWords(narrations: string[], rawRuns: SpeechRun[], edges: nu
   });
   return wordTimes;
 }
+
+/** Sentences of a narration: split after . ! ? or । */
+export const sentencesOf = (narration: string) => narration.split(/(?<=[.!?।])\s+/).map((s) => s.trim()).filter(Boolean);
+
+/**
+ * Fits the script to a recording that has a short pause after every sentence (text-to-speech does). A scene always ends
+ * at the end of a sentence, so each scene break is one of those pauses. The sentences are matched to the pauses in order,
+ * by how long each sentence should take (its length), allowing for extra speech at the end (a closing line that is not
+ * in the script). Returns null when the recording has fewer pauses than the script has sentence ends.
+ */
+export function alignBySentences(narrations: string[], rawRuns: SpeechRun[], win: { start: number; end: number }): ScriptFit | null {
+  if (narrations.length < 2) return null;
+  const sentences = narrations.map((n) => {
+    const list = sentencesOf(n);
+    return (list.length ? list : [n]).map((s) => wordsOf(s).reduce((a, w) => a + weightOf(w), 0) || 1);
+  });
+  const flat = sentences.flat();
+  const S = flat.length;
+  const runs = prepare(rawRuns, win.start, win.end);
+  if (!runs.length) return null;
+  const total = speechBefore(runs, win.end);
+  if (total < 0.5) return null;
+  const gaps = runs.slice(0, -1).map((r, i) => ({ tau: speechBefore(runs, r.end), pause: runs[i + 1]!.start - r.end, after: runs[i + 1]!.start, before: r.end })).filter((g) => g.pause >= 0.2);
+  if (gaps.length < S - 1) return null;
+  const sum = flat.reduce((a, b) => a + b, 0);
+  const cum: number[] = [];
+  let acc = 0;
+  for (let j = 0; j < S - 1; j++) cum.push((acc += flat[j]!) / sum);
+  // Which sentence ends are scene ends.
+  const sceneEnd = new Set<number>();
+  let at = -1;
+  for (let k = 0; k < sentences.length - 1; k++) sceneEnd.add((at += sentences[k]!.length));
+
+  let best: { cost: number; pick: number[] } | null = null;
+  for (const share of [1, 0.95, 0.9, 0.85, 0.8, 0.75]) {
+    // `share` of the speech is the script; the rest is a closing line after it.
+    const scale = (total * share) / S;
+    const cost = (j: number, g: (typeof gaps)[number]) => Math.abs(g.tau - cum[j]! * total * share) / scale - 0.5 * Math.min(1, g.pause / 0.5);
+    const dp: number[][] = [];
+    const from: number[][] = [];
+    for (let j = 0; j < S - 1; j++) {
+      dp.push(gaps.map(() => Infinity));
+      from.push(gaps.map(() => -1));
+      gaps.forEach((g, i) => {
+        if (j === 0) {
+          dp[0]![i] = cost(0, g);
+          return;
+        }
+        let bv = Infinity;
+        let bj = -1;
+        for (let p = 0; p < i; p++) if (dp[j - 1]![p]! < bv) (bv = dp[j - 1]![p]!), (bj = p);
+        if (bj >= 0) {
+          dp[j]![i] = bv + cost(j, g);
+          from[j]![i] = bj;
+        }
+      });
+    }
+    let bi = -1;
+    let bv = Infinity;
+    dp[S - 2]!.forEach((v, i) => {
+      if (v < bv) (bv = v), (bi = i);
+    });
+    if (bi < 0 || (best && bv >= best.cost)) continue;
+    const pick: number[] = [];
+    for (let j = S - 2; j >= 0; j--) {
+      pick[j] = bi;
+      bi = from[j]![bi]!;
+    }
+    best = { cost: bv, pick };
+  }
+  if (!best) return null;
+  const cutTimes: number[] = [];
+  for (const j of [...sceneEnd].sort((a, b) => a - b)) {
+    const g = gaps[best.pick[j]!]!;
+    cutTimes.push(Math.max(g.before, g.after - 0.12));
+  }
+  const cuts: number[] = [];
+  cutTimes.forEach((t, k) => cuts.push(r2(Math.max(t, (cuts[k - 1] ?? win.start) + MIN_SCENE_SEC))));
+  return { cuts, wordTimes: placeWords(narrations, runs, [win.start, ...cuts, win.end]) };
+}
