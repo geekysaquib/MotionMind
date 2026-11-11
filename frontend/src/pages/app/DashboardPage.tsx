@@ -162,7 +162,7 @@ export const DashboardPage = observer(function DashboardPage() {
                     <div className="mt-1 text-xs text-ink-400">Next: {nextStage(resume).title}</div>
                   </div>
                 </div>
-                <span className="mt-4 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-mint-600 text-sm font-semibold text-white shadow-glow transition group-hover:bg-mint-700">
+                <span className="mt-4 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-brand text-sm font-semibold text-white shadow-glow transition group-hover:brightness-110">
                   <Play className="h-4 w-4" /> Continue
                 </span>
               </Link>

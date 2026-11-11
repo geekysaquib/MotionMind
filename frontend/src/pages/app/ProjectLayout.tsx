@@ -71,11 +71,11 @@ export const ProjectLayout = observer(function ProjectLayout() {
                     <span
                       className={cn(
                         'relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-bold transition',
-                        isCurrent ? 'border-mint-600 bg-ink-900 text-accent' : done[i] ? 'border-mint-600 bg-mint-600 text-white' : 'border-line/20 bg-ink-900 text-ink-400',
+                        isCurrent ? 'border-mint-600 bg-ink-900 text-accent' : done[i] ? 'border-mint-600 bg-brand text-white' : 'border-line/20 bg-ink-900 text-ink-400',
                       )}
                     >
                       {isCurrent && <span className="absolute inset-[-5px] animate-ping-soft rounded-full border border-mint-500/50" aria-hidden />}
-                      {done[i] && !isCurrent ? <Check className="h-3.5 w-3.5 animate-pop" strokeWidth={3} /> : isCurrent ? <span className="h-2 w-2 rounded-full bg-mint-600" /> : i + 1}
+                      {done[i] && !isCurrent ? <Check className="h-3.5 w-3.5 animate-pop" strokeWidth={3} /> : isCurrent ? <span className="h-2 w-2 rounded-full bg-brand" /> : i + 1}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={cn('flex items-center gap-1.5 truncate text-sm', isCurrent ? 'font-semibold' : done[i] ? 'text-ink-100' : 'text-ink-300')}>
@@ -104,7 +104,7 @@ export const ProjectLayout = observer(function ProjectLayout() {
       <div className="min-w-0">
         <div key={info.path} className="mb-5 flex animate-fade-up flex-wrap items-start justify-between gap-4 rounded-xl border border-line/[0.09] bg-ink-900 p-5 shadow-soft">
           <div className="flex min-w-[240px] flex-1 items-start gap-4">
-            <span className="flex h-11 w-11 shrink-0 animate-pop items-center justify-center rounded-xl bg-mint-600 text-white shadow-glow">
+            <span className="flex h-11 w-11 shrink-0 animate-pop items-center justify-center rounded-xl bg-brand text-white shadow-glow">
               {(() => {
                 const HeroIcon = STAGE_ICONS[info.path] ?? PenLine;
                 return <HeroIcon className="h-5 w-5" aria-hidden />;

@@ -113,7 +113,7 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
               </li>
             ))}
           </ol>
-          <Link to={`/app/projects/${p.id}/${nextStage(p).path || 'research'}`} className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-mint-600 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:bg-mint-700">
+          <Link to={`/app/projects/${p.id}/${nextStage(p).path || 'research'}`} className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:brightness-110">
             Continue: {nextStage(p).label} <ArrowRight className="h-4 w-4" />
           </Link>
         </Card>

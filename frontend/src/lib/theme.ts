@@ -2,12 +2,11 @@ export type Theme = 'light' | 'dark';
 const KEY = 'mm-theme';
 
 export function getTheme(): Theme {
-  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
 }
 
 export function setTheme(t: Theme) {
-  if (t === 'dark') document.documentElement.dataset.theme = 'dark';
-  else delete document.documentElement.dataset.theme;
+  document.documentElement.dataset.theme = t;
   try {
     localStorage.setItem(KEY, t);
   } catch {

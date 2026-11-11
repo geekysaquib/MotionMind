@@ -16,10 +16,11 @@ export default {
         violet: { 400: '#A78BFA', 500: '#8B5CF6', 600: '#7C3AED' },
       },
       fontFamily: {
-        display: ['"Google Sans Variable"', '"Google Sans"', 'system-ui', 'sans-serif'],
-        sans: ['"Google Sans Variable"', '"Google Sans"', 'system-ui', 'sans-serif'],
+        display: ['"Bricolage Grotesque Variable"', '"Plus Jakarta Sans Variable"', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans Variable"', 'system-ui', 'sans-serif'],
       },
-      boxShadow: { glow: '0 6px 18px -8px rgba(124,58,237,.55)', soft: '0 1px 2px rgba(15,20,36,.05), 0 2px 8px -4px rgba(15,20,36,.06)' },
+      boxShadow: { glow: '0 8px 28px -10px rgba(139,92,246,.75), inset 0 1px 0 rgba(255,255,255,.22)', soft: '0 1px 0 rgba(255,255,255,.04) inset, 0 10px 30px -18px rgba(0,0,0,.45)' },
+      borderRadius: { xl: '0.875rem', '2xl': '1.25rem' },
       keyframes: {
         'fade-up': { from: { opacity: 0, transform: 'translateY(6px)' }, to: { opacity: 1, transform: 'none' } },
         'rise': { from: { opacity: 0, transform: 'translateY(22px) scale(.98)' }, to: { opacity: 1, transform: 'none' } },

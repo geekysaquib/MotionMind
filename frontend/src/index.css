@@ -3,39 +3,45 @@
 @tailwind utilities;
 
 @layer base {
-  /* Light (default): pure white surfaces, cool grey fills, near-black text, purple accent. */
+  /* Dark is the studio default. Surfaces are near-black with a cool tint; one violet accent with an indigo-to-fuchsia gradient. */
   :root {
+    color-scheme: dark;
+    --ink-950: 8 9 15; /* page, sidebar */
+    --ink-900: 15 17 27; /* cards, top bar */
+    --ink-850: 19 21 33; /* inputs */
+    --ink-800: 11 12 20; /* app canvas */
+    --ink-700: 33 36 52;
+    --ink-600: 56 60 82;
+    --ink-400: 142 148 172; /* secondary text */
+    --ink-300: 192 197 216;
+    --ink-100: 243 244 250; /* primary text */
+    --line: 255 255 255; /* borders and hover tints, used at low opacity */
+    --accent: 177 151 252;
+    --danger: 251 113 133;
+  }
+  :root[data-theme='light'] {
     color-scheme: light;
-    --ink-950: 255 255 255; /* page */
-    --ink-900: 255 255 255; /* cards, sidebar, top bar */
-    --ink-850: 255 255 255; /* inputs */
-    --ink-800: 246 247 250; /* quiet fills, app canvas */
-    --ink-700: 238 240 245;
-    --ink-600: 203 208 220;
-    --ink-400: 100 108 126; /* secondary text */
-    --ink-300: 64 72 92;
-    --ink-100: 15 20 36; /* primary text */
-    --line: 15 20 36; /* borders and hover tints, used at low opacity */
+    --ink-950: 250 250 253;
+    --ink-900: 255 255 255;
+    --ink-850: 255 255 255;
+    --ink-800: 243 244 250;
+    --ink-700: 232 234 243;
+    --ink-600: 200 205 220;
+    --ink-400: 98 106 128;
+    --ink-300: 62 70 92;
+    --ink-100: 14 17 32;
+    --line: 14 17 32;
     --accent: 109 40 217;
     --danger: 220 38 38;
   }
-  :root[data-theme='dark'] {
-    color-scheme: dark;
-    --ink-950: 11 13 20;
-    --ink-900: 17 20 30;
-    --ink-850: 22 26 38;
-    --ink-800: 14 17 26;
-    --ink-700: 38 44 60;
-    --ink-600: 53 60 80;
-    --ink-400: 138 146 168;
-    --ink-300: 182 189 208;
-    --ink-100: 238 240 247;
-    --line: 255 255 255;
-    --accent: 167 139 250;
-    --danger: 248 113 113;
-  }
+  /* Status text written for a white page stays readable on the dark one. */
+  :root:not([data-theme='light']) .text-emerald-700 { color: #6ee7b7; }
+  :root:not([data-theme='light']) .text-amber-700 { color: #fcd34d; }
+  :root:not([data-theme='light']) .text-violet-600 { color: #c4b5fd; }
+  :root:not([data-theme='light']) .text-emerald-600 { color: #6ee7b7; }
   html, body, #root { height: 100%; }
-  body { font-family: 'Google Sans Variable', 'Google Sans', system-ui, sans-serif; }
+  body { font-family: 'Plus Jakarta Sans Variable', system-ui, sans-serif; font-feature-settings: 'ss01', 'cv11'; }
+  h1, h2, h3, .font-display { letter-spacing: -0.02em; }
   ::selection { background: rgba(139, 92, 246, 0.28); }
   :focus-visible { outline: 2px solid #8B5CF6; outline-offset: 2px; }
   html { scroll-behavior: smooth; }
@@ -48,10 +54,19 @@
 }
 
 @layer components {
-  .card { @apply rounded-xl border border-line/[0.09] bg-ink-900 shadow-soft transition duration-300; }
-  .card-hover { @apply hover:-translate-y-0.5 hover:border-line/[0.18] hover:shadow-[0_14px_32px_-18px_rgba(15,20,36,0.25)]; }
-  .glass { @apply border border-line/[0.08] bg-ink-900/70 backdrop-blur-md; }
+  .card { @apply rounded-2xl border border-line/[0.08] bg-ink-900 shadow-soft transition duration-300; background-image: linear-gradient(180deg, rgb(var(--line) / 0.035), transparent 40%); }
+  .card-hover { @apply hover:-translate-y-0.5 hover:border-mint-500/40 hover:shadow-[0_18px_40px_-22px_rgba(139,92,246,0.55)]; }
+  .glass { @apply border border-line/[0.08] bg-ink-900/60 backdrop-blur-xl; }
   .skeleton { @apply animate-pulse rounded-lg bg-line/[0.06]; }
+  /* Brand gradient: used for the main button, key words and glows. */
+  .bg-brand { background-image: linear-gradient(135deg, #7c3aed 0%, #6366f1 55%, #8b5cf6 100%); }
+  .text-gradient { background-image: linear-gradient(100deg, #a78bfa 0%, #818cf8 40%, #e879f9 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  /* Soft coloured light behind a page or hero. */
+  .aurora { background-image: radial-gradient(60% 50% at 15% 0%, rgba(124,58,237,.30), transparent 70%), radial-gradient(50% 45% at 90% 10%, rgba(99,102,241,.22), transparent 70%), radial-gradient(45% 40% at 60% 100%, rgba(217,70,239,.14), transparent 70%); }
+  :root[data-theme='light'] .aurora { background-image: radial-gradient(60% 50% at 15% 0%, rgba(124,58,237,.16), transparent 70%), radial-gradient(50% 45% at 90% 10%, rgba(99,102,241,.12), transparent 70%); }
+  .canvas-glow { background-image: radial-gradient(70% 40% at 50% -10%, rgba(124,58,237,.14), transparent 70%); }
+  /* A faint grid that fades out, for hero backgrounds. */
+  .grid-bg { background-image: linear-gradient(rgb(var(--line) / .05) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--line) / .05) 1px, transparent 1px); background-size: 44px 44px; -webkit-mask-image: radial-gradient(70% 60% at 50% 30%, #000 30%, transparent 75%); mask-image: radial-gradient(70% 60% at 50% 30%, #000 30%, transparent 75%); }
   /* Scroll reveal: starts hidden, <Reveal> adds .is-in when it scrolls into view. */
   .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s cubic-bezier(.2,.8,.2,1), transform .7s cubic-bezier(.2,.8,.2,1); transition-delay: var(--d, 0ms); }
   .reveal.is-in { opacity: 1; transform: none; }
@@ -64,19 +79,18 @@
   .stagger > *:nth-child(4) { animation-delay: 180ms; } .stagger > *:nth-child(5) { animation-delay: 240ms; } .stagger > *:nth-child(6) { animation-delay: 300ms; }
   .stagger > *:nth-child(n+7) { animation-delay: 360ms; }
   @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  /* A progress bar that is working: a bright band sweeps along the fill. */
-  .bar-live { background-color: #7c3aed; animation: bar-pulse 1.4s ease-in-out infinite; }
-  @keyframes bar-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .7; } }
+  /* A progress bar that is working. */
+  .bar-live { background-image: linear-gradient(90deg, #7c3aed, #818cf8, #7c3aed); background-size: 200% 100%; animation: bar-pulse 1.6s linear infinite; }
+  @keyframes bar-pulse { to { background-position: -200% 0; } }
   /* Icons nudge when their row or button is hovered. */
   .icon-hover svg { transition: transform .25s cubic-bezier(.2,.8,.2,1); }
   .icon-hover:hover svg { transform: scale(1.12) rotate(-3deg); }
-  /* A soft, slow colour wash behind the app's pages. */
   /* Background outline icons: a slow drift with a gentle turn. */
   .float-icon { transform: rotate(var(--r, 0deg)); animation: icon-drift var(--t, 12s) ease-in-out infinite; will-change: transform; }
   @keyframes icon-drift { 0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--r, 0deg)); } 50% { transform: translate3d(10px, -22px, 0) rotate(calc(var(--r, 0deg) + 9deg)); } }
-  .label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-400; }
+  .label { @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-400; }
   .field {
-    @apply w-full rounded-lg border border-line/[0.14] bg-ink-850 px-3.5 py-2.5 text-sm text-ink-100 placeholder:text-ink-400/70
-           transition focus:border-mint-500/70 focus:outline-none focus:ring-2 focus:ring-mint-500/20 disabled:opacity-50;
+    @apply w-full rounded-xl border border-line/[0.12] bg-ink-850 px-3.5 py-2.5 text-sm text-ink-100 placeholder:text-ink-400/60
+           transition focus:border-mint-500/80 focus:outline-none focus:ring-4 focus:ring-mint-500/15 disabled:opacity-50;
   }
 }

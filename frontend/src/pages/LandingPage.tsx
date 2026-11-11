@@ -37,12 +37,12 @@ const STEPS = [
 ];
 
 const FEATURES = [
-  { icon: Boxes, tone: 'bg-mint-600', title: 'Graphics that follow your topic', text: 'Vaccines, payments, trains, chips: each scene draws the objects the narration talks about, on a world that fits the subject.' },
-  { icon: BadgeCheck, tone: 'bg-violet-600', title: 'Facts you can trust', text: 'Research keeps its sources. You approve it before the script is written from it.' },
+  { icon: Boxes, tone: 'bg-brand', title: 'Graphics that follow your topic', text: 'Vaccines, payments, trains, chips: each scene draws the objects the narration talks about, on a world that fits the subject.' },
+  { icon: BadgeCheck, tone: 'bg-brand', title: 'Facts you can trust', text: 'Research keeps its sources. You approve it before the script is written from it.' },
   { icon: Languages, tone: 'bg-coral-500', title: 'Made for Indian audiences', text: 'Scripts written for Indian viewers: Hinglish, Hindi or English, with examples and numbers they know.' },
   { icon: ShieldCheck, tone: 'bg-mint-500', title: 'You approve every stage', text: 'Go back and change any step without starting over. Nothing is locked in.' },
   { icon: Captions, tone: 'bg-violet-500', title: 'Captions with timing', text: 'Every word is timed to your voice, so the animation lands exactly when you say it.' },
-  { icon: AudioLines, tone: 'bg-mint-600', title: 'Fine-tune on a waveform', text: 'Drag a scene break or trim the silence if the auto-fit is a little off, and add quiet background music.' },
+  { icon: AudioLines, tone: 'bg-brand', title: 'Fine-tune on a waveform', text: 'Drag a scene break or trim the silence if the auto-fit is a little off, and add quiet background music.' },
 ];
 
 const TOPICS = [
@@ -99,7 +99,7 @@ export const LandingPage = observer(function LandingPage() {
 
   return (
     <div className="min-h-full overflow-x-hidden bg-ink-950 text-ink-100">
-      <header className="sticky top-0 z-30 border-b border-line/[0.06] bg-ink-950/75 backdrop-blur-lg">
+      <header className="sticky top-0 z-30 border-b border-line/[0.06] bg-ink-950/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-3.5">
           <Link to="/" aria-label={`${BRAND.name} home`}>
             <Logo size="sm" animated />
@@ -117,7 +117,7 @@ export const LandingPage = observer(function LandingPage() {
                 Sign in
               </Link>
             )}
-            <Link to={primary.to} className="rounded-xl bg-mint-600 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:bg-mint-700">
+            <Link to={primary.to} className="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:brightness-110">
               {signedIn ? 'Open studio' : 'Get started'}
             </Link>
           </div>
@@ -125,14 +125,16 @@ export const LandingPage = observer(function LandingPage() {
       </header>
 
       <section className="relative overflow-hidden">
-        <FloatingIcons tone="text-ink-100/[0.18]" />
+        <div className="aurora pointer-events-none absolute inset-0" aria-hidden />
+        <div className="grid-bg pointer-events-none absolute inset-0" aria-hidden />
+        <FloatingIcons tone="text-ink-100/[0.10]" />
         <div className="relative mx-auto grid max-w-6xl items-center gap-16 px-5 pb-24 pt-14 md:grid-cols-[1.15fr_1fr] md:pt-24">
           <div>
-            <span className="inline-flex animate-rise items-center gap-2 rounded-full border border-line/10 bg-ink-900 px-3 py-1.5 text-xs font-semibold text-ink-300 shadow-soft">
+            <span className="inline-flex animate-rise items-center gap-2 rounded-full border border-line/10 bg-line/[0.05] px-3.5 py-1.5 text-xs font-semibold text-ink-300 backdrop-blur">
               <InstagramIcon className="h-4 w-4" /> <YouTubeIcon className="h-4 w-4" /> AI studio for Reels &amp; Shorts
             </span>
-            <h1 className="mt-6 animate-rise font-display text-5xl font-bold leading-[1.05] tracking-tight [animation-delay:80ms] md:text-6xl">
-              Turn any question into a <span className="text-accent">cinematic</span> Reel or Short.
+            <h1 className="mt-6 animate-rise font-display text-5xl font-extrabold leading-[1.02] tracking-tight [animation-delay:80ms] md:text-7xl">
+              Turn any question into a <span className="text-gradient">cinematic</span> Reel or Short.
             </h1>
             <p className="mt-5 h-8 animate-rise text-xl font-medium text-ink-300 [animation-delay:160ms]">
               Today: <Typewriter className="text-accent" phrases={['how UPI Soundbox speaks', 'how a vaccine trains your body', 'where my train is, offline', 'why 5G needs so many towers']} />
@@ -142,10 +144,10 @@ export const LandingPage = observer(function LandingPage() {
               timed captions and a ready-to-post 9:16 video for Instagram Reels, YouTube Shorts, or both.
             </p>
             <div className="mt-9 flex animate-rise flex-wrap items-center gap-3 [animation-delay:320ms]">
-              <Link to={primary.to} className="group inline-flex items-center gap-2 rounded-xl bg-mint-600 px-6 py-3.5 text-base font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:bg-mint-700">
+              <Link to={primary.to} className="group inline-flex items-center gap-2 rounded-full bg-brand px-7 py-3.5 text-base font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:brightness-110">
                 {primary.label} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
               </Link>
-              <a href="#how" className="inline-flex items-center gap-2 rounded-xl border border-line/15 bg-ink-900 px-6 py-3.5 text-base font-semibold transition hover:-translate-y-0.5 hover:bg-ink-800">
+              <a href="#how" className="inline-flex items-center gap-2 rounded-full border border-line/15 bg-line/[0.05] px-7 py-3.5 text-base font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:bg-line/[0.09]">
                 <Play className="h-4 w-4" /> See how it works
               </a>
             </div>
@@ -193,7 +195,7 @@ export const LandingPage = observer(function LandingPage() {
             { n: 0, label: 'API keys needed in copy-paste mode', suffix: '' },
           ].map((s, i) => (
             <Reveal key={s.label} delay={i * 90}>
-              <div className="font-display text-5xl font-bold tracking-tight text-accent">
+              <div className="text-gradient font-display text-6xl font-extrabold tracking-tight">
                 <CountUp to={s.n} />
                 {s.suffix}
               </div>
@@ -207,11 +209,11 @@ export const LandingPage = observer(function LandingPage() {
         <div className="mx-auto max-w-6xl px-5">
           <Reveal>
             <p className="text-sm font-semibold uppercase tracking-wider text-accent">How it works</p>
-            <h2 className="mt-3 max-w-2xl font-display text-4xl font-bold tracking-tight">From topic to finished reel in seven steps, with you in control.</h2>
+            <h2 className="mt-3 max-w-2xl font-display text-4xl font-extrabold tracking-tight md:text-5xl">From topic to finished reel in seven steps, with you in control.</h2>
           </Reveal>
           <ol className="relative mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map(({ icon: Icon, title, text, sample }, i) => (
-              <Reveal as="li" key={title} delay={(i % 4) * 90} className="group relative rounded-2xl border border-line/[0.07] bg-ink-950 p-5 transition duration-300 hover:-translate-y-1 hover:border-mint-500/40 hover:shadow-[0_20px_44px_-22px_rgba(13,148,136,0.5)]">
+              <Reveal as="li" key={title} delay={(i % 4) * 90} className="group relative rounded-2xl border border-line/[0.07] bg-ink-950 p-5 transition duration-300 hover:-translate-y-1 hover:border-mint-500/50 hover:shadow-[0_24px_50px_-24px_rgba(139,92,246,0.6)]">
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-mint-400/15 text-accent transition group-hover:scale-110 group-hover:rotate-[-6deg]">
                     <Icon className="h-5 w-5" />
@@ -223,7 +225,7 @@ export const LandingPage = observer(function LandingPage() {
                 <div className="mt-4 rounded-lg bg-line/[0.05] px-3 py-2 font-mono text-[11px] text-ink-300">{sample}</div>
               </Reveal>
             ))}
-            <Reveal as="li" delay={270} className="flex flex-col items-start justify-center rounded-2xl bg-mint-600 p-6 text-white">
+            <Reveal as="li" delay={270} className="flex flex-col items-start justify-center rounded-2xl bg-brand p-6 text-white shadow-glow">
               <Wand2 className="h-7 w-7" />
               <p className="mt-3 font-display text-xl font-bold">All of it in one place.</p>
               <Link to={primary.to} className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold underline-offset-4 hover:underline">
@@ -238,7 +240,7 @@ export const LandingPage = observer(function LandingPage() {
         <div className="mx-auto max-w-6xl px-5">
           <Reveal>
             <p className="text-sm font-semibold uppercase tracking-wider text-accent">Why {BRAND.name}</p>
-            <h2 className="mt-3 max-w-2xl font-display text-4xl font-bold tracking-tight">Looks like a production team made it.</h2>
+            <h2 className="mt-3 max-w-2xl font-display text-4xl font-extrabold tracking-tight md:text-5xl">Looks like a production team made it.</h2>
           </Reveal>
           <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, tone, title, text }, i) => (
@@ -259,13 +261,13 @@ export const LandingPage = observer(function LandingPage() {
         <div className="relative mx-auto max-w-6xl px-5">
           <Reveal>
             <p className="text-sm font-semibold uppercase tracking-wider text-accent">One reel, both platforms</p>
-            <h2 className="mt-3 max-w-2xl font-display text-4xl font-bold tracking-tight">Make it for Instagram, YouTube Shorts, or both.</h2>
-            <p className="mt-3 max-w-2xl text-ink-400">Each app covers the screen with its own buttons and captions. Motion Mind lays the text out for the one you pick and renders a separate video for each.</p>
+            <h2 className="mt-3 max-w-2xl font-display text-4xl font-extrabold tracking-tight md:text-5xl">Make it for Instagram, YouTube Shorts, or both.</h2>
+            <p className="mt-3 max-w-2xl text-ink-400">Pick where the reel is going. The closing line and end card say follow, subscribe or both, and you export the video for each platform you chose.</p>
           </Reveal>
           <div className="mt-10 grid gap-5 md:max-w-xl">
             {[
-              { name: 'Instagram Reels', logo: <InstagramIcon className="h-9 w-9" />, cta: 'follow', points: ['Captions sit above the Reels caption area', 'End card: follow @yourhandle', 'Cover with 4:5 and 1:1 profile-grid guides'] },
-              { name: 'YouTube Shorts', logo: <YouTubeIcon className="h-9 w-9" />, cta: 'subscribe', points: ['Text kept clear of the Shorts title and buttons', 'End card: subscribe @yourhandle', 'The voice script closes with a subscribe line'] },
+              { name: 'Instagram Reels', logo: <InstagramIcon className="h-9 w-9" />, cta: 'follow', points: ['End card: follow @yourhandle', 'The voice script closes with a follow line', 'A cover frame picked from any scene'] },
+              { name: 'YouTube Shorts', logo: <YouTubeIcon className="h-9 w-9" />, cta: 'subscribe', points: ['End card: subscribe @yourhandle', 'The voice script closes with a subscribe line', 'The same 1080 × 1920 video, ready for Shorts'] },
             ].map((pl, i) => (
               <Reveal key={pl.name} delay={i * 110} className="card card-hover p-7">
                 <div className="flex items-center gap-3">
@@ -293,7 +295,7 @@ export const LandingPage = observer(function LandingPage() {
         <div className="mx-auto max-w-6xl px-5">
           <Reveal>
             <p className="text-sm font-semibold uppercase tracking-wider text-accent">How Claude fits in</p>
-            <h2 className="mt-3 max-w-2xl font-display text-4xl font-bold tracking-tight">Claude writes it in claude.ai. Nothing to set up.</h2>
+            <h2 className="mt-3 max-w-2xl font-display text-4xl font-extrabold tracking-tight md:text-5xl">Claude writes it in claude.ai. Nothing to set up.</h2>
             <p className="mt-3 max-w-2xl text-ink-400">Research, script and animation are each a prompt you copy and an answer you paste back.</p>
           </Reveal>
           <div className="mt-10 grid gap-5 md:max-w-xl">
@@ -317,7 +319,7 @@ export const LandingPage = observer(function LandingPage() {
       <section id="faq" className="py-20">
         <div className="mx-auto max-w-3xl px-5">
           <Reveal>
-            <h2 className="font-display text-4xl font-bold tracking-tight">Questions</h2>
+            <h2 className="font-display text-4xl font-extrabold tracking-tight md:text-5xl">Questions</h2>
           </Reveal>
           <div className="mt-8 divide-y divide-line/[0.08]">
             {FAQ.map(({ q, a }, i) => (
@@ -337,13 +339,14 @@ export const LandingPage = observer(function LandingPage() {
 
       <section className="pb-20">
         <div className="mx-auto max-w-4xl px-5">
-          <Reveal className="relative overflow-hidden rounded-3xl bg-ink-100 px-8 py-16 text-center text-ink-950">
-            <FloatingIcons count={7} tone="text-ink-950/[0.14]" />
+          <Reveal className="relative overflow-hidden rounded-3xl bg-brand px-8 py-16 text-center text-white shadow-glow">
+            <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/15 blur-3xl" aria-hidden />
+            <FloatingIcons count={7} tone="text-white/[0.16]" />
             <div className="relative">
               <LogoMark animated className="mx-auto h-16 w-16" />
-              <h2 className="mt-6 font-display text-4xl font-bold tracking-tight">Your next reel starts with a question.</h2>
+              <h2 className="mt-6 font-display text-4xl font-extrabold tracking-tight md:text-5xl">Your next reel starts with a question.</h2>
               <p className="mx-auto mt-3 max-w-md text-sm opacity-70">Sign in with an emailed code. No password.</p>
-              <Link to={primary.to} className="group mt-8 inline-flex items-center gap-2 rounded-xl bg-mint-400 px-6 py-3.5 font-semibold text-ink-100 transition hover:-translate-y-0.5 hover:bg-mint-300">
+              <Link to={primary.to} className="group mt-8 inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 font-semibold text-[#4c1d95] transition hover:-translate-y-0.5 hover:bg-violet-50">
                 {primary.label} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
               </Link>
             </div>

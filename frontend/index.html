@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Motion Mind</title>
     <script>
-      try { if (localStorage.getItem('mm-theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+      try { document.documentElement.dataset.theme = localStorage.getItem('mm-theme') === 'light' ? 'light' : 'dark'; } catch (e) {}
     </script>
   </head>
   <body class="bg-ink-950 text-ink-100 antialiased">

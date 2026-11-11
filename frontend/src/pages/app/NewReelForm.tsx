@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Gauge, Sparkles } from 'lucide-react';
-import { ALL_PLATFORMS, type Platform, type QualityTier } from '@motionmind/shared';
+import { Clock, Sparkles } from 'lucide-react';
+import { ALL_PLATFORMS, type Platform } from '@motionmind/shared';
 import { PlatformPicker } from '../../components/PlatformPicker';
 import { useStores } from '../../stores/RootStore';
 import { Button } from '../../components/ui';
@@ -24,7 +24,6 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
   const nav = useNavigate();
   const [topic, setTopic] = useState(initialTopic);
   const [duration, setDuration] = useState(60);
-  const [tier, setTier] = useState<QualityTier>('standard');
   const [platforms, setPlatforms] = useState<Platform[]>([...ALL_PLATFORMS]);
   const [busy, setBusy] = useState(false);
 
@@ -34,7 +33,7 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
     if (!t) return;
     setBusy(true);
     try {
-      const p = await projects.create({ title: t.length > 80 ? `${t.slice(0, 77)}…` : t, topic: t, durationSec: duration, qualityTier: tier, platforms });
+      const p = await projects.create({ title: t.length > 80 ? `${t.slice(0, 77)}…` : t, topic: t, durationSec: duration, qualityTier: 'standard', platforms });
       toasts.push('success', 'Project created.');
       nav(`/app/projects/${p.id}`);
     } catch (err) {
@@ -69,15 +68,6 @@ export function NewReelForm({ autoFocus, initialTopic = '' }: { autoFocus?: bool
                   {d} seconds
                 </option>
               ))}
-            </select>
-          </div>
-          <div className="relative">
-            <Gauge className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-400" />
-            <select aria-label="Quality" className={pill} value={tier} onChange={(e) => setTier(e.target.value as QualityTier)}>
-              <option value="draft">Draft (cheapest)</option>
-              <option value="standard">Standard</option>
-              <option value="premium">Premium</option>
-              <option value="cinematic">Cinematic</option>
             </select>
           </div>
           <PlatformPicker compact value={platforms} onChange={setPlatforms} />

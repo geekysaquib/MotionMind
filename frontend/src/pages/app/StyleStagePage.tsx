@@ -74,7 +74,7 @@ export const StyleStagePage = observer(function StyleStagePage() {
               aria-label={`Use the ${st.name} style`}
               disabled={busy !== null}
               onClick={() => void pick(id)}
-              className={cn('group overflow-hidden rounded-2xl border bg-white text-left transition hover:shadow-soft disabled:opacity-70 dark:bg-ink-900', selected ? 'border-accent ring-2 ring-accent/40' : 'border-line/10')}
+              className={cn('group overflow-hidden rounded-2xl border bg-ink-900 text-left transition hover:shadow-soft disabled:opacity-70', selected ? 'border-accent ring-2 ring-accent/40' : 'border-line/10')}
             >
               <div className="relative flex h-36 items-end p-4" style={{ background: st.swatch[0] }}>
                 <div className="absolute right-4 top-4 h-10 w-10 rounded-full" style={{ background: st.swatch[1] }} />
