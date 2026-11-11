@@ -67,4 +67,12 @@ describe('extractAnimation', () => {
     expect(() => extractAnimation(HTML.replace('</body>', '<script>fetch("https://x.example")</script></body>'))).toThrow(/network/);
     expect(() => extractAnimation(HTML.replace('</head>', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter"></head>'))).not.toThrow();
   });
+
+  it('marks the animation out of date when only the words inside a scene move', () => {
+    const track = { path: 'p', fileName: 'v.mp3', mime: 'audio/mpeg', durationSec: 10, peaks: [] };
+    const words = (shift: number) => NARR.join(' ').split(/\s+/).map((_, i) => [i * 0.5 + shift, i * 0.5 + 0.4 + shift] as [number, number]);
+    const key = (shift: number) => timingKey(reelTimeline(SCRIPT, { upload: { track, cuts: [5.5], wordTimes: words(shift), fitKey: narrationKey(NARR) }, music: null }));
+    expect(key(0)).toBe(key(0.02));
+    expect(key(0)).not.toBe(key(0.5));
+  });
 });

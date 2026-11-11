@@ -97,9 +97,14 @@ export function reelTimeline(script: Pick<ReelScript, 'beats'>, editor?: ReelEdi
   return { scenes, storyEnd, duration: r2(storyEnd + END_CARD_SEC), source };
 }
 
-/** A short fingerprint of the timing, to tell when the animation no longer matches the voice. */
+/**
+ * A short fingerprint of the timing, to tell when the animation no longer matches the voice: the scene times, and when every
+ * word is spoken (to a tenth of a second), so a fit that only moves words inside a scene also marks the animation out of date.
+ */
 export function timingKey(t: ReelTimeline): string {
-  return [t.source, ...t.scenes.map((s) => `${s.start.toFixed(1)}-${s.end.toFixed(1)}`)].join('|');
+  let h = 5381;
+  for (const s of t.scenes) for (const w of s.words) h = ((h << 5) + h + Math.round(w.start * 10) * 31 + Math.round(w.end * 10)) | 0;
+  return [t.source, ...t.scenes.map((s) => `${s.start.toFixed(1)}-${s.end.toFixed(1)}`), (h >>> 0).toString(36)].join('|');
 }
 
 /** Script sources the animation may load: GSAP and friends from public CDNs, and fonts. Nothing else. */
