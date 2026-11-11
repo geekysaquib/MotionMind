@@ -18,6 +18,10 @@ const COVER: CoverSettings = { scene: 1 };
 
 class FakeRenderer implements Renderer {
   stills: { html: string; at: number }[] = [];
+  removed: string[] = [];
+  async removeProject(userId: string, projectId: string) {
+    this.removed.push(`${userId}:${projectId}`);
+  }
   start(): never {
     throw new Error('not used');
   }
@@ -111,5 +115,12 @@ describe('cover render', () => {
     const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/cover/render`, headers: H, payload: { cover: COVER } });
     expect(res.statusCode).toBe(500);
     expect(res.json().message).toBe('The cover could not be made: Chrome did not start');
+  });
+
+  it("is told to delete the project's videos and covers when the project is deleted", async () => {
+    const renderer = new FakeRenderer();
+    const { app, id, ownerId } = await setup(renderer);
+    expect((await app.inject({ method: 'DELETE', url: `/api/projects/${id}`, headers: H })).statusCode).toBe(200);
+    expect(renderer.removed).toEqual([`${ownerId}:${id}`]);
   });
 });

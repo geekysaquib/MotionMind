@@ -155,6 +155,23 @@ describe('reel editor routes', () => {
     expect(b).toBeTruthy();
   });
 
+  it("deletes all of a project's files from storage when the project is deleted, and nobody else's", async () => {
+    const { app, audio, id } = await setup();
+    const voice = (await upload(app, id, 'voice', mp3())).json().track;
+    const music = (await upload(app, id, 'music', mp3())).json().track;
+    // A stray file in the project's folder (for example from a replaced recording that failed to delete) goes too.
+    await audio.put(`u1/${id}/stray.mp3`, mp3());
+    // Another project of the same person keeps its files.
+    const other = (await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'Other', topic: 'x', durationSec: 30, qualityTier: 'draft' } })).json().project.id as string;
+    const keep = (await upload(app, other, 'voice', mp3())).json().track;
+    await app.inject({ method: 'PUT', url: `/api/projects/${id}/editor`, headers: H, payload: { editor: { ...editorFor(voice), music: { track: { path: music.path, fileName: 'm.mp3', mime: 'audio/mpeg', durationSec: 10 }, volume: 0.2 } } } });
+    expect((await app.inject({ method: 'DELETE', url: `/api/projects/${id}`, headers: OTHER })).statusCode).toBe(404);
+    expect((await audio.urls([voice.path]))[0]).toBeTruthy();
+    expect((await app.inject({ method: 'DELETE', url: `/api/projects/${id}`, headers: H })).statusCode).toBe(200);
+    expect(await audio.urls([voice.path, music.path, `u1/${id}/stray.mp3`])).toEqual(['', '', '']);
+    expect((await audio.urls([keep.path]))[0]).toBeTruthy();
+  });
+
   it("lays the user's own recording under the animation when it is exported", async () => {
     const { app, data, audio, id } = await setup();
     const track = (await upload(app, id, 'voice', mp3())).json().track;

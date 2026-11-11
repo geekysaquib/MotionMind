@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Platform } from '@motionmind/shared';
@@ -24,7 +24,9 @@ export interface Renderer {
   start(userId: string, projectId: string, input: HtmlRenderInput, platform?: Platform): RenderJob;
   latest(userId: string, projectId: string, platform?: Platform): RenderJob | null;
   /** One frame of the animation at `at` seconds, as a PNG (the cover). Returns its file name. */
-  still(html: string, at: number): Promise<string>;
+  still(html: string, at: number, projectId?: string): Promise<string>;
+  /** Deletes the finished videos and cover images of a project, and forgets its jobs. */
+  removeProject?(userId: string, projectId: string): Promise<void>;
   /** Absolute path of a finished render, by file name; null if unknown. */
   filePath(file: string): string | null;
 }
@@ -34,7 +36,8 @@ export const RENDERS_DIR = path.resolve(here, '../../../renders');
 
 export class HyperFramesRenderer implements Renderer {
   private jobs = new Map<string, RenderJob>();
-  private stills = new Set<string>();
+  /** Cover images made so far, by file name, with the project each belongs to (when known). */
+  private stills = new Map<string, string | null>();
 
   start(userId: string, projectId: string, input: HtmlRenderInput, platform: Platform = 'instagram'): RenderJob {
     const running = this.latest(userId, projectId, platform);
@@ -54,10 +57,26 @@ export class HyperFramesRenderer implements Renderer {
     return this.stills.has(file) || [...this.jobs.values()].some((j) => j.file === file) ? path.join(RENDERS_DIR, file) : null;
   }
 
-  async still(html: string, at: number) {
+  async removeProject(userId: string, projectId: string) {
+    const files: string[] = [];
+    for (const [key, job] of this.jobs) {
+      if (!key.startsWith(`${userId}:${projectId}:`)) continue;
+      this.jobs.delete(key);
+      if (job.file) files.push(job.file);
+    }
+    for (const [file, owner] of this.stills) {
+      if (owner === projectId) {
+        this.stills.delete(file);
+        files.push(file);
+      }
+    }
+    await Promise.all(files.map((f) => rm(path.join(RENDERS_DIR, f), { force: true })));
+  }
+
+  async still(html: string, at: number, projectId: string | null = null) {
     await mkdir(RENDERS_DIR, { recursive: true });
     const file = await snapshotHtml(html, at, RENDERS_DIR);
-    this.stills.add(file);
+    this.stills.set(file, projectId);
     return file;
   }
 }
