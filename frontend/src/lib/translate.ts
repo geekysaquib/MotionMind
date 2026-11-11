@@ -7,12 +7,24 @@ const HINTS: Record<string, string> = {
   Hinglish: 'natural, spoken Hinglish: Hindi written in the Roman alphabet, the way people text, with English words where people use them',
 };
 
-/** A prompt that turns the scene lines into another language, one line per scene, as a JSON array. */
-export function translatePrompt(lines: string[], language: string, note = ''): string {
-  const target = HINTS[language] ?? `natural, spoken ${language}, in that language's own script (keep common English tech words as they are)`;
+const TTS_RULES = [
+  'These lines will be read aloud by a text-to-speech voice that mispronounces words written in a script it does not expect.',
+  "So write EVERY word that is not in the target language's own script (English words, brand and company names, acronyms, units) in the target script, spelled exactly as it is pronounced.",
+  'Examples for Hindi: CDN -> सीडीएन, OTP -> ओ टी पी, server -> सर्वर, Aadhaar -> आधार, IRCTC -> आई आर सी टी सी, PRS -> पी आर एस, 87 percent -> सत्तासी परसेंट.',
+  'Spell acronyms letter by letter with spaces, and write numbers as words. Keep sentence punctuation, so the voice pauses at the end of each sentence.',
+];
+
+/**
+ * A prompt that turns the scene lines into another language (or, with `tts`, rewrites them so a text-to-speech voice says
+ * every word right), one line per scene, as a JSON array.
+ */
+export function translatePrompt(lines: string[], language: string, note = '', tts = false): string {
+  const same = language === '';
+  const target = same ? "the language the lines are written in, in that language's own script" : (HINTS[language] ?? `natural, spoken ${language}, in that language's own script (keep common English tech words as they are)`);
   return [
-    `Translate these ${lines.length} voiceover lines for a short Instagram reel into ${target}.`,
+    same ? `Rewrite these ${lines.length} voiceover lines for a short Instagram reel, keeping their language and meaning.` : `Translate these ${lines.length} voiceover lines for a short Instagram reel into ${target}.`,
     'They are read aloud, so keep each line short and easy to say. Keep the meaning, names and numbers.',
+    ...(tts ? TTS_RULES : []),
     `Reply with ONLY a JSON array of exactly ${lines.length} strings, in the same order, one per line. No notes, no markdown.`,
     '',
     JSON.stringify(lines, null, 2),

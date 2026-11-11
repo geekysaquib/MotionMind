@@ -20,15 +20,22 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
   const original = script.beats.map((b) => b.narration.trim());
   const [choice, setChoice] = useState<string>(AS_WRITTEN);
   const [other, setOther] = useState('');
-  const language = choice === OTHER ? other.trim() : choice;
+  const [tts, setTts] = useState(false);
+  const language = choice === OTHER ? other.trim() : choice === AS_WRITTEN ? '' : choice;
   // Translations are kept per language for this visit, so switching back and forth does not ask Claude again.
-  const [translated, setTranslated] = useState<Record<string, string[]>>({});
+  const [translated, setTranslated] = useState<Record<string, { lines: string[]; closing: string }>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const showing = choice === AS_WRITTEN ? original : language ? (translated[language] ?? null) : null;
+  const key = `${language}|${tts ? 'tts' : ''}`;
+  const changed = choice !== AS_WRITTEN || tts;
+  const done = translated[key] ?? null;
+  const ready = choice !== OTHER || Boolean(language);
+  const showing = !changed ? original : ready ? (done?.lines ?? null) : null;
   const closingLanguage = choice === 'English' ? 'en' : choice === 'Hindi' ? 'hi' : choice === 'Hinglish' ? 'hinglish' : choice === AS_WRITTEN ? (profile.profile?.language ?? 'hinglish') : null;
-  const closing = closingLine(closingLanguage ?? 'en', followName(profile.profile, BRAND.name), project.platforms);
+  const ownClosing = closingLine(closingLanguage ?? 'en', followName(profile.profile, BRAND.name), project.platforms);
+  const sourceClosing = closingLine(profile.profile?.language ?? 'hinglish', followName(profile.profile, BRAND.name), project.platforms);
+  const closing = changed && done ? done.closing : ownClosing;
   const fullText = showing ? [...showing, closing].join('\n\n') : '';
   const words = fullText.split(/\s+/).filter(Boolean).length;
 
@@ -42,13 +49,14 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
   }
 
   async function useInReel() {
-    if (!showing || choice === AS_WRITTEN) return;
+    if (!showing || !changed) return;
     setBusy(true);
     setError(null);
     try {
       await projects.saveScript(project.id, { ...script, beats: script.beats.map((b, i) => ({ ...b, narration: showing[i]! })) });
-      toasts.push('success', `The reel's narration is now in ${language}. Record it, upload it, and the fit follows.`);
+      toasts.push('success', 'The narration is updated. Make the voice from it, upload it, and the fit follows.');
       setChoice(AS_WRITTEN);
+      setTts(false);
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -88,6 +96,16 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
         </div>
       </div>
 
+      <label className="mt-4 flex items-start gap-2 rounded-xl border border-line/10 bg-line/[0.03] p-3 text-sm">
+        <input type="checkbox" className="mt-1" checked={tts} onChange={(e) => setTts(e.target.checked)} />
+        <span>
+          <span className="font-medium">Spell it for text-to-speech</span>
+          <span className="block text-xs text-ink-400">
+            Voices for Hindi and other Indian languages say English words badly (CDN, OTP, IRCTC). Claude rewrites them in your language's script, the way they sound: "CDN" becomes "सीडीएन". Use this before you generate the voice.
+          </span>
+        </span>
+      </label>
+
       {showing ? (
         <>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
@@ -95,7 +113,7 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
               {words} words, about {Math.max(1, Math.round(words / 2.5))} seconds spoken
             </span>
             <div className="flex flex-wrap gap-2">
-              {choice !== AS_WRITTEN && (
+              {changed && (
                 <Button variant="secondary" loading={busy} onClick={() => void useInReel()}>
                   Use in the reel
                 </Button>
@@ -125,10 +143,10 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
                 </Button>
               </div>
               <p className="mt-1 text-sm leading-relaxed">{closing}</p>
-              {closingLanguage === null && <p className="mt-1 text-xs text-ink-400">This closing line is in English. Translate it yourself if you need it in {language}.</p>}
+              {closingLanguage === null && !done && <p className="mt-1 text-xs text-ink-400">This closing line is in English. Translate it yourself if you need it in {language}.</p>}
             </li>
           </ol>
-          {choice === AS_WRITTEN ? (
+          {!changed ? (
             <p className="mt-3 text-xs text-ink-400">
               Want to change a line? Edit it on the{' '}
               <Link to={`/app/projects/${project.id}/storyboard`} className="text-accent hover:underline">
@@ -138,19 +156,22 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
             </p>
           ) : (
             <p className="mt-3 text-xs text-ink-400">
-              This translation is only for copying until you press "Use in the reel". That replaces the narration, and the words the animation is timed to, so record it in {language}.
+              This translation is only for copying until you press "Use in the reel". That replaces the narration, and the words the animation is timed to, so record or generate the voice from it.
             </p>
           )}
         </>
       ) : (
         <div className="mt-4">
-          {language ? (
+          {ready ? (
             <ClaudeAiPanel
-              title={`Translate it to ${language} in claude.ai`}
+              title={tts ? `Spell it for text-to-speech in claude.ai${language ? ` (${language})` : ''}` : `Translate it to ${language} in claude.ai`}
               placeholder='["...", "..."]'
               logScope="Translate"
-              getPrompt={async (note) => translatePrompt(original, language, note)}
-              onImport={async (text) => setTranslated({ ...translated, [language]: parseTranslation(text, original.length) })}
+              getPrompt={async (note) => translatePrompt([...original, sourceClosing], language, note, tts)}
+              onImport={async (text) => {
+                const all = parseTranslation(text, original.length + 1);
+                setTranslated({ ...translated, [key]: { lines: all.slice(0, -1), closing: all[all.length - 1]! } });
+              }}
             />
           ) : (
             <p className="text-sm text-ink-400">Type the language above.</p>

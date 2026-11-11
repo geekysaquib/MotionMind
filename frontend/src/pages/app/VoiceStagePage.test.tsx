@@ -134,7 +134,7 @@ describe('VoiceStagePage', () => {
     });
     expect(writes[0]).toContain('into natural, spoken Tamil');
     expect(writes[0]).toContain('Ek second.');
-    fireEvent.change(screen.getByLabelText("Claude's answer"), { target: { value: '["ஒரு வினாடி.", "என்பிசிஐ."]' } });
+    fireEvent.change(screen.getByLabelText("Claude's answer"), { target: { value: '["ஒரு வினாடி.", "என்பிசிஐ.", "ஃபாலோ செய்யுங்கள்."]' } });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Use this answer' }));
     });
@@ -143,6 +143,29 @@ describe('VoiceStagePage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Use in the reel' }));
     });
     expect(store.projects.items[0]!.script!.beats.map((b) => b.narration)).toEqual(['ஒரு வினாடி.', 'என்பிசிஐ.']);
+  });
+
+  it('spells English words for text-to-speech: the prompt carries the rules and the closing line, and the answer replaces the narration', async () => {
+    const writes: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t: string) => void writes.push(t) } });
+    const { store } = await setup();
+    fireEvent.click(screen.getByLabelText(/Spell it for text-to-speech/));
+    expect(screen.getByText(/Spell it for text-to-speech in claude.ai/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }));
+    });
+    expect(writes[0]).toContain('CDN -> सीडीएन');
+    expect(writes[0]).toContain('exactly 3 strings');
+    expect(writes[0]).toContain('Ek second.');
+    fireEvent.change(screen.getByLabelText("Claude's answer"), { target: { value: '["एक सेकंड।", "एन पी सी आई।", "फ़ॉलो करें।"]' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use this answer' }));
+    });
+    expect(screen.getByText('फ़ॉलो करें।')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use in the reel' }));
+    });
+    expect(store.projects.items[0]!.script!.beats.map((b) => b.narration)).toEqual(['एक सेकंड।', 'एन पी सी आई।']);
   });
 
   it('takes any language by name', async () => {

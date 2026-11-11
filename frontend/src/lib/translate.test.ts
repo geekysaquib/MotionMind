@@ -15,4 +15,10 @@ describe('translate', () => {
     expect(() => parseTranslation('["a"]', 2)).toThrow(TranslationError);
     expect(() => parseTranslation('nope', 2)).toThrow(TranslationError);
   });
+  it('adds the text-to-speech spelling rules, and can rewrite in the same language', () => {
+    const p = translatePrompt(['Ek.', 'Do.'], '', '', true);
+    expect(p).toContain('Rewrite these 2 voiceover lines');
+    expect(p).toContain('OTP -> ओ टी पी');
+    expect(translatePrompt(['Ek.'], 'Hindi')).not.toContain('text-to-speech');
+  });
 });
