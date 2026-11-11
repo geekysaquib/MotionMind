@@ -44,6 +44,7 @@ async function setup(opts: { editor?: ReelEditor | null; fitFails?: boolean } = 
         if (opts.fitFails) throw new Error('no speech');
         return { project: { ...created, script: SCRIPT, editor: { upload: fitted, music: null } } as Project, urls: { voice: 'v.mp3' }, fit: 'speech' as const, note: null };
       },
+      saveScript: async (_id: string, script: ReelScript) => ({ ...created, script }) as Project,
       animationFor: async () => ({ animation: null, timeline: null, stale: false }),
     }) as unknown as ClaudeService;
   const Layout = observer(() => <Outlet context={store.projects.byId(created.id)} />);
@@ -120,5 +121,34 @@ describe('VoiceStagePage', () => {
     const up = { track: { path: 'u/v.mp3', fileName: 'v.mp3', mime: 'audio/mpeg', durationSec: 5, peaks }, cuts: [3], fitKey: narrationKey(['Old line.', 'NPCI.']), fit: 'speech' as const };
     await setup({ editor: { upload: up, music: null } });
     expect(screen.getByText('Script changed since the fit')).toBeTruthy();
+  });
+
+  it('shows the script in another language: a prompt for claude.ai, then the pasted translation, which can replace the narration', async () => {
+    const writes: string[] = [];
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (t: string) => void writes.push(t) } });
+    const { store } = await setup();
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'Tamil' } });
+    expect(screen.getByText('Translate it to Tamil in claude.ai')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }));
+    });
+    expect(writes[0]).toContain('into natural, spoken Tamil');
+    expect(writes[0]).toContain('Ek second.');
+    fireEvent.change(screen.getByLabelText("Claude's answer"), { target: { value: '["ஒரு வினாடி.", "என்பிசிஐ."]' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use this answer' }));
+    });
+    expect(screen.getByText('ஒரு வினாடி.')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Use in the reel' }));
+    });
+    expect(store.projects.items[0]!.script!.beats.map((b) => b.narration)).toEqual(['ஒரு வினாடி.', 'என்பிசிஐ.']);
+  });
+
+  it('takes any language by name', async () => {
+    await setup();
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'Other language' } });
+    fireEvent.change(screen.getByLabelText('Language name'), { target: { value: 'Malayalam' } });
+    expect(screen.getByText('Translate it to Malayalam in claude.ai')).toBeTruthy();
   });
 });

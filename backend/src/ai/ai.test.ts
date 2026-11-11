@@ -102,6 +102,13 @@ describe('research', () => {
     const prompt = (await app.inject({ method: 'GET', url: `/api/projects/${id}/research/prompt`, headers: H })).json().prompt as string;
     expect(prompt).toContain('Research this topic for a reel: How UPI works');
     expect(prompt).toContain('"facts"');
+    expect(prompt).not.toContain('EXTRA INSTRUCTIONS');
+    const withNote = (await app.inject({ method: 'GET', url: `/api/projects/${id}/research/prompt?note=${encodeURIComponent('Focus on the 2023 rules.')}`, headers: H })).json().prompt as string;
+    expect(withNote).toContain(prompt);
+    expect(withNote).toContain('EXTRA INSTRUCTIONS FROM THE CREATOR');
+    expect(withNote.trimEnd().endsWith('Focus on the 2023 rules.')).toBe(true);
+    const script = (await app.inject({ method: 'GET', url: `/api/projects/${id}/script/prompt?note=${encodeURIComponent('Keep it under 40 seconds')}`, headers: H })).json().prompt as string;
+    expect(script).toContain('Keep it under 40 seconds');
     const pasted = { ...RESEARCH, facts: [...RESEARCH.facts, { claim: 'Bad index', status: 'single_source', sources: [7] }] };
     const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/research/import`, headers: H, payload: { text: `Sure!\n${JSON.stringify(pasted)}` } });
     expect(res.statusCode).toBe(200);

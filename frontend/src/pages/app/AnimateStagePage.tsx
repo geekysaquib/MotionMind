@@ -95,7 +95,7 @@ export const AnimateStagePage = observer(function AnimateStagePage() {
           chatHint="Use a new chat. Claude's answer is long (one HTML file); wait until it has finished, then copy all of it."
           placeholder="<!doctype html> ... </html>"
           logScope="Animate"
-          getPrompt={() => api.animationPrompt(project.id)}
+          getPrompt={(note) => api.animationPrompt(project.id, note)}
           onImport={async (text) => {
             const p = await api.importAnimation(project.id, text);
             projects.upsert(p);

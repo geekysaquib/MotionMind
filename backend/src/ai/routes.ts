@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { noteOf, withNote } from './promptNote';
 import { z } from 'zod';
 import { z as zv4 } from 'zod/v4';
 import type { AppDeps } from '../app';
@@ -80,7 +81,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   api.get('/projects/:id/research/prompt', async (req, reply) => {
     const project = await projectFor(req, reply);
     if (!project) return reply;
-    return { prompt: manualResearchPrompt({ topic: project.topic! }) };
+    return { prompt: withNote(manualResearchPrompt({ topic: project.topic! }), noteOf(req.query)) };
   });
 
   api.post('/projects/:id/research/import', async (req, reply) => {
@@ -109,7 +110,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   api.get('/projects/:id/script/prompt', async (req, reply) => {
     const project = await projectFor(req, reply);
     if (!project) return reply;
-    return { prompt: manualReelPrompt(await briefFor(req.userId, project, styleOf((req.query as { style?: unknown }).style))) };
+    return { prompt: withNote(manualReelPrompt(await briefFor(req.userId, project, styleOf((req.query as { style?: unknown }).style))), noteOf(req.query)) };
   });
 
   api.post('/projects/:id/script/import', async (req, reply) => {

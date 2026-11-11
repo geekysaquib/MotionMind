@@ -125,7 +125,7 @@ export const TrendingPanel = observer(function TrendingPanel() {
               placeholder='{ "ideas": [ { "topic": "...", "hook": "...", "seconds": 45, "why": "..." } ] }'
               disabled={!trending}
               logScope="Trending"
-              getPrompt={() => api.trendingPrompt(lang)}
+              getPrompt={(note) => api.trendingPrompt(lang, note)}
               onImport={async (text) => {
                 const ideas = await api.importTrendingIdeas(text);
                 keep(trending?.date ?? new Date().toISOString().slice(0, 10), ideas);

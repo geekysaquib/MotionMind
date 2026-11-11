@@ -87,9 +87,16 @@ export function HtmlReelPlayer({ html, duration, clips = [], gsapUrl }: { html: 
       }
       clips.forEach((c, i) => {
         const a = audios.current[i];
-        if (a && a.paused && now >= c.at && now < c.at + 0.1) {
-          a.currentTime = c.from ?? 0;
-          void a.play().catch(() => undefined);
+        if (!a || now < c.at) return;
+        const want = (c.from ?? 0) + (now - c.at);
+        if (a.paused) {
+          if (now < c.at + 0.3 || a.ended === false) {
+            a.currentTime = want;
+            void a.play().catch(() => undefined);
+          }
+        } else if (Math.abs(a.currentTime - want) > 0.12) {
+          // The sound started late or the page stuttered: the picture follows the sound, so bring the sound back to the picture.
+          a.currentTime = want;
         }
       });
       setT(now);

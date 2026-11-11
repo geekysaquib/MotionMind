@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
+import { noteOf, withNote } from '../ai/promptNote';
 import { z } from 'zod';
 import type { AppDeps } from '../app';
 import { PastedScriptError } from '../ai/reelPrompt';
@@ -34,7 +35,7 @@ export function registerDiscoverRoutes(api: FastifyInstance, deps: AppDeps) {
     const q = langSchema.safeParse(req.query);
     if (!q.success) return reply.code(400).send({ error: 'invalid_language', message: firstIssue(q.error) });
     try {
-      return { prompt: trendingPrompt(await fetchTrending(q.data.lang, fetchImpl)) };
+      return { prompt: withNote(trendingPrompt(await fetchTrending(q.data.lang, fetchImpl)), noteOf(req.query)) };
     } catch (err) {
       return sendError(err, reply);
     }

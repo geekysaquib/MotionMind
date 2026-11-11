@@ -9,6 +9,7 @@ import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
 import { cn } from '../../lib/cn';
 import { pickedStyle, rememberStyle } from '../../lib/pickedStyle';
+import { StyleSample } from '../../components/StyleSample';
 
 /**
  * Style stage: which rulebook Claude follows when it animates the reel. Nothing is drawn by Motion Mind itself:
@@ -76,11 +77,8 @@ export const StyleStagePage = observer(function StyleStagePage() {
               onClick={() => void pick(id)}
               className={cn('group overflow-hidden rounded-2xl border bg-ink-900 text-left transition hover:shadow-soft disabled:opacity-70', selected ? 'border-accent ring-2 ring-accent/40' : 'border-line/10')}
             >
-              <div className="relative flex h-36 items-end p-4" style={{ background: st.swatch[0] }}>
-                <div className="absolute right-4 top-4 h-10 w-10 rounded-full" style={{ background: st.swatch[1] }} />
-                <span className="text-2xl font-black tracking-tight" style={{ color: st.swatch[1] === '#FFD60A' || st.swatch[0].startsWith('#F') ? '#0B0B0C' : '#F2F4F8' }}>
-                  {st.name}
-                </span>
+              <div className="relative flex h-72 items-center justify-center overflow-hidden" style={{ background: `linear-gradient(160deg, ${st.swatch[0]}, ${st.swatch[1]}55)` }}>
+                <StyleSample id={id} name={st.name} className="h-[88%] rounded-2xl shadow-[0_18px_40px_-14px_rgba(0,0,0,.6)] ring-1 ring-white/20" />
                 <div className="absolute left-3 top-3 flex gap-2">
                   {rank === 0 && !recent.includes(id) && (
                     <Badge tone="mint">
@@ -90,14 +88,15 @@ export const StyleStagePage = observer(function StyleStagePage() {
                   {recent.includes(id) && <Badge>Used recently</Badge>}
                 </div>
                 {selected && (
-                  <div className="absolute bottom-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-accent text-white">
+                  <div className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-accent text-white">
                     <Check className="h-5 w-5" />
                   </div>
                 )}
               </div>
               <div className="p-4">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold">{st.tagline}</span>
+                  <span className="font-semibold">{st.name}</span>
+                  <span className="text-xs text-ink-400">· {st.tagline}</span>
                   {busy === id && <Spinner label="" />}
                 </div>
                 <p className="mt-2 text-xs text-ink-400">{st.description}</p>

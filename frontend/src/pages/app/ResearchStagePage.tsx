@@ -44,7 +44,7 @@ export const ResearchStagePage = observer(function ResearchStagePage() {
             placeholder='{ "summary": "...", "facts": [...], "sources": [...] }'
             disabled={!project.topic}
             logScope="Research"
-            getPrompt={() => services.claude(() => auth.session?.accessToken ?? null).researchPrompt(project.id)}
+            getPrompt={(note) => services.claude(() => auth.session?.accessToken ?? null).researchPrompt(project.id, note)}
             onImport={(text) => projects.importResearch(project.id, text)}
           />
 

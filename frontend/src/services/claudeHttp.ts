@@ -41,18 +41,18 @@ export interface TrendIdea {
 export interface ClaudeService {
   /** Discover: what people are reading right now, and reel ideas made from it (prompt, then the pasted answer). */
   trending(lang: 'en' | 'hi'): Promise<Trending>;
-  trendingPrompt(lang: 'en' | 'hi'): Promise<string>;
+  trendingPrompt(lang: 'en' | 'hi', note?: string): Promise<string>;
   importTrendingIdeas(text: string): Promise<TrendIdea[]>;
   /** Script: the prompt to copy, then the answer to paste back. */
-  scriptPrompt(projectId: string, style?: StyleId | null): Promise<string>;
+  scriptPrompt(projectId: string, style?: StyleId | null, note?: string): Promise<string>;
   importScript(projectId: string, text: string, style?: StyleId | null): Promise<Project>;
   /** Research: the prompt to copy, the answer to paste back, then the user approves it. */
-  researchPrompt(projectId: string): Promise<string>;
+  researchPrompt(projectId: string, note?: string): Promise<string>;
   importResearch(projectId: string, text: string): Promise<Project>;
   approveResearch(projectId: string): Promise<Project>;
   /** Animate: Claude writes the reel as a HyperFrames composition in claude.ai; the user pastes it back. */
   animationFor(projectId: string): Promise<{ animation: ReelAnimation | null; timeline: ReelTimeline | null; stale: boolean }>;
-  animationPrompt(projectId: string): Promise<string>;
+  animationPrompt(projectId: string, note?: string): Promise<string>;
   importAnimation(projectId: string, text: string): Promise<Project>;
   /** Style: the rulebook Claude animates with. */
   saveStyle(projectId: string, style: StyleId): Promise<Project>;
@@ -72,6 +72,12 @@ export interface ClaudeService {
   saveScript(projectId: string, script: ReelScript): Promise<Project>;
 }
 
+/** `?a=1&b=2` from the values that are set. */
+function query(params: Record<string, string | null | undefined>): string {
+  const q = Object.entries(params).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v!)}`);
+  return q.length ? `?${q.join('&')}` : '';
+}
+
 export function httpClaudeService(baseUrl: string, getToken: () => string | null, fetchImpl: typeof fetch = fetch): ClaudeService {
   async function call<T>(path: string, method = 'GET', body?: unknown) {
     const token = getToken();
@@ -79,13 +85,13 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     return apiRequest<T>(baseUrl, path, { method, body, token, fetchImpl });
   }
   return {
-    scriptPrompt: async (projectId, style) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt${style ? `?style=${style}` : ''}`)).prompt,
+    scriptPrompt: async (projectId, style, note) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt${query({ style, note })}`)).prompt,
     importScript: async (projectId, text, style) => (await call<{ project: Project }>(`/projects/${projectId}/script/import`, 'POST', style ? { text, style } : { text })).project,
-    researchPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt`)).prompt,
+    researchPrompt: async (projectId, note) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt${query({ note })}`)).prompt,
     importResearch: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/research/import`, 'POST', { text })).project,
     approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,
     animationFor: (projectId) => call(`/projects/${projectId}/animation`),
-    animationPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/animation/prompt`)).prompt,
+    animationPrompt: async (projectId, note) => (await call<{ prompt: string }>(`/projects/${projectId}/animation/prompt${query({ note })}`)).prompt,
     importAnimation: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/animation/import`, 'POST', { text })).project,
     saveStyle: async (projectId, style) => (await call<{ project: Project }>(`/projects/${projectId}/style`, 'PUT', { style })).project,
     uploadAudio: (projectId, kind, file, fileName) => {
@@ -107,7 +113,7 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     exportStatus: (projectId) => call(`/projects/${projectId}/export`),
     saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,
     trending: (lang) => call(`/discover/trending?lang=${lang}`),
-    trendingPrompt: async (lang) => (await call<{ prompt: string }>(`/discover/prompt?lang=${lang}`)).prompt,
+    trendingPrompt: async (lang, note) => (await call<{ prompt: string }>(`/discover/prompt${query({ lang, note })}`)).prompt,
     importTrendingIdeas: async (text) => (await call<{ ideas: TrendIdea[] }>(`/discover/import`, 'POST', { text })).ideas,
   };
 }

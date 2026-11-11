@@ -1,4 +1,5 @@
 import { createReadStream } from 'node:fs';
+import { noteOf, withNote } from '../ai/promptNote';
 import { createRequire } from 'node:module';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
@@ -47,7 +48,7 @@ export function registerAnimationRoutes(api: FastifyInstance, deps: AppDeps) {
       logoBase: apiOrigin(),
       platform: both ? 'both' : project.platforms[0] ?? 'instagram',
     });
-    return { prompt, timeline };
+    return { prompt: withNote(prompt, noteOf(req.query)), timeline };
   });
 
   api.post('/projects/:id/animation/import', async (req, reply) => {

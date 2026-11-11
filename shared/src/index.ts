@@ -8,3 +8,4 @@ export * from './cover';
 export * from './footage';
 export * from './animation';
 export * from './alignScript';
+export * from './alignWords';

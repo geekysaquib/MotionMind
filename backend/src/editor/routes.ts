@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
-import { alignScript, clipToLoud, MAX_AUDIO_SEC, MIN_SCENE_SEC, narrationKey, runsFromPeaks, STAGES, trimWindow, type Project, type ReelEditor, type SpeechRun } from '@motionmind/shared';
+import { alignScript, clipToLoud, placeWords, sceneStartsFromWords, MAX_AUDIO_SEC, MIN_SCENE_SEC, narrationKey, runsFromPeaks, STAGES, trimWindow, type Project, type ReelEditor, type SpeechRun } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 import { cleanFileName, sniffAudio } from './audioFormat';
@@ -170,6 +170,7 @@ export function registerEditorRoutes(api: FastifyInstance, deps: AppDeps) {
     const end = up.closingAt ?? win.end;
 
     let runs: SpeechRun[] = [];
+    let heardWords: { text: string; start: number; end: number }[] = [];
     let fit: 'speech' | 'loudness' = 'loudness';
     let note: string | null = null;
     const tools = deps.footage?.tools;
@@ -183,6 +184,7 @@ export function registerEditorRoutes(api: FastifyInstance, deps: AppDeps) {
         if (heard.words && heard.words.length >= Math.max(4, Math.round(total / 8))) {
           runs = clipToLoud(heard.words.map((w) => ({ start: w.start, end: w.end })), runsFromPeaks(up.track.peaks ?? []));
           fit = 'speech';
+          heardWords = heard.words;
         } else note = heard.note ?? 'The speech could not be recognised, so the fit uses the loudness of your recording.';
       } catch (err) {
         req.log.warn({ err }, 'speech recognition failed, fitting from loudness');
@@ -193,7 +195,11 @@ export function registerEditorRoutes(api: FastifyInstance, deps: AppDeps) {
     } else note = 'whisper.cpp is not set up, so the fit uses the loudness of your recording.';
     if (!runs.length) runs = runsFromPeaks(up.track.peaks ?? []);
 
-    const result = alignScript(narrations, runs, { start: win.start, end });
+    // Matching the heard words to the script's words places a scene exactly where it is spoken, even when text-to-speech
+    // leaves no pause between scenes. Pauses and loudness are the fallback.
+    const loud = runsFromPeaks(up.track.peaks ?? []);
+    const starts = heardWords.length ? sceneStartsFromWords(narrations, heardWords, loud, { start: win.start, end }) : null;
+    const result = starts ? { cuts: starts, wordTimes: placeWords(narrations, runs, [win.start, ...starts, end]) } : alignScript(narrations, runs, { start: win.start, end });
     if (!result) return reply.code(400).send({ error: 'no_speech', message: "I couldn't hear any speech in that recording. Check the file and upload it again." });
     const upload = { ...up, cuts: result.cuts, wordTimes: result.wordTimes, fitKey: narrationKey(narrations), fit, speech: fit === 'speech' ? runs.map((r) => [r.start, r.end] as [number, number]).slice(0, 6000) : undefined };
     const problem = checkUpload(upload, narrations.length);

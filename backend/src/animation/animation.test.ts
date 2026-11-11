@@ -38,6 +38,9 @@ describe('Animate step', () => {
     expect(prompt).toContain('HyperFrames');
     expect(prompt).toContain('window.__timelines["main"]');
     expect(prompt).toContain('Whiteboard Explainer');
+    const noted = (await app.inject({ method: 'GET', url: `/api/projects/${id}/animation/prompt?note=${encodeURIComponent('Use more red')}`, headers: H })).json().prompt as string;
+    expect(noted).toContain('Use more red');
+    expect(prompt).not.toContain('Use more red');
     expect(prompt).toContain('["Subah",');
     expect(prompt).toContain('/api/logo/irctc.co.in');
     expect(prompt).toContain('Indian audience');
