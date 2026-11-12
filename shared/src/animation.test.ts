@@ -76,3 +76,16 @@ describe('extractAnimation', () => {
     expect(key(0)).not.toBe(key(0.5));
   });
 });
+
+describe('extractAnimation with a plan and a continuation', () => {
+  const FULL = '<!doctype html><html><head><script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script></head><body><div id="root" data-composition-id="main" data-start="0" data-duration="6"></div><script>window.__timelines = window.__timelines || {}; window.__timelines["main"] = gsap.timeline({ paused: true });</script></body></html>';
+  it('ignores the plan before the code, and joins an answer that was cut off and continued', () => {
+    const cut = FULL.indexOf('window.__timelines = ') + 12;
+    const first = 'Plan: warm palette, two fonts.\n\n```html\n' + FULL.slice(0, cut);
+    expect(() => extractAnimation(first)).toThrow(AnimationError);
+    // Part one was cut off (no closing fence); part two is a new answer that starts with a fence.
+    const joined = first + '\n```html\n' + FULL.slice(cut) + '\n```\n';
+    expect(extractAnimation(joined)).toBe(FULL);
+    expect(extractAnimation('Plan.\n\n```html\n' + FULL + '\n```\n')).toBe(FULL);
+  });
+});

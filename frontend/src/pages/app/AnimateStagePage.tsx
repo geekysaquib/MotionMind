@@ -93,7 +93,7 @@ export const AnimateStagePage = observer(function AnimateStagePage() {
 
         <ClaudeAiPanel
           title={anim ? 'Ask Claude for a new animation' : 'Animate it in claude.ai'}
-          chatHint="Use a new chat. Claude's answer is long (one HTML file); wait until it has finished, then copy all of it."
+          chatHint='Use a new chat with the most capable Claude model (Opus) and turn extended thinking on: it makes the animation noticeably better. The answer is long (a short plan, then one HTML file). Wait until it finishes, then copy all of it. If it stops early, type "continue" and paste both parts together.'
           placeholder="<!doctype html> ... </html>"
           logScope="Animate"
           getPrompt={(note) => api.animationPrompt(project.id, note)}

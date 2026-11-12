@@ -116,8 +116,23 @@ export class AnimationError extends Error {}
 
 /** Pulls the HTML document out of a chat answer (with or without a ```html fence) and checks the HyperFrames contract. */
 export function extractAnimation(text: string): string {
-  const fenced = /```(?:html)?\s*\n([\s\S]*?)```/i.exec(text);
-  let html = (fenced ? fenced[1]! : text).trim();
+  // The answer may hold a short plan first, and the HTML may come in several code blocks when Claude was asked to continue
+  // after being cut off: the blocks are joined, and the last one may even be missing its closing fence.
+  const blocks: string[][] = [];
+  let open: string[] | null = null;
+  for (const line of text.split(/\r?\n/)) {
+    const fence = /^\s*```([\w-]*)\s*$/.exec(line);
+    if (fence) {
+      if (open && !fence[1]) open = null; // a closing fence
+      else {
+        // An opening fence (also while one is still open: the earlier answer was cut off and this one continues it).
+        open = [];
+        blocks.push(open);
+      }
+    } else if (open) open.push(line);
+  }
+  // Continuations pick up exactly where the cut-off stopped, so the pieces are joined without a line break.
+  let html = (blocks.length ? blocks.map((b) => b.join('\n')).reduce((a, b) => a.replace(/\n$/, '') + b) : text).trim();
   const start = html.search(/<!doctype html|<html/i);
   const end = html.toLowerCase().lastIndexOf('</html>');
   if (start < 0 || end < 0) throw new AnimationError("That doesn't look like the animation. Paste Claude's whole answer: the HTML from <!doctype html> to </html>.");

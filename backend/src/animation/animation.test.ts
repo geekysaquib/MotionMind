@@ -38,6 +38,9 @@ describe('Animate step', () => {
     expect(prompt).toContain('HyperFrames');
     expect(prompt).toContain('window.__timelines["main"]');
     expect(prompt).toContain('Whiteboard Explainer');
+    expect(prompt).toContain('PLAN FIRST');
+    expect(prompt).toContain('DRAWING KIT');
+    expect(prompt).toContain('say "continue"');
     expect(prompt).toContain('Maximum quality');
     expect(prompt).toContain('Layout rules (nothing may overlap');
     expect(prompt).toContain('one inline-block cell per character');
