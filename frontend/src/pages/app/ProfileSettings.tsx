@@ -5,6 +5,7 @@ import { normalizeHandle } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { Button, Card, Field, Select } from '../../components/ui';
 import { errorText } from '../../lib/format';
+import { ChannelLogo } from '../../components/ChannelLogo';
 
 export const ProfileSettings = observer(function ProfileSettings() {
   const { profile, toasts } = useStores();
@@ -40,6 +41,7 @@ export const ProfileSettings = observer(function ProfileSettings() {
   const icon = !handleChanged ? null : status === 'checking' ? <Loader2 className="h-4 w-4 animate-spin" /> : status === 'available' ? <Check className="h-4 w-4 text-accent" /> : <X className="h-4 w-4 text-danger" />;
 
   return (
+    <div className="space-y-6">
     <Card>
       <form onSubmit={save} className="space-y-5">
         <Field
@@ -65,5 +67,7 @@ export const ProfileSettings = observer(function ProfileSettings() {
         </Button>
       </form>
     </Card>
+    <ChannelLogo />
+    </div>
   );
 });

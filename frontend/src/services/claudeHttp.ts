@@ -69,6 +69,10 @@ export interface ClaudeService {
   editorFor(projectId: string): Promise<{ editor: ReelEditor | null; urls: EditorUrls }>;
   saveEditor(projectId: string, editor: ReelEditor): Promise<{ project: Project; urls: EditorUrls }>;
   fitVoice(projectId: string): Promise<{ project: Project; urls: EditorUrls; fit: 'speech' | 'loudness'; note: string | null }>;
+  /** The channel logo: shown on the end card and the cover. */
+  logo(): Promise<{ url: string | null }>;
+  uploadLogo(file: Blob): Promise<{ url: string | null }>;
+  removeLogo(): Promise<{ ok: boolean }>;
   /** Captions and hashtags for the post: the prompt to copy, then the answer to paste back. */
   postPrompt(projectId: string, platform: Platform, note?: string): Promise<string>;
   importPost(projectId: string, platform: Platform, text: string): Promise<Project>;
@@ -119,6 +123,13 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     editorFor: (projectId) => call(`/projects/${projectId}/editor`),
     saveEditor: (projectId, editor) => call(`/projects/${projectId}/editor`, 'PUT', { editor }),
     fitVoice: (projectId) => call(`/projects/${projectId}/voice/fit`, 'POST'),
+    logo: () => call('/profile/logo'),
+    uploadLogo: (file) => {
+      const token = getToken();
+      if (!token) throw new ServiceError('You are signed out.', 'unauthorized');
+      return apiRequest(baseUrl, '/profile/logo', { method: 'POST', token, fetchImpl, raw: { data: file, contentType: 'application/octet-stream' } });
+    },
+    removeLogo: () => call('/profile/logo', 'DELETE'),
     postPrompt: async (projectId, platform, note) => (await call<{ prompt: string }>(`/projects/${projectId}/post/prompt${query({ platform, note })}`)).prompt,
     importPost: async (projectId, platform, text) => (await call<{ project: Project }>(`/projects/${projectId}/post/import`, 'POST', { text, platform })).project,
     saveCover: async (projectId, cover) => (await call<{ project: Project }>(`/projects/${projectId}/cover`, 'PUT', { cover })).project,

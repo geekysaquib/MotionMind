@@ -6,6 +6,7 @@ import { PLATFORM_IDS, reelTimeline, type Platform, type Project } from '@motion
 import type { AppDeps } from '../app';
 import type { AudioClip, HtmlRenderInput } from './hyperframes';
 import { finishedAnimation } from '../animation/endCard';
+import { logoDataUrl } from '../profile/logo';
 
 /**
  * What the renderer needs for a project: Claude's composition, its length, and the audio to lay under it
@@ -26,7 +27,7 @@ export async function htmlRenderFor(deps: AppDeps, project: Project): Promise<{ 
     if (url) audio.push({ url, at: 0, volume: editor.music.volume, loop: true });
   }
   const withVoice = audio.some((c) => !c.loop);
-  const html = finishedAnimation(project, await deps.data.getProfile(project.ownerId));
+  const html = finishedAnimation(project, await deps.data.getProfile(project.ownerId), await logoDataUrl(deps.audio, project.ownerId));
   return { input: { html, duration: timeline.duration, audio }, withVoice };
 }
 

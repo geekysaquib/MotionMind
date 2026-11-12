@@ -17,6 +17,8 @@ export interface EndCardOptions {
   language: 'en' | 'hi' | 'hinglish';
   /** The style's accent colour. */
   accent: string;
+  /** The creator's logo as a data URL (PNG, JPEG or WebP). Shown as a round avatar above the handle. */
+  logo?: string;
 }
 
 /** The one line under the handle, in the reel's language. */
@@ -27,6 +29,8 @@ function invite(language: EndCardOptions['language'], platforms: Platform[]): st
   return yt ? 'Aise aur explainers ke liye subscribe karo' : 'Aise aur explainers ke liye follow karo';
 }
 
+/** Only an image data URL is ever put into the page. */
+export const safeLogo = (u: string | undefined) => (u && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(u) ? u : null);
 const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const safeColor = (c: string) => (/^#[0-9a-fA-F]{3,8}$/.test(c) ? c : '#8B5CF6');
 const r1 = (n: number) => Math.round(n * 100) / 100;
@@ -41,6 +45,7 @@ export function endCardParts(o: EndCardOptions): { section: string; script: stri
   const E = r1(o.storyEnd);
   const D = r1(Math.max(1, o.duration - o.storyEnd));
   const accent = safeColor(o.accent);
+  const logo = safeLogo(o.logo);
   const handle = escapeHtml(o.handle);
   // The handle is one line, 900 px wide at most: smaller type for a long handle.
   const size = Math.max(54, Math.min(120, Math.floor(900 / Math.max(6, o.handle.length * 0.6))));
@@ -64,6 +69,8 @@ export function endCardParts(o: EndCardOptions): { section: string; script: stri
 .mm-glow2{position:absolute;left:-300px;top:1200px;width:1000px;height:900px;background:radial-gradient(closest-side,#6366f155,transparent 70%);opacity:0}
 .mm-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:90px 90px;-webkit-mask-image:radial-gradient(60% 45% at 50% 50%,#000,transparent);mask-image:radial-gradient(60% 45% at 50% 50%,#000,transparent);opacity:0}
 .mm-dot{position:absolute;width:10px;height:10px;border-radius:50%;background:${accent};opacity:0}
+.mm-logo{position:absolute;left:410px;top:340px;width:260px;height:260px;border-radius:50%;overflow:hidden;background:#12141f;border:7px solid ${accent};box-shadow:0 0 0 14px ${accent}33,0 30px 80px -20px ${accent}aa;opacity:0}
+.mm-logo img{display:block;width:100%;height:100%;object-fit:cover}
 .mm-handle{position:absolute;left:90px;top:640px;width:900px;height:150px;text-align:center;white-space:nowrap;font-family:'Bricolage Grotesque','Plus Jakarta Sans',system-ui,sans-serif;font-weight:800;font-size:${size}px;line-height:150px;letter-spacing:-0.02em;color:#fff;opacity:0}
 .mm-line{position:absolute;left:360px;top:808px;width:360px;height:8px;border-radius:4px;background:linear-gradient(90deg,transparent,${accent},transparent);opacity:0;transform-origin:50% 50%}
 .mm-invite{position:absolute;left:90px;top:860px;width:900px;height:70px;text-align:center;white-space:nowrap;font-weight:500;font-size:44px;line-height:70px;color:rgba(255,255,255,.72);opacity:0}
@@ -81,7 +88,7 @@ export function endCardParts(o: EndCardOptions): { section: string; script: stri
   const conf = Array.from({ length: 28 }, (_, i) => `<div class="mm-conf" data-i="${i}"></div>`).join('');
   const section = `<section class="clip mm-end" data-start="${E}" data-duration="${D}" data-track-index="9" style="position:absolute;left:0;top:0;width:1080px;height:1920px;z-index:2147483000">
 <div class="mm-glow"></div><div class="mm-glow2"></div><div class="mm-grid"></div>${dots}
-<div class="mm-handle">${handle}</div><div class="mm-line"></div><div class="mm-invite">${escapeHtml(invite(o.language, o.platforms))}</div>
+${logo ? `<div class="mm-logo"><img alt="" src="${logo}"></div>` : ''}<div class="mm-handle">${handle}</div><div class="mm-line"></div><div class="mm-invite">${escapeHtml(invite(o.language, o.platforms))}</div>
 ${buttons.join('\n')}${conf}
 </section>`;
 
@@ -96,6 +103,7 @@ tl.fromTo(q(".mm-glow"),{opacity:0,scale:.85},{opacity:1,scale:1,duration:1.2,ea
 tl.fromTo(q(".mm-glow2"),{opacity:0},{opacity:1,duration:1.2,ease:"power2.out"},0.1);
 tl.fromTo(q(".mm-grid"),{opacity:0},{opacity:1,duration:1,ease:"power1.out"},0.1);
 q(".mm-dot").forEach(function(el,i){var x=70+r()*940,y=300+r()*1300,dy=-(60+r()*90);gsap.set(el,{left:x,top:y});tl.fromTo(el,{opacity:0,y:0},{opacity:.35+r()*.4,y:dy,duration:2.8,ease:"sine.out"},0.1+r()*.6);});
+tl.fromTo(q(".mm-logo"),{opacity:0,scale:.55},{opacity:1,scale:1,duration:.65,ease:"back.out(1.7)"},0.15);
 tl.fromTo(q(".mm-handle"),{opacity:0,y:24},{opacity:1,y:0,duration:.6,ease:"power3.out"},0.3);
 tl.fromTo(q(".mm-line"),{opacity:0,scaleX:0},{opacity:1,scaleX:1,duration:.7,ease:"power3.out"},0.55);
 tl.fromTo(q(".mm-invite"),{opacity:0,y:20},{opacity:1,y:0,duration:.55,ease:"power3.out"},0.8);
@@ -134,7 +142,7 @@ export function withEndCard(html: string, o: EndCardOptions): string {
 }
 
 /** The animation of a project as it is played, exported and checked: Claude's file plus Motion Mind's end card. */
-export function finishedAnimation(project: Project, profile: Pick<Profile, 'handle' | 'language'> | null): string {
+export function finishedAnimation(project: Project, profile: Pick<Profile, 'handle' | 'language'> | null, logo?: string): string {
   const script = project.script!;
   const html = script.animation!.html;
   const t = reelTimeline(script, project.editor);
@@ -145,5 +153,6 @@ export function finishedAnimation(project: Project, profile: Pick<Profile, 'hand
     platforms: project.platforms.length ? project.platforms : ['instagram'],
     language: profile?.language ?? 'hinglish',
     accent: styleOf(script.style).swatch[1],
+    logo,
   });
 }

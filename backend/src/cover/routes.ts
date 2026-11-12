@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { MAX_COVER_HEADLINE, PLATFORM_IDS, reelTimeline, styleOf, type Project } from '@motionmind/shared';
 import { withCoverText } from './overlay';
+import { logoDataUrl } from '../profile/logo';
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 import { finishedAnimation } from '../animation/endCard';
@@ -45,9 +46,10 @@ export function registerCoverRoutes(api: FastifyInstance, deps: AppDeps) {
     const kicker = `Explained in ${Math.max(15, Math.round(timeline.storyEnd / 5) * 5)} sec`;
     try {
       const profile = await deps.data.getProfile(req.userId);
-      let html = finishedAnimation(project, profile);
+      const logo = await logoDataUrl(deps.audio, req.userId);
+      let html = finishedAnimation(project, profile, logo);
       // The words on the cover: the reel's title unless the creator wrote their own; none when they turned the text off.
-      if (body.data.cover.text !== false) html = withCoverText(html, { headline: body.data.cover.headline?.trim() || project.script.title, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', accent: styleOf(project.script.style).swatch[1], kicker, platform: body.data.platform ?? project.platforms[0] ?? 'instagram' });
+      if (body.data.cover.text !== false) html = withCoverText(html, { headline: body.data.cover.headline?.trim() || project.script.title, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', accent: styleOf(project.script.style).swatch[1], logo, kicker, platform: body.data.platform ?? project.platforms[0] ?? 'instagram' });
       const file = await deps.renderer.still(html, scene.start + (scene.end - scene.start) * 0.8, project.id);
       req.log.info({ projectId: project.id, file, scene: body.data.cover.scene }, 'cover rendered');
       return { file, url: `/api/renders/${file}` };

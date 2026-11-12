@@ -6,6 +6,7 @@ import { registerDiscoverRoutes } from './discover/routes';
 import { registerAnimationAssets, registerAnimationRoutes } from './animation/routes';
 import { registerCoverRoutes } from './cover/routes';
 import { registerPostRoutes } from './post/routes';
+import { registerLogoRoutes } from './profile/logo';
 import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
 import { registerEditorRoutes } from './editor/routes';
 import type { Renderer } from './export/renderer';
@@ -90,6 +91,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
       registerExportRoutes(api, deps);
       registerCoverRoutes(api, deps);
       registerPostRoutes(api, deps);
+      registerLogoRoutes(api, deps);
       registerAnimationRoutes(api, deps);
       registerFootageRoutes(api, deps);
     },

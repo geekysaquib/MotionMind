@@ -2,6 +2,7 @@
 // a small badge above and the handle. Added to the animation only for the cover picture (the saved animation and the
 // video are not changed).
 
+const safeLogo = (u: string | undefined) => (u && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(u) ? u : null);
 const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 const safeColor = (c: string) => (/^#[0-9a-fA-F]{6}$/.test(c) ? c : '#8B5CF6');
 
@@ -48,6 +49,8 @@ export interface CoverTextOptions {
   handle: string;
   accent: string;
   platform?: 'instagram' | 'youtube';
+  /** The creator's logo (a data URL), shown in the handle pill. */
+  logo?: string;
   /** The small badge above the headline, e.g. "EXPLAINED IN 60 SEC". Empty = no badge. */
   kicker?: string;
 }
@@ -60,6 +63,7 @@ export function withCoverText(html: string, o: CoverTextOptions): string {
   const ink = inkOn(accent);
   const size = coverFontSize(o.headline);
   const kicker = (o.kicker ?? '').trim();
+  const logo = safeLogo(o.logo);
   const shade = yt
     ? 'linear-gradient(180deg,rgb(5,6,12) 0%,rgba(5,6,12,.97) 36%,rgba(5,6,12,.8) 46%,rgba(5,6,12,.12) 62%,rgba(5,6,12,0) 78%,rgba(5,6,12,.5) 100%)'
     : 'linear-gradient(180deg,rgba(5,6,12,.5) 0%,rgba(5,6,12,0) 16%,rgba(5,6,12,.1) 30%,rgba(5,6,12,.86) 46%,rgba(5,6,12,.97) 56%,rgb(5,6,12) 70%,rgb(5,6,12) 100%)';
@@ -76,9 +80,10 @@ export function withCoverText(html: string, o: CoverTextOptions): string {
 .mm-cv-play{width:0;height:0;border-left:22px solid ${ink};border-top:14px solid transparent;border-bottom:14px solid transparent}
 .mm-cv-h{margin:0;color:#fff;font-weight:800;font-size:${size}px;line-height:1.08;letter-spacing:-0.035em;overflow-wrap:break-word;text-shadow:0 8px 0 rgba(0,0,0,.35),0 10px 44px rgba(0,0,0,.75)}
 .mm-cv-hi{display:inline-block;padding:0 .14em .04em;margin:0 -.04em;border-radius:.12em;background:${accent};color:${ink};text-shadow:none;transform:rotate(-1.6deg);box-shadow:0 .08em 0 rgba(0,0,0,.35),0 18px 50px -12px ${accent}}
+.mm-cv-handle img{width:64px;height:64px;border-radius:50%;object-fit:cover;margin:0 18px 0 -22px;border:3px solid ${accent}}
 .mm-cv-handle{position:absolute;left:78px;top:${yt ? 130 : 1500}px;height:84px;padding:0 34px;border-radius:42px;display:flex;align-items:center;background:rgba(10,12,20,.62);border:2px solid rgba(255,255,255,.3);color:#fff;font:700 40px 'Plus Jakarta Sans',system-ui,sans-serif;white-space:nowrap}
 </style>
 <div class="mm-cv"><div class="mm-cv-shade"></div><div class="mm-cv-glow"></div><div class="mm-cv-glow2"></div><div class="mm-cv-frame"></div>
-<div class="mm-cv-box">${kicker ? `<div class="mm-cv-kick"><span class="mm-cv-play"></span>${escapeHtml(kicker)}</div>` : ''}<h1 class="mm-cv-h">${headlineHtml(o.headline)}</h1></div><div class="mm-cv-handle">${escapeHtml(o.handle)}</div></div>`;
+<div class="mm-cv-box">${kicker ? `<div class="mm-cv-kick"><span class="mm-cv-play"></span>${escapeHtml(kicker)}</div>` : ''}<h1 class="mm-cv-h">${headlineHtml(o.headline)}</h1></div><div class="mm-cv-handle">${logo ? `<img alt="" src="${logo}">` : ''}${escapeHtml(o.handle)}</div></div>`;
   return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${block}</body>`) : html + block;
 }

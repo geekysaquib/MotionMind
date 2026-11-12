@@ -7,6 +7,8 @@ export interface AudioStore {
   remove(paths: string[]): Promise<void>;
   /** Deletes every file in a folder (all of a project's files), ignoring a folder that is already gone. */
   removeFolder(folder: string): Promise<void>;
+  /** One file's bytes and type, or null when it is not there. */
+  get(path: string): Promise<{ data: Buffer; contentType: string } | null>;
   /** Short-lived URLs the browser can play without signing in (the player can't send headers). */
   urls(paths: string[]): Promise<string[]>;
 }
@@ -34,6 +36,10 @@ export class MemoryAudioStore implements AudioStore {
         this.types.delete(p);
       }
     }
+  }
+  async get(path: string) {
+    const data = this.files.get(path);
+    return data ? { data, contentType: this.types.get(path) ?? 'application/octet-stream' } : null;
   }
   async urls(paths: string[]) {
     return paths.map((p) => {
@@ -68,6 +74,12 @@ export class SupabaseAudioStore implements AudioStore {
       if (!files.length) return;
       await this.remove(files);
     }
+  }
+
+  async get(path: string) {
+    const { data, error } = await this.db.storage.from(this.bucket).download(path);
+    if (error || !data) return null;
+    return { data: Buffer.from(await data.arrayBuffer()), contentType: data.type || 'application/octet-stream' };
   }
 
   async urls(paths: string[]) {

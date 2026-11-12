@@ -9,6 +9,7 @@ import { firstIssue } from '../http';
 import { animationPrompt } from '../ai/animationPrompt';
 import { layoutFixRequest } from './layout';
 import { finishedAnimation } from './endCard';
+import { logoDataUrl } from '../profile/logo';
 
 /** The API's own address, where the composition loads company logos from (in the preview and in the render). */
 export const apiOrigin = () => `http://localhost:${process.env.PORT ?? 8787}`;
@@ -31,7 +32,7 @@ export function registerAnimationRoutes(api: FastifyInstance, deps: AppDeps) {
     const timeline = timelineOf(project);
     // The browser plays the animation with Motion Mind's end card added; the saved file stays as Claude wrote it.
     const saved = project.script.animation ?? null;
-    const animation = saved ? { ...saved, html: finishedAnimation(project, await deps.data.getProfile(req.userId)) } : null;
+    const animation = saved ? { ...saved, html: finishedAnimation(project, await deps.data.getProfile(req.userId), await logoDataUrl(deps.audio, req.userId)) } : null;
     return { animation, timeline, stale: Boolean(animation && animation.timingKey !== timingKey(timeline)) };
   });
 
@@ -63,7 +64,7 @@ export function registerAnimationRoutes(api: FastifyInstance, deps: AppDeps) {
     const animation = project.script?.animation;
     if (!animation) return reply.code(400).send({ error: 'no_animation', message: 'Paste the animation first.' });
     try {
-      const report = await deps.layoutChecker(finishedAnimation(project, await deps.data.getProfile(req.userId)), timelineOf(project).duration);
+      const report = await deps.layoutChecker(finishedAnimation(project, await deps.data.getProfile(req.userId), await logoDataUrl(deps.audio, req.userId)), timelineOf(project).duration);
       req.log.info({ projectId: project.id, issues: report.total }, 'layout checked');
       return { report, request: report.ok ? null : layoutFixRequest(report) };
     } catch (err) {
