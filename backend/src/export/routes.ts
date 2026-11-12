@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { PLATFORM_IDS, reelTimeline, type Platform, type Project } from '@motionmind/shared';
 import type { AppDeps } from '../app';
 import type { AudioClip, HtmlRenderInput } from './hyperframes';
+import { finishedAnimation } from '../animation/endCard';
 
 /**
  * What the renderer needs for a project: Claude's composition, its length, and the audio to lay under it
@@ -25,7 +26,8 @@ export async function htmlRenderFor(deps: AppDeps, project: Project): Promise<{ 
     if (url) audio.push({ url, at: 0, volume: editor.music.volume, loop: true });
   }
   const withVoice = audio.some((c) => !c.loop);
-  return { input: { html: script.animation!.html, duration: timeline.duration, audio }, withVoice };
+  const html = finishedAnimation(project, await deps.data.getProfile(project.ownerId));
+  return { input: { html, duration: timeline.duration, audio }, withVoice };
 }
 
 /** Signed-in: start and follow an MP4 export. Public: download a finished file by its unguessable name. */

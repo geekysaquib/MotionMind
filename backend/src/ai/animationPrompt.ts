@@ -34,22 +34,6 @@ export interface AnimationBrief {
 
 const LANG: Record<AnimationBrief['language'], string> = { en: 'English', hi: 'Hindi (Devanagari)', hinglish: 'Hinglish (Latin script)' };
 
-/** What the buttons on the end card say, per platform. */
-function endButtons(platform: AnimationBrief['platform']): string {
-  const ig = 'a "Follow" pill in the Instagram gradient (#F58529, #DD2A7B, #8134AF, #515BD4) with the Instagram glyph (a rounded square, a circle and a dot) in white';
-  const yt = 'a "Subscribe" pill in YouTube red (#FF0033) with the YouTube play glyph (a rounded rectangle with a triangle) in white and a small bell icon at the right';
-  if (platform === 'instagram') return `one button: ${ig}`;
-  if (platform === 'youtube') return `one button: ${yt}`;
-  return `two buttons stacked with a 28 px gap, the Instagram one first: ${ig}; then ${yt}`;
-}
-
-/** How the buttons change when they are "tapped". */
-function endState(platform: AnimationBrief['platform']): string {
-  if (platform === 'instagram') return 'Follow turns into a grey "Following" with a check mark';
-  if (platform === 'youtube') return 'Subscribe turns into a grey "Subscribed" with a check mark while the bell swings once';
-  return 'each button changes in turn, 0.35 s apart: Follow turns into a grey "Following" with a check mark, Subscribe into a grey "Subscribed" with a check mark and a bell that swings once';
-}
-
 export function animationPrompt(b: AnimationBrief): string {
   const st = styleOf(b.style);
   const t = b.timeline;
@@ -67,14 +51,13 @@ export function animationPrompt(b: AnimationBrief): string {
       words: s.words.map((w) => [w.w, w.start, w.end]),
     };
   });
-  const cta = b.platform === 'youtube' ? 'Subscribe karo' : b.platform === 'both' ? 'Follow / Subscribe karo' : 'Follow karo';
   return `You are a world-class motion designer making a premium Instagram Reel for an Indian audience. Write the WHOLE reel as one HyperFrames composition: a single HTML file with CSS, inline SVG and one GSAP timeline. Motion Mind renders it frame by frame at 1080x1920, 30 fps, and adds the voiceover itself. You design and animate everything you see: no templates, no stock assets, no generic shapes. Every scene must SHOW what the narration says at that moment, specific to this topic.
 
 # The reel
 Title: ${b.script.title}
 Channel: ${b.channelName} (${b.handle})
 Language of on-screen text and captions: ${LANG[b.language]}
-Total length: ${t.duration.toFixed(2)} s. Story scenes end at ${t.storyEnd.toFixed(2)} s; then an end card (${cta}, the channel name and ${b.handle}) until ${t.duration.toFixed(2)} s.
+Total length: ${t.duration.toFixed(2)} s. Story scenes end at ${t.storyEnd.toFixed(2)} s; after that Motion Mind shows its own end card until ${t.duration.toFixed(2)} s (you do not make it).
 Timing source: ${t.source === 'estimate' ? 'ESTIMATED (no voice yet)' : 'the real voiceover'}. Times are seconds from the start of the video.
 Short forms: ${JSON.stringify(b.script.glossary ?? [])}
 Brands: ${JSON.stringify(b.script.brands ?? [])} — a brand's logo is an <img> from ${b.logoBase}/api/logo/<domain>?name=<name> (for example ${b.logoBase}/api/logo/irctc.co.in?name=IRCTC); keep it on a white rounded tile.
@@ -107,7 +90,6 @@ Work at the highest quality you are capable of, as a senior motion designer woul
 - One design system declared once in :root CSS variables (colours, radii, shadows, type scale) and used everywhere, so the whole reel is one coherent piece. Use at most two fonts and a consistent type scale.
 - Polish: crisp alignment on a grid, consistent margins, strong contrast, a clear focal point in every scene, no clutter (if a scene has more than one idea, split the idea over two beats instead of crowding it).
 - Performance: the renderer captures frames in Chrome, so avoid animating huge blurs or SVG filters over the full screen, avoid more than about 60 animated elements at once, and prefer transform and opacity.
-- The end card is as well designed as the story scenes: follow the End card section exactly.
 
 # Quality bar (premium, not a slideshow)
 - A designed piece for every scene: real objects of the topic (phones with the actual app screen, servers, queues of people, tickets, money, maps, trains...) drawn in inline SVG/CSS in the style, with depth, light and shadow. Vary the composition scene to scene.
@@ -128,12 +110,12 @@ Text that shifts by even one pixel from one frame to the next looks like jitter.
 - Headline per scene (the card's headline, *starred* words highlighted) and the step progress, styled per the rulebook.
 - Indian context: ₹, lakh/crore, Indian apps, places and everyday moments, as in the script.
 
-# The end card (it is the last thing people see: make it look like a real channel's outro)
-The end card is its own scene: <section class="clip" data-start="${t.storyEnd.toFixed(2)}" data-duration="${(t.duration - t.storyEnd).toFixed(2)}">. Call E = ${t.storyEnd.toFixed(2)} s. Design it with the same care as the hero scenes, in the reel's palette, but calmer than the story: one clear focus, generous space, nothing crowded.
-- Layout (a centred column inside x 120–960, y 300–1500, built with flex, never overlapping): (1) a channel avatar, a circle about 260 px wide with a thin gradient ring (a conic or linear gradient in the accent colours), a soft glow behind it and the first letter of "${b.channelName}" in the display font inside it; (2) the channel name "${b.channelName}" large (about 84 px, bold) and under it the handle "${b.handle}" (about 44 px, in the accent colour); (3) one short line in the reel's language inviting people to follow for more explainers like this (about 44 px, secondary colour); (4) ${endButtons(b.platform)}.
-- Buttons are designed objects, not text on a rectangle: a pill about 760 px wide and 150 px tall, 75 px corner radius, brand-accurate gradient or colour, a soft coloured shadow, a glossy top highlight, the platform glyph drawn as inline SVG on the left (not an emoji) and the label in bold. They look tappable.
-- Choreography (times are absolute seconds on the timeline; the scene's own transition in the last 0.3 s before E is a designed move, for example a whip or push that carries the last scene into the card): E + 0.00 background glow and a few soft particles fade in; E + 0.25 avatar pops in with a small overshoot while its ring draws around it; E + 0.55 the name rises 24 px and fades in; E + 0.75 the handle; E + 0.95 the invite line; E + 1.15 the button(s) slide up and settle; E + 1.70 a soft tap ripple on the button and the button changes state (${endState(b.platform)}) with a small bounce; E + 1.95 a short restrained burst of small confetti or sparkles from the button. After that EVERYTHING HOLDS COMPLETELY STILL until the end of the video: no fade-out, no drifting text, no looping motion on the text. The last frame is a clean, finished poster.
-- The same rock-steady text rules apply: text is positioned once, in whole pixels, in fixed boxes, and only enters; nothing on the card may overlap, and every element stays inside the safe area (nothing in the top 120 px or bottom 260 px).
+# The end card is NOT yours to make
+Motion Mind adds its own end card (the handle and the follow buttons) from ${t.storyEnd.toFixed(2)} s to the end, on top of everything. So:
+- Do not draw any end card, outro, follow or subscribe screen, handle, or call to action. Your last story scene ends at ${t.storyEnd.toFixed(2)} s and you put no clip after it.
+- In the last 0.4 s of the last scene, design an exit: the scene's content clears away (fades, slides or zooms out) to a plain dark background, so the end card can take over cleanly. Overlays that span the reel (captions, progress bar) end at ${t.storyEnd.toFixed(2)} s too: give them data-duration="${t.storyEnd.toFixed(2)}".
+- The root keeps data-duration="${t.duration.toFixed(2)}".
+- Put this exact comment as the first line inside <body>, so Motion Mind knows to add the card: <!-- motionmind:no-end-card -->
 
 # Layout rules (nothing may overlap; Motion Mind measures this)
 Motion Mind opens your file in Chrome and measures every text box across the timeline. Text that overlaps other text, hides under a panel, or runs out of its box is reported as an error and sent back to you, so get it right the first time.
@@ -149,7 +131,7 @@ Motion Mind opens your file in Chrome and measures every text box across the tim
 1. One file. Start with <!doctype html>. In <head>: <meta charset="UTF-8">, <meta name="viewport" content="width=1080, height=1920">, and exactly this script: <script src="${GSAP_URL}"></script>. You may load Google Fonts with <link>; no other external files, images or scripts (logos only from the URL above).
 2. html, body: margin 0, width 1080px, height 1920px, overflow hidden, a background colour.
 3. Root: <div id="root" data-composition-id="main" data-start="0" data-duration="${t.duration.toFixed(2)}" data-width="1080" data-height="1920"> holding everything.
-4. Each scene is a <section class="clip" data-start="START" data-duration="LENGTH" data-track-index="0"> using the scene's start and (end − start) from the list above (the end card too). Elements outside a clip's time are hidden by the runtime. A .clip is position:absolute; inset:0. Overlays that span the whole reel (captions layer, progress bar) get class="clip" data-start="0" data-duration="${t.duration.toFixed(2)}" data-track-index="1".
+4. Each scene is a <section class="clip" data-start="START" data-duration="LENGTH" data-track-index="0"> using the scene's start and (end − start) from the list above. Elements outside a clip's time are hidden by the runtime. A .clip is position:absolute; inset:0. Overlays that span the story (captions layer, progress bar) get class="clip" data-start="0" data-duration="${t.storyEnd.toFixed(2)}" data-track-index="1".
 5. One GSAP timeline, created paused, with every tween placed at absolute times (position parameter in seconds), then registered: window.__timelines = window.__timelines || {}; const tl = gsap.timeline({ paused: true }); ... ; window.__timelines["main"] = tl; Child timelines added to it must NOT be paused. Use repeat on looping idle motion (pings, floating) only inside the scene's time span.
 6. Deterministic: no Math.random (use a seeded function), no Date, no fetch, no timers, no requestAnimationFrame, no CSS animations or transitions (GSAP only), no video or audio elements. The page must look right at any time it is seeked to.
 
