@@ -32,6 +32,7 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
   const active = platforms.includes(platform) ? platform : platforms[0]!;
   const [urls, setUrls] = useState<Partial<Record<Platform, string>>>({});
   const url = urls[active] ?? null;
+  const ideas = script.post?.[active]?.covers ?? [];
 
   async function make() {
     setBusy(true);
@@ -55,7 +56,7 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
       <h2 className="flex items-center gap-2 font-semibold">
         <ImageIcon className="h-4 w-4 text-accent" /> Cover
       </h2>
-      <p className="mt-1 text-sm text-ink-400">The reel's title set large over a frame of your animation, with your handle. Pick the scene that sums up the reel best, and edit the words if you like. Put *stars* around words to colour them.</p>
+      <p className="mt-1 text-sm text-ink-400">A short hook set huge over a frame of your animation, with the key words highlighted, a badge and your handle. Pick the scene that sums up the reel best, and edit the words if you like. Put *stars* around words to colour them.</p>
       {!script.animation ? (
         <div className="mt-3">
           <Alert tone="info">Make the animation first, on the Animate step.</Alert>
@@ -99,6 +100,19 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
             Words on the cover
             <input aria-label="Words on the cover" className={cn(inputCls, 'mt-1')} maxLength={MAX_COVER_HEADLINE} disabled={!text} value={headline} onChange={(e) => setHeadline(e.target.value)} />
           </label>
+          {ideas.length > 0 && text && (
+            <div className="w-full">
+              <span className="text-xs text-ink-400">Catchy lines from Claude (tap to use):</span>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {ideas.map((idea) => (
+                  <button key={idea} type="button" onClick={() => setHeadline(idea)} className={cn('rounded-full border px-3 py-1.5 text-sm transition', headline === idea ? 'border-accent bg-mint-500/15 text-ink-100' : 'border-line/15 text-ink-300 hover:border-line/30')}>
+                    {idea.replace(/\*/g, '')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {ideas.length === 0 && text && <p className="w-full text-xs text-ink-400">Tip: make the caption and hashtags below first. Claude also writes three catchy cover lines, and they show up here to pick from.</p>}
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Show the words
           </label>

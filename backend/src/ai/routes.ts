@@ -15,7 +15,7 @@ const scriptWithLayout = scriptSchemaV4.extend({
   style: zv4.enum(STYLE_IDS).optional(),
   animation: zv4.object({ html: zv4.string().max(2_000_000), style: zv4.enum(STYLE_IDS).optional(), timingKey: zv4.string().max(4000), writtenAt: zv4.string() }).optional(),
   cover: zv4.object({ scene: zv4.number().int().min(0).max(60), headline: zv4.string().max(70).optional(), text: zv4.boolean().optional() }).optional(),
-  post: zv4.object({ instagram: zv4.object({ captions: zv4.array(zv4.string().max(2200)).max(6), hashtags: zv4.array(zv4.string().max(60)).max(40), title: zv4.string().max(100).optional(), createdAt: zv4.string() }).optional(), youtube: zv4.object({ captions: zv4.array(zv4.string().max(2200)).max(6), hashtags: zv4.array(zv4.string().max(60)).max(40), title: zv4.string().max(100).optional(), createdAt: zv4.string() }).optional() }).optional(),
+  post: zv4.object({ instagram: zv4.object({ captions: zv4.array(zv4.string().max(2200)).max(6), hashtags: zv4.array(zv4.string().max(60)).max(40), title: zv4.string().max(100).optional(), covers: zv4.array(zv4.string().max(70)).max(4).optional(), createdAt: zv4.string() }).optional(), youtube: zv4.object({ captions: zv4.array(zv4.string().max(2200)).max(6), hashtags: zv4.array(zv4.string().max(60)).max(40), title: zv4.string().max(100).optional(), covers: zv4.array(zv4.string().max(70)).max(4).optional(), createdAt: zv4.string() }).optional() }).optional(),
 });
 const importSchema = z.object({ text: z.string().min(1, "Paste Claude's answer first.").max(100_000), style: z.enum(STYLE_IDS).optional() });
 /** The style picked before the script: the prompt designs every scene for it, and the script is saved with it. */

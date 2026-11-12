@@ -36,6 +36,8 @@ export interface PlatformPost {
   hashtags: string[];
   /** YouTube Shorts only. */
   title?: string;
+  /** Short hooks for the cover picture, with *stars* around the key words. */
+  covers?: string[];
   createdAt: string;
 }
 

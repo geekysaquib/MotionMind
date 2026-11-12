@@ -97,4 +97,14 @@ describe('CoverMaker', () => {
     });
     expect(calls.rendered.map((r) => r.platform)).toEqual(['instagram', 'youtube']);
   });
+
+  it("offers Claude's catchy cover lines once the post has been made, and uses the one you tap", async () => {
+    const calls = await setup({}, { ...SCRIPT, post: { instagram: { captions: ['c'], hashtags: ['#a'], covers: ['Soundbox *kaise* bolta hai?'], createdAt: 'now' } } });
+    fireEvent.click(screen.getByRole('button', { name: 'Soundbox kaise bolta hai?' }));
+    expect((screen.getByLabelText('Words on the cover') as HTMLInputElement).value).toBe('Soundbox *kaise* bolta hai?');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^Make the (Instagram )?cover$/ }));
+    });
+    expect(calls.rendered[0]!.cover.headline).toBe('Soundbox *kaise* bolta hai?');
+  });
 });

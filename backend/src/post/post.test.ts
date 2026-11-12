@@ -6,7 +6,7 @@ import { SessionTokens } from '../auth/session';
 import { DevTokenVerifier } from '../auth/verifiers';
 import { MemoryDataRepository } from '../data/repository';
 import { MemoryAudioStore } from '../voice/audioStore';
-import { withCoverText, coverFontSize } from '../cover/overlay';
+import { autoStar, withCoverText, coverFontSize } from '../cover/overlay';
 import { parsePost, PostError } from './post';
 
 const secret = randomBytes(32).toString('base64');
@@ -53,6 +53,8 @@ describe('caption and hashtag routes', () => {
     expect(ig).toContain('Subah dus baje Tatkal khulta hai.');
     expect(ig).toContain('for Instagram Reels');
     expect(ig).toContain('FIRST FIVE');
+    expect(ig).toContain('THREE COVER LINES');
+    expect(yt).toContain('THREE COVER LINES');
     expect(ig).not.toContain('#Shorts');
     expect(yt).toContain('for YouTube Shorts');
     expect(yt).toContain('The first must be #Shorts');
@@ -97,7 +99,29 @@ describe('cover text', () => {
   it('sets the words in the middle for Instagram (grid crop) and high up for YouTube Shorts (its title covers the bottom)', () => {
     const ig = withCoverText(page, { headline: 'T', handle: '@x', accent: '#FFD60A', platform: 'instagram' });
     const yt = withCoverText(page, { headline: 'T', handle: '@x', accent: '#FFD60A', platform: 'youtube' });
-    expect(ig).toContain('.mm-cv-box{position:absolute;left:70px;top:760px');
-    expect(yt).toContain('.mm-cv-box{position:absolute;left:70px;top:300px');
+    expect(ig).toContain('.mm-cv-box{position:absolute;left:78px;top:700px');
+    expect(yt).toContain('.mm-cv-box{position:absolute;left:78px;top:250px');
+  });
+  it('always highlights something: your *starred* words, or else the number, or else the longest word', () => {
+    expect(autoStar('Tatkal *kyun* girta hai')).toBe('Tatkal *kyun* girta hai');
+    expect(autoStar('Tatkal 10 baje kyun girta hai?')).toBe('Tatkal *10 baje* kyun girta hai?');
+    expect(autoStar('IRCTC ka asli raaz')).toBe('*IRCTC* ka asli raaz');
+    expect(autoStar('UPI')).toBe('UPI');
+  });
+  it('adds the badge, and picks readable ink for the highlight (dark on a light accent, white on a dark one)', () => {
+    const light = withCoverText(page, { headline: 'A *b*', handle: '@x', accent: '#FFD60A', kicker: 'Explained in 60 sec' });
+    expect(light).toContain('Explained in 60 sec');
+    expect(light).toContain('.mm-cv-hi{display:inline-block');
+    expect(light).toMatch(/\.mm-cv-hi\{[^}]*color:#0a0b12/);
+    expect(withCoverText(page, { headline: 'A *b*', handle: '@x', accent: '#1E3A8A' })).toMatch(/\.mm-cv-hi\{[^}]*color:#ffffff/);
+    expect(withCoverText(page, { headline: 'A *b*', handle: '@x', accent: '#FFD60A' })).not.toContain('class="mm-cv-kick"');
+  });
+});
+
+describe('cover lines from Claude', () => {
+  it('are asked for in the prompt and kept with the post, cleaned', () => {
+    const a = JSON.stringify({ captions: ['c'], hashtags: ['#a1'], covers: ['Tatkal *10 baje* kyun girta hai?', '  #IRCTC ka\nraaz  ', ''] });
+    expect(parsePost(a, 'instagram').covers).toEqual(['Tatkal *10 baje* kyun girta hai?', 'IRCTC ka raaz']);
+    expect(parsePost('{"captions":["c"],"hashtags":["#a1"]}', 'instagram').covers).toBeUndefined();
   });
 });

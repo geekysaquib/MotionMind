@@ -39,12 +39,15 @@ export function registerCoverRoutes(api: FastifyInstance, deps: AppDeps) {
     if (body.data.cover.scene >= project.script.beats.length) return reply.code(400).send({ error: 'invalid_cover', message: "That scene doesn't exist." });
     if (!project.script.animation) return reply.code(400).send({ error: 'no_animation', message: 'Make the animation first, on the Animate step.' });
     // The cover is a frame of Claude's animation, late in the chosen scene once everything has come in.
-    const scene = reelTimeline(project.script, project.editor).scenes[body.data.cover.scene]!;
+    const timeline = reelTimeline(project.script, project.editor);
+    const scene = timeline.scenes[body.data.cover.scene]!;
+    // The badge says how short the explainer is, rounded to the nearest 5 seconds.
+    const kicker = `Explained in ${Math.max(15, Math.round(timeline.storyEnd / 5) * 5)} sec`;
     try {
       const profile = await deps.data.getProfile(req.userId);
       let html = finishedAnimation(project, profile);
       // The words on the cover: the reel's title unless the creator wrote their own; none when they turned the text off.
-      if (body.data.cover.text !== false) html = withCoverText(html, { headline: body.data.cover.headline?.trim() || project.script.title, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', accent: styleOf(project.script.style).swatch[1], platform: body.data.platform ?? project.platforms[0] ?? 'instagram' });
+      if (body.data.cover.text !== false) html = withCoverText(html, { headline: body.data.cover.headline?.trim() || project.script.title, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', accent: styleOf(project.script.style).swatch[1], kicker, platform: body.data.platform ?? project.platforms[0] ?? 'instagram' });
       const file = await deps.renderer.still(html, scene.start + (scene.end - scene.start) * 0.8, project.id);
       req.log.info({ projectId: project.id, file, scene: body.data.cover.scene }, 'cover rendered');
       return { file, url: `/api/renders/${file}` };
