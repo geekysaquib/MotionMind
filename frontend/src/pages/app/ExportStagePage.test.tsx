@@ -70,8 +70,8 @@ describe('ExportStagePage', () => {
   it('offers one export per platform and can start both', async () => {
     const started: (Platform | undefined)[] = [];
     await setup(true, [null], ['instagram', 'youtube'], started);
-    expect(screen.getByText('Instagram Reels')).toBeTruthy();
-    expect(screen.getByText('YouTube Shorts')).toBeTruthy();
+    expect(screen.getAllByText('Instagram Reels').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('YouTube Shorts').length).toBeGreaterThan(0);
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Export both' }));
     });

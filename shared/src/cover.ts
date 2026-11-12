@@ -30,11 +30,14 @@ export function normalizeCover(raw: Partial<CoverSettings> | null | undefined, s
   };
 }
 
-/** What a reel's post needs besides the video: captions to choose from, hashtags, and a title for YouTube Shorts. */
-export interface ReelPost {
+/** The post for one platform: captions (descriptions on YouTube) to choose from, hashtags, and a title for YouTube Shorts. */
+export interface PlatformPost {
   captions: string[];
   hashtags: string[];
-  /** A title for YouTube Shorts (60 characters at most). */
+  /** YouTube Shorts only. */
   title?: string;
   createdAt: string;
 }
+
+/** What a reel's post needs besides the video, written separately for each platform it goes to. */
+export type ReelPost = Partial<Record<'instagram' | 'youtube', PlatformPost>>;

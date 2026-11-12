@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Download, Image as ImageIcon } from 'lucide-react';
-import { exportFileName, MAX_COVER_HEADLINE, normalizeCover, type Project } from '@motionmind/shared';
+import { exportFileName, MAX_COVER_HEADLINE, normalizeCover, normalizePlatforms, PLATFORMS, type Platform, type Project } from '@motionmind/shared';
+import { PlatformIcon } from './BrandIcons';
 import { useStores } from '../stores/RootStore';
 import { config } from '../config';
 import { Alert, Button, Card } from './ui';
@@ -25,7 +26,12 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
   const [text, setText] = useState(saved.text !== false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [url, setUrl] = useState<string | null>(null);
+  // One cover per platform: each has its own layout, and is kept until it is made again.
+  const platforms = normalizePlatforms(project.platforms);
+  const [platform, setPlatform] = useState<Platform>(platforms[0]!);
+  const active = platforms.includes(platform) ? platform : platforms[0]!;
+  const [urls, setUrls] = useState<Partial<Record<Platform, string>>>({});
+  const url = urls[active] ?? null;
 
   async function make() {
     setBusy(true);
@@ -34,9 +40,9 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
       const words = headline.trim();
       const cover = { scene, ...(words && words !== script.title ? { headline: words } : {}), ...(text ? {} : { text: false }) };
       projects.upsert(await api.saveCover(project.id, cover));
-      const r = await api.renderCover(project.id, cover);
-      setUrl(`${config.apiUrl}${r.url}`);
-      log.info('cover', 'Cover made', { projectId: project.id, scene });
+      const r = await api.renderCover(project.id, cover, active);
+      setUrls((u) => ({ ...u, [active]: `${config.apiUrl}${r.url}` }));
+      log.info('cover', 'Cover made', { projectId: project.id, scene, platform: active });
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -56,6 +62,29 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
         </div>
       ) : (
         <div className="mt-4 flex flex-wrap items-end gap-3">
+          {platforms.length > 1 && (
+            <div className="w-full">
+              <div className="inline-flex gap-1 rounded-xl bg-line/[0.06] p-1" role="tablist" aria-label="Platform for the cover">
+                {platforms.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    role="tab"
+                    aria-selected={p === active}
+                    onClick={() => setPlatform(p)}
+                    className={cn('inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition', p === active ? 'bg-ink-900 text-ink-100 shadow-sm' : 'text-ink-400 hover:text-ink-100')}
+                  >
+                    <PlatformIcon platform={p} className="h-4 w-4" /> {PLATFORMS[p].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <p className="w-full text-xs text-ink-400">
+            {active === 'youtube'
+              ? 'YouTube Shorts lays its own title and buttons over the bottom of the cover, so the words sit near the top.'
+              : 'Instagram crops the cover to its middle on your profile grid, so the words sit in the middle band.'}
+          </p>
           <label className="block text-xs text-ink-400">
             Scene
             <select aria-label="Scene" className={cn(inputCls, 'mt-1 min-w-[260px]')} value={scene} onChange={(e) => setScene(Number(e.target.value))}>
@@ -74,10 +103,10 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
             <input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Show the words
           </label>
           <Button loading={busy} onClick={() => void make()}>
-            Make the cover
+            {platforms.length > 1 ? `Make the ${PLATFORMS[active].short} cover` : 'Make the cover'}
           </Button>
           {url && (
-            <a className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline" href={`${url}?name=${encodeURIComponent(exportFileName(script.title, null, 'png'))}`}>
+            <a className="inline-flex items-center gap-1 text-sm font-semibold text-accent hover:underline" href={`${url}?name=${encodeURIComponent(exportFileName(`${script.title} cover`, active, 'png'))}`}>
               <Download className="h-4 w-4" /> Download PNG
             </a>
           )}

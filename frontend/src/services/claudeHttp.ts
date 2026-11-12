@@ -70,11 +70,11 @@ export interface ClaudeService {
   saveEditor(projectId: string, editor: ReelEditor): Promise<{ project: Project; urls: EditorUrls }>;
   fitVoice(projectId: string): Promise<{ project: Project; urls: EditorUrls; fit: 'speech' | 'loudness'; note: string | null }>;
   /** Captions and hashtags for the post: the prompt to copy, then the answer to paste back. */
-  postPrompt(projectId: string, note?: string): Promise<string>;
-  importPost(projectId: string, text: string): Promise<Project>;
+  postPrompt(projectId: string, platform: Platform, note?: string): Promise<string>;
+  importPost(projectId: string, platform: Platform, text: string): Promise<Project>;
   /** Cover (thumbnail): save the scene, and take the frame on this machine. */
   saveCover(projectId: string, cover: CoverSettings): Promise<Project>;
-  renderCover(projectId: string, cover: CoverSettings): Promise<{ file: string; url: string }>;
+  renderCover(projectId: string, cover: CoverSettings, platform?: Platform): Promise<{ file: string; url: string }>;
   /** Export: render the MP4 (only on a local server). */
   startExport(projectId: string, platform?: Platform): Promise<{ job: RenderJob; withVoice: boolean }>;
   /** `jobs` has the latest export of each platform; `job` is the first platform's. */
@@ -119,10 +119,10 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     editorFor: (projectId) => call(`/projects/${projectId}/editor`),
     saveEditor: (projectId, editor) => call(`/projects/${projectId}/editor`, 'PUT', { editor }),
     fitVoice: (projectId) => call(`/projects/${projectId}/voice/fit`, 'POST'),
-    postPrompt: async (projectId, note) => (await call<{ prompt: string }>(`/projects/${projectId}/post/prompt${query({ note })}`)).prompt,
-    importPost: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/post/import`, 'POST', { text })).project,
+    postPrompt: async (projectId, platform, note) => (await call<{ prompt: string }>(`/projects/${projectId}/post/prompt${query({ platform, note })}`)).prompt,
+    importPost: async (projectId, platform, text) => (await call<{ project: Project }>(`/projects/${projectId}/post/import`, 'POST', { text, platform })).project,
     saveCover: async (projectId, cover) => (await call<{ project: Project }>(`/projects/${projectId}/cover`, 'PUT', { cover })).project,
-    renderCover: (projectId, cover) => call(`/projects/${projectId}/cover/render`, 'POST', { cover }),
+    renderCover: (projectId, cover, platform) => call(`/projects/${projectId}/cover/render`, 'POST', platform ? { cover, platform } : { cover }),
     startExport: (projectId, platform) => call(`/projects/${projectId}/export`, 'POST', platform ? { platform } : undefined),
     exportStatus: (projectId) => call(`/projects/${projectId}/export`),
     saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,

@@ -19,15 +19,15 @@ async function setup(over: Partial<ClaudeService> = {}, script: ReelScript = SCR
   const created = await store.projects.create({ title: 'Soundbox', topic: 'x', durationSec: 30, qualityTier: 'draft' });
   const project: Project = { ...created, script };
   store.projects.upsert(project);
-  const calls = { saved: [] as CoverSettings[], rendered: [] as { cover: CoverSettings }[] };
+  const calls = { saved: [] as CoverSettings[], rendered: [] as { cover: CoverSettings; platform?: string }[] };
   store.services.claude = () =>
     ({
       saveCover: async (_id: string, cover: CoverSettings) => {
         calls.saved.push(cover);
         return { ...project, script: { ...script, cover } };
       },
-      renderCover: async (_id: string, cover: CoverSettings) => {
-        calls.rendered.push({ cover });
+      renderCover: async (_id: string, cover: CoverSettings, platform?: string) => {
+        calls.rendered.push({ cover, platform });
         return { file: 'f.png', url: '/api/renders/f.png' };
       },
       ...over,
@@ -49,7 +49,7 @@ describe('CoverMaker', () => {
     expect((screen.getByLabelText('Scene') as HTMLSelectElement).value).toBe('0');
     fireEvent.change(screen.getByLabelText('Scene'), { target: { value: '1' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Make the cover' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Make the (Instagram )?cover$/ }));
     });
     expect(calls.saved[0]!.scene).toBe(1);
     expect(calls.rendered[0]).toMatchObject({ cover: { scene: 1 } });
@@ -63,7 +63,7 @@ describe('CoverMaker', () => {
     cleanup();
     await setup({ renderCover: async () => { throw new Error('HyperFrames could not take the picture'); } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Make the cover' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Make the (Instagram )?cover$/ }));
     });
     expect(screen.getByText(/HyperFrames could not take the picture/)).toBeTruthy();
   });
@@ -74,13 +74,27 @@ describe('CoverMaker', () => {
     expect(words.value).toBe('Soundbox kaise bolta hai');
     fireEvent.change(words, { target: { value: 'Soundbox *bolta* kaise hai?' } });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Make the cover' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Make the (Instagram )?cover$/ }));
     });
     expect(calls.rendered[0]!.cover).toEqual({ scene: 0, headline: 'Soundbox *bolta* kaise hai?' });
     fireEvent.click(screen.getByLabelText('Show the words'));
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Make the cover' }));
+      fireEvent.click(screen.getByRole('button', { name: /^Make the (Instagram )?cover$/ }));
     });
     expect(calls.rendered[1]!.cover).toMatchObject({ scene: 0, text: false });
+  });
+
+  it('makes a cover for each platform, with its own layout', async () => {
+    const calls = await setup();
+    expect(screen.getByText(/crops the cover to its middle/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Make the Instagram cover' }));
+    });
+    fireEvent.click(screen.getByRole('tab', { name: /YouTube Shorts/ }));
+    expect(screen.getByText(/the words sit near the top/)).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Make the Shorts cover' }));
+    });
+    expect(calls.rendered.map((r) => r.platform)).toEqual(['instagram', 'youtube']);
   });
 });
