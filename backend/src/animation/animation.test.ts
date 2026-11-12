@@ -38,6 +38,9 @@ describe('Animate step', () => {
     expect(prompt).toContain('HyperFrames');
     expect(prompt).toContain('window.__timelines["main"]');
     expect(prompt).toContain('Whiteboard Explainer');
+    expect(prompt).toContain('# The end card');
+    expect(prompt).toContain('two buttons stacked');
+    expect(prompt).toContain('EVERYTHING HOLDS COMPLETELY STILL');
     expect(prompt).toContain('PLAN FIRST');
     expect(prompt).toContain('DRAWING KIT');
     expect(prompt).toContain('say "continue"');
