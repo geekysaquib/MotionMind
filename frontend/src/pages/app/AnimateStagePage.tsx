@@ -11,6 +11,7 @@ import { log } from '../../lib/logger';
 import { config } from '../../config';
 import { HtmlReelPlayer, type PlayerClip } from '../../components/HtmlReelPlayer';
 import { ClaudeAiPanel } from './PasteScriptPanel';
+import { LayoutCheck } from '../../components/LayoutCheck';
 
 /**
  * Animate step: Claude writes the whole reel as a HyperFrames composition (HTML, CSS, SVG and a GSAP timeline)
@@ -103,6 +104,8 @@ export const AnimateStagePage = observer(function AnimateStagePage() {
             return p;
           }}
         />
+
+        {anim && <LayoutCheck project={project} />}
 
         {anim && (
           <Card>

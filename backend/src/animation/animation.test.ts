@@ -39,6 +39,8 @@ describe('Animate step', () => {
     expect(prompt).toContain('window.__timelines["main"]');
     expect(prompt).toContain('Whiteboard Explainer');
     expect(prompt).toContain('Maximum quality');
+    expect(prompt).toContain('Layout rules (nothing may overlap');
+    expect(prompt).toContain('one inline-block cell per character');
     expect(prompt).toContain('Text must be rock steady');
     expect(prompt).toContain('lay out ALL of its words at once in a fixed box');
     const noted = (await app.inject({ method: 'GET', url: `/api/projects/${id}/animation/prompt?note=${encodeURIComponent('Use more red')}`, headers: H })).json().prompt as string;

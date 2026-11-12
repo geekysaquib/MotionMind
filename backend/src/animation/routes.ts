@@ -7,6 +7,7 @@ import { AnimationError, extractAnimation, reelTimeline, timingKey, type Project
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 import { animationPrompt } from '../ai/animationPrompt';
+import { layoutFixRequest } from './layout';
 
 /** The API's own address, where the composition loads company logos from (in the preview and in the render). */
 export const apiOrigin = () => `http://localhost:${process.env.PORT ?? 8787}`;
@@ -49,6 +50,23 @@ export function registerAnimationRoutes(api: FastifyInstance, deps: AppDeps) {
       platform: both ? 'both' : project.platforms[0] ?? 'instagram',
     });
     return { prompt: withNote(prompt, noteOf(req.query)), timeline };
+  });
+
+  // Opens the saved animation in headless Chrome and looks for text that overlaps, is hidden or spills out.
+  api.post('/projects/:id/animation/check', async (req, reply) => {
+    if (!deps.layoutChecker) return reply.code(501).send({ error: 'check_unavailable', message: 'The layout check runs on your PC: start Motion Mind with npm run dev.' });
+    const project = await owned(req.userId, (req.params as { id: string }).id);
+    if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
+    const animation = project.script?.animation;
+    if (!animation) return reply.code(400).send({ error: 'no_animation', message: 'Paste the animation first.' });
+    try {
+      const report = await deps.layoutChecker(animation.html, timelineOf(project).duration);
+      req.log.info({ projectId: project.id, issues: report.total }, 'layout checked');
+      return { report, request: report.ok ? null : layoutFixRequest(report) };
+    } catch (err) {
+      req.log.error({ err }, 'layout check failed');
+      return reply.code(500).send({ error: 'check_failed', message: `The layout check could not run: ${err instanceof Error ? err.message.split('\n')[0] : 'unknown error'}` });
+    }
   });
 
   api.post('/projects/:id/animation/import', async (req, reply) => {

@@ -103,6 +103,16 @@ Text that shifts by even one pixel from one frame to the next looks like jitter.
 - Headline per scene (the card's headline, *starred* words highlighted) and the step progress, styled per the rulebook.
 - Indian context: ₹, lakh/crore, Indian apps, places and everyday moments, as in the script.
 
+# Layout rules (nothing may overlap; Motion Mind measures this)
+Motion Mind opens your file in Chrome and measures every text box across the timeline. Text that overlaps other text, hides under a panel, or runs out of its box is reported as an error and sent back to you, so get it right the first time.
+- Build every scene as a layout, not a pile of absolutely positioned boxes. Put the scene's content in one container (position:absolute; left:60px; right:60px; top:140px; bottom:280px) with display:flex or grid, flex-direction:column and a gap, and let panels, headings and rows flow inside it. A panel's height comes from its content (padding + rows): never give a panel a fixed height, and never place two panels at absolute positions whose rectangles overlap.
+- Do the arithmetic in a comment for each scene: list every block with its height, add the gaps, and check the total fits the container (about 1,500 px tall). If it does not fit, remove rows (at most 5 rows per panel, at most 6 text blocks per scene) or shrink sizes. Long text wraps inside its box: give every text box an explicit width, and make sure the box is tall enough for the wrapped lines.
+- Two things never share the same space at the same time. If panel B replaces panel A in the same area, A must be completely gone (opacity 0 and visibility hidden) before B starts to appear; never cross-fade two text panels on top of each other. Anything stacked on purpose (a badge on a corner of a card) must sit inside the card's own box with room around it.
+- Text on a picture or a busy graphic sits on its own solid or blurred panel (a scrim), never directly over other text or over lines and shapes that make it hard to read.
+- Changing numbers and scramble or decode effects (counters, ticking values, "decoding" digits) live in their own fixed-width cells: font-variant-numeric: tabular-nums, white-space: nowrap, one inline-block cell per character with a fixed width, overflow hidden. The old and new characters are never stacked in the same cell, and the final value is the only thing left on screen when the effect ends.
+- Nothing may be cut off by the screen edge or by its container (no clipped words, no half-visible panels at rest); everything stays inside x 60–1020 and y 120–1660 once it has entered.
+- Before you answer, walk through every scene at its busiest moment: list the rectangles of every text block, and confirm no two overlap and none is covered. Fix what fails.
+
 # HyperFrames rules (the render fails without these)
 1. One file. Start with <!doctype html>. In <head>: <meta charset="UTF-8">, <meta name="viewport" content="width=1080, height=1920">, and exactly this script: <script src="${GSAP_URL}"></script>. You may load Google Fonts with <link>; no other external files, images or scripts (logos only from the URL above).
 2. html, body: margin 0, width 1080px, height 1920px, overflow hidden, a background colour.

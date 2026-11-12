@@ -8,6 +8,7 @@ import { registerCoverRoutes } from './cover/routes';
 import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
 import { registerEditorRoutes } from './editor/routes';
 import type { Renderer } from './export/renderer';
+import type { LayoutChecker } from './animation/layout';
 import { registerExportRoutes, registerRenderDownload } from './export/routes';
 import { registerFootageFiles, registerFootageRoutes, type FootageDeps } from './footage/routes';
 import { registerLogoRoute, type LogoFetcher } from './logo/routes';
@@ -39,6 +40,8 @@ export interface AppDeps {
   audio: AudioStore;
   /** MP4 export (Remotion), rendered on the machine running the API. Absent in tests. */
   renderer?: Renderer;
+  /** Looks for overlapping or hidden text in Claude's animation (runs Chrome on this machine). */
+  layoutChecker?: LayoutChecker;
   /** Raw footage editing (FFmpeg, whisper.cpp) on the machine running the API. Absent: the routes answer 501. */
   footage?: FootageDeps;
 }

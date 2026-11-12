@@ -8,6 +8,12 @@ export interface EditorUrls {
   music?: string;
 }
 
+export interface LayoutCheck {
+  report: { ok: boolean; total: number; issues: { code: string; time: number; text: string | null; message: string; seconds: number }[] };
+  /** What to paste into the same claude.ai chat so Claude fixes the problems; null when there are none. */
+  request: string | null;
+}
+
 export interface RenderJob {
   id: string;
   status: 'bundling' | 'rendering' | 'finishing' | 'done' | 'failed';
@@ -54,6 +60,8 @@ export interface ClaudeService {
   animationFor(projectId: string): Promise<{ animation: ReelAnimation | null; timeline: ReelTimeline | null; stale: boolean }>;
   animationPrompt(projectId: string, note?: string): Promise<string>;
   importAnimation(projectId: string, text: string): Promise<Project>;
+  /** Layout check: opens the animation in Chrome on this PC and looks for overlapping, hidden or cut-off text. */
+  checkLayout(projectId: string): Promise<LayoutCheck>;
   /** Style: the rulebook Claude animates with. */
   saveStyle(projectId: string, style: StyleId): Promise<Project>;
   /** Voice: upload the recording and the music, save how they are cut, and fit the script's words to the voice. */
@@ -93,6 +101,7 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     animationFor: (projectId) => call(`/projects/${projectId}/animation`),
     animationPrompt: async (projectId, note) => (await call<{ prompt: string }>(`/projects/${projectId}/animation/prompt${query({ note })}`)).prompt,
     importAnimation: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/animation/import`, 'POST', { text })).project,
+    checkLayout: (projectId) => call(`/projects/${projectId}/animation/check`, 'POST'),
     saveStyle: async (projectId, style) => (await call<{ project: Project }>(`/projects/${projectId}/style`, 'PUT', { style })).project,
     uploadAudio: (projectId, kind, file, fileName) => {
       const token = getToken();

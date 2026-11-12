@@ -37,5 +37,6 @@ export async function createAppFromEnv(env: Env, opts: { logger: boolean }): Pro
   const { LocalMediaTools } = await import('./footage/tools');
   const footage = { store: new FootageStore(env.FOOTAGE_DIR || DEFAULT_FOOTAGE_DIR), tools: new LocalMediaTools(env) };
 
-  return buildApp({ ...deps, renderer, footage, sessions, mailer, authSecret: env.AUTH_SECRET, webOrigin: env.WEB_ORIGIN, mode: env.API_DATA_MODE, logger: opts.logger });
+  const layoutChecker = (await import('./animation/layout')).hyperFramesLayoutChecker();
+  return buildApp({ ...deps, renderer, layoutChecker, footage, sessions, mailer, authSecret: env.AUTH_SECRET, webOrigin: env.WEB_ORIGIN, mode: env.API_DATA_MODE, logger: opts.logger });
 }
