@@ -64,7 +64,7 @@ describe('cover settings', () => {
   it('refuse an unknown scene, extra fields, and other users', async () => {
     const { app, id } = await setup();
     const put = (cover: unknown, headers = H) => app.inject({ method: 'PUT', url: `/api/projects/${id}/cover`, headers, payload: { cover } });
-    expect((await put({ ...COVER, headline: 'x' })).statusCode).toBe(400);
+    expect((await put({ ...COVER, layout: 'x' })).statusCode).toBe(400);
     expect((await put({ scene: -1 })).statusCode).toBe(400);
     expect((await put({ ...COVER, scene: 5 })).json().message).toBe("That scene doesn't exist.");
     expect((await put(COVER, B)).statusCode).toBe(404);

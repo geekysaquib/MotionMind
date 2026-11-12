@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Download, Image as ImageIcon } from 'lucide-react';
-import { exportFileName, normalizeCover, type Project } from '@motionmind/shared';
+import { exportFileName, MAX_COVER_HEADLINE, normalizeCover, type Project } from '@motionmind/shared';
 import { useStores } from '../stores/RootStore';
 import { config } from '../config';
 import { Alert, Button, Card } from './ui';
@@ -21,6 +21,8 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
   const script = project.script!;
   const saved = useMemo(() => normalizeCover(script.cover, script), [script]);
   const [scene, setScene] = useState(saved.scene);
+  const [headline, setHeadline] = useState(saved.headline ?? script.title);
+  const [text, setText] = useState(saved.text !== false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState<string | null>(null);
@@ -29,7 +31,8 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
     setBusy(true);
     setError(null);
     try {
-      const cover = { ...saved, scene };
+      const words = headline.trim();
+      const cover = { scene, ...(words && words !== script.title ? { headline: words } : {}), ...(text ? {} : { text: false }) };
       projects.upsert(await api.saveCover(project.id, cover));
       const r = await api.renderCover(project.id, cover);
       setUrl(`${config.apiUrl}${r.url}`);
@@ -46,7 +49,7 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
       <h2 className="flex items-center gap-2 font-semibold">
         <ImageIcon className="h-4 w-4 text-accent" /> Cover
       </h2>
-      <p className="mt-1 text-sm text-ink-400">A frame of your animation as the reel's cover. Pick the scene that sums up the reel best.</p>
+      <p className="mt-1 text-sm text-ink-400">The reel's title set large over a frame of your animation, with your handle. Pick the scene that sums up the reel best, and edit the words if you like. Put *stars* around words to colour them.</p>
       {!script.animation ? (
         <div className="mt-3">
           <Alert tone="info">Make the animation first, on the Animate step.</Alert>
@@ -62,6 +65,13 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
                 </option>
               ))}
             </select>
+          </label>
+          <label className="block min-w-[260px] flex-1 text-xs text-ink-400">
+            Words on the cover
+            <input aria-label="Words on the cover" className={cn(inputCls, 'mt-1')} maxLength={MAX_COVER_HEADLINE} disabled={!text} value={headline} onChange={(e) => setHeadline(e.target.value)} />
+          </label>
+          <label className="flex items-center gap-2 pb-2 text-sm">
+            <input type="checkbox" checked={text} onChange={(e) => setText(e.target.checked)} /> Show the words
           </label>
           <Button loading={busy} onClick={() => void make()}>
             Make the cover

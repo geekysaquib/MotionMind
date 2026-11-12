@@ -67,4 +67,20 @@ describe('CoverMaker', () => {
     });
     expect(screen.getByText(/HyperFrames could not take the picture/)).toBeTruthy();
   });
+
+  it('sends your own words for the cover, or none when the words are turned off', async () => {
+    const calls = await setup();
+    const words = screen.getByLabelText('Words on the cover') as HTMLInputElement;
+    expect(words.value).toBe('Soundbox kaise bolta hai');
+    fireEvent.change(words, { target: { value: 'Soundbox *bolta* kaise hai?' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Make the cover' }));
+    });
+    expect(calls.rendered[0]!.cover).toEqual({ scene: 0, headline: 'Soundbox *bolta* kaise hai?' });
+    fireEvent.click(screen.getByLabelText('Show the words'));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Make the cover' }));
+    });
+    expect(calls.rendered[1]!.cover).toMatchObject({ scene: 0, text: false });
+  });
 });

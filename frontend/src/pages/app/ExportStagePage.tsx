@@ -7,6 +7,7 @@ import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
 import { PlatformIcon } from '../../components/BrandIcons';
 import { CoverMaker } from '../../components/CoverMaker';
+import { PostKit } from '../../components/PostKit';
 import { config } from '../../config';
 import { Alert, Button, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
@@ -170,6 +171,7 @@ export const ExportStagePage = observer(function ExportStagePage() {
         {error && <Alert>{error}</Alert>}
       </div>
       <CoverMaker project={project} />
+      <PostKit project={project} />
     </div>
   );
 });

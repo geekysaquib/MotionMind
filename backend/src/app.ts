@@ -5,6 +5,7 @@ import { registerClaudeRoutes } from './ai/routes';
 import { registerDiscoverRoutes } from './discover/routes';
 import { registerAnimationAssets, registerAnimationRoutes } from './animation/routes';
 import { registerCoverRoutes } from './cover/routes';
+import { registerPostRoutes } from './post/routes';
 import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
 import { registerEditorRoutes } from './editor/routes';
 import type { Renderer } from './export/renderer';
@@ -88,6 +89,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
       registerEditorRoutes(api, deps);
       registerExportRoutes(api, deps);
       registerCoverRoutes(api, deps);
+      registerPostRoutes(api, deps);
       registerAnimationRoutes(api, deps);
       registerFootageRoutes(api, deps);
     },

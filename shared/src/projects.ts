@@ -87,6 +87,8 @@ export interface ReelScript {
   style?: import('./styles').StyleId;
   /** The cover (thumbnail) settings. Missing means the defaults. */
   cover?: import('./cover').CoverSettings;
+  /** Captions and hashtags for posting the reel, made on the Export step. */
+  post?: import('./cover').ReelPost;
   /** The animation Claude wrote for this reel (HyperFrames HTML), made on the Animate step. */
   animation?: import('./animation').ReelAnimation;
   steps: string[];

@@ -1,11 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { reelTimeline, type Project } from '@motionmind/shared';
+import { MAX_COVER_HEADLINE, reelTimeline, styleOf, type Project } from '@motionmind/shared';
+import { withCoverText } from './overlay';
 import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 import { finishedAnimation } from '../animation/endCard';
 
-const coverSchema = z.object({ scene: z.number().int().min(0).max(60) }).strict();
+const coverSchema = z.object({ scene: z.number().int().min(0).max(60), headline: z.string().trim().max(MAX_COVER_HEADLINE).optional(), text: z.boolean().optional() }).strict();
 
 const renderSchema = z.object({ cover: coverSchema });
 
@@ -40,7 +41,11 @@ export function registerCoverRoutes(api: FastifyInstance, deps: AppDeps) {
     // The cover is a frame of Claude's animation, late in the chosen scene once everything has come in.
     const scene = reelTimeline(project.script, project.editor).scenes[body.data.cover.scene]!;
     try {
-      const file = await deps.renderer.still(finishedAnimation(project, await deps.data.getProfile(req.userId)), scene.start + (scene.end - scene.start) * 0.8, project.id);
+      const profile = await deps.data.getProfile(req.userId);
+      let html = finishedAnimation(project, profile);
+      // The words on the cover: the reel's title unless the creator wrote their own; none when they turned the text off.
+      if (body.data.cover.text !== false) html = withCoverText(html, { headline: body.data.cover.headline?.trim() || project.script.title, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', accent: styleOf(project.script.style).swatch[1] });
+      const file = await deps.renderer.still(html, scene.start + (scene.end - scene.start) * 0.8, project.id);
       req.log.info({ projectId: project.id, file, scene: body.data.cover.scene }, 'cover rendered');
       return { file, url: `/api/renders/${file}` };
     } catch (err) {

@@ -69,6 +69,9 @@ export interface ClaudeService {
   editorFor(projectId: string): Promise<{ editor: ReelEditor | null; urls: EditorUrls }>;
   saveEditor(projectId: string, editor: ReelEditor): Promise<{ project: Project; urls: EditorUrls }>;
   fitVoice(projectId: string): Promise<{ project: Project; urls: EditorUrls; fit: 'speech' | 'loudness'; note: string | null }>;
+  /** Captions and hashtags for the post: the prompt to copy, then the answer to paste back. */
+  postPrompt(projectId: string, note?: string): Promise<string>;
+  importPost(projectId: string, text: string): Promise<Project>;
   /** Cover (thumbnail): save the scene, and take the frame on this machine. */
   saveCover(projectId: string, cover: CoverSettings): Promise<Project>;
   renderCover(projectId: string, cover: CoverSettings): Promise<{ file: string; url: string }>;
@@ -116,6 +119,8 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     editorFor: (projectId) => call(`/projects/${projectId}/editor`),
     saveEditor: (projectId, editor) => call(`/projects/${projectId}/editor`, 'PUT', { editor }),
     fitVoice: (projectId) => call(`/projects/${projectId}/voice/fit`, 'POST'),
+    postPrompt: async (projectId, note) => (await call<{ prompt: string }>(`/projects/${projectId}/post/prompt${query({ note })}`)).prompt,
+    importPost: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/post/import`, 'POST', { text })).project,
     saveCover: async (projectId, cover) => (await call<{ project: Project }>(`/projects/${projectId}/cover`, 'PUT', { cover })).project,
     renderCover: (projectId, cover) => call(`/projects/${projectId}/cover/render`, 'POST', { cover }),
     startExport: (projectId, platform) => call(`/projects/${projectId}/export`, 'POST', platform ? { platform } : undefined),

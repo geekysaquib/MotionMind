@@ -14,7 +14,8 @@ const editSchema = z.object({ script: z.unknown() });
 const scriptWithLayout = scriptSchemaV4.extend({
   style: zv4.enum(STYLE_IDS).optional(),
   animation: zv4.object({ html: zv4.string().max(2_000_000), style: zv4.enum(STYLE_IDS).optional(), timingKey: zv4.string().max(4000), writtenAt: zv4.string() }).optional(),
-  cover: zv4.object({ scene: zv4.number().int().min(0).max(60) }).optional(),
+  cover: zv4.object({ scene: zv4.number().int().min(0).max(60), headline: zv4.string().max(70).optional(), text: zv4.boolean().optional() }).optional(),
+  post: zv4.object({ captions: zv4.array(zv4.string().max(2200)).max(6), hashtags: zv4.array(zv4.string().max(60)).max(40), title: zv4.string().max(100).optional(), createdAt: zv4.string() }).optional(),
 });
 const importSchema = z.object({ text: z.string().min(1, "Paste Claude's answer first.").max(100_000), style: z.enum(STYLE_IDS).optional() });
 /** The style picked before the script: the prompt designs every scene for it, and the script is saved with it. */
@@ -140,7 +141,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     const id = (req.params as { id: string }).id;
     const project = z.string().uuid().safeParse(id).success ? await deps.data.getProject(req.userId, id) : null;
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
-    const saved: ReelScript = { ...parsed.data, cover: parsed.data.cover as ReelScript['cover'], style: parsed.data.style, animation: parsed.data.animation, model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
+    const saved: ReelScript = { ...parsed.data, cover: parsed.data.cover as ReelScript['cover'], style: parsed.data.style, animation: parsed.data.animation, post: parsed.data.post, model: project.script?.model, writtenAt: project.script?.writtenAt, editedAt: new Date().toISOString() };
     return {
       project: await deps.data.updateProject(req.userId, project.id, { script: saved, stage: project.stage === 'script' || project.stage === 'voice' ? 'storyboard' : project.stage }),
     };
