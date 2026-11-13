@@ -9,3 +9,4 @@ export * from './footage';
 export * from './animation';
 export * from './alignScript';
 export * from './alignWords';
+export * from './social';

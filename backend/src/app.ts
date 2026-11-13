@@ -7,6 +7,9 @@ import { registerAnimationAssets, registerAnimationRoutes } from './animation/ro
 import { registerCoverRoutes } from './cover/routes';
 import { registerPostRoutes } from './post/routes';
 import { registerLogoRoutes } from './profile/logo';
+import { registerSocialCallback, registerSocialRoutes, type SocialDeps } from './social/routes';
+import { MemorySocialStore, type SocialStore } from './social/store';
+import { httpInstagramClient } from './social/instagram';
 import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
 import { registerEditorRoutes } from './editor/routes';
 import type { Renderer } from './export/renderer';
@@ -44,6 +47,10 @@ export interface AppDeps {
   renderer?: Renderer;
   /** Looks for overlapping or hidden text in Claude's animation (runs Chrome on this machine). */
   layoutChecker?: LayoutChecker;
+  /** Connected Instagram and YouTube accounts (Phase 2 analytics). Defaults to memory. */
+  socialStore?: SocialStore;
+  /** The Instagram and YouTube API clients. Defaults to Instagram only (YouTube needs Google OAuth in .env). */
+  social?: SocialDeps;
   /** Raw footage editing (FFmpeg, whisper.cpp) on the machine running the API. Absent: the routes answer 501. */
   footage?: FootageDeps;
 }
@@ -55,7 +62,12 @@ declare module 'fastify' {
 }
 
 export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioStore }): Promise<FastifyInstance> {
-  const deps: AppDeps = { ...input, audio: input.audio ?? new MemoryAudioStore() };
+  const deps: AppDeps = {
+    ...input,
+    audio: input.audio ?? new MemoryAudioStore(),
+    socialStore: input.socialStore ?? new MemorySocialStore(),
+    social: input.social ?? { instagram: httpInstagramClient(input.fetchImpl), redirectBase: `http://localhost:${process.env.PORT ?? 8787}` },
+  };
   const app = Fastify({
     logger: deps.logger ? { redact: ['req.headers.authorization', 'body.apiKey', 'body.code'] } : false,
   });
@@ -69,6 +81,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
   registerLogoRoute(app, deps);
   registerAnimationAssets(app);
   registerFootageFiles(app, deps);
+  registerSocialCallback(app, deps);
 
   // Public
   app.register(async (auth) => registerLoginRoutes(auth, deps), { prefix: '/api/auth' });
@@ -93,6 +106,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
       registerPostRoutes(api, deps);
       registerLogoRoutes(api, deps);
       registerAnimationRoutes(api, deps);
+      registerSocialRoutes(api, deps);
       registerFootageRoutes(api, deps);
     },
     { prefix: '/api' },

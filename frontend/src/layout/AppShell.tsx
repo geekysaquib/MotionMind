@@ -1,6 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronRight, Compass, FolderClosed, FolderOpen, LayoutDashboard, LogOut, Plus, Scissors, Settings } from 'lucide-react';
+import { ChevronRight, Compass, FolderClosed, FolderOpen, BarChart3, LayoutDashboard, LogOut, Plus, Scissors, Settings } from 'lucide-react';
 import { useStores } from '../stores/RootStore';
 import { Logo } from '../components/Logo';
 import { DemoBanner } from '../components/DemoBanner';
@@ -13,10 +13,11 @@ const NAV = [
   { to: '/app/library', label: 'Projects', icon: FolderOpen },
   { to: '/app/discover', label: 'Discover', icon: Compass },
   { to: '/app/footage', label: 'Raw footage', icon: Scissors },
+  { to: '/app/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
-const SETTINGS_TABS: Record<string, string> = { connectors: 'AI & connectors', account: 'Account', diagnostics: 'Diagnostics', claude: 'AI & connectors' };
+const SETTINGS_TABS: Record<string, string> = { connections: 'Connections', connectors: 'AI & connectors', account: 'Account', diagnostics: 'Diagnostics', claude: 'AI & connectors' };
 
 /** Where you are, as a short trail for the top bar: Projects / <reel> / <step>. */
 function useCrumbs(): { label: string; to?: string }[] {
@@ -26,6 +27,7 @@ function useCrumbs(): { label: string; to?: string }[] {
   if (parts.length === 0) return [{ label: 'Home' }];
   if (parts[0] === 'library') return [{ label: 'Projects' }];
   if (parts[0] === 'discover') return [{ label: 'Discover' }];
+  if (parts[0] === 'analytics') return [{ label: 'Analytics' }];
   if (parts[0] === 'footage') return parts[1] ? [{ label: 'Raw footage', to: '/app/footage' }, { label: 'Edit' }] : [{ label: 'Raw footage' }];
   if (parts[0] === 'settings') return [{ label: 'Settings', to: '/app/settings' }, { label: parts[1] ? (SETTINGS_TABS[parts[1]] ?? parts[1]) : 'Profile & handle' }];
   if (parts[0] === 'projects' && parts[1]) {

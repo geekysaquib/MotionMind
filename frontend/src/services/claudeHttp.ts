@@ -1,3 +1,4 @@
+import type { AnalyticsRange, AnalyticsSummary, SocialAccount, SocialPlatform } from '@motionmind/shared';
 import type { AudioTrack, CoverSettings, Platform, Project, ReelAnimation, ReelEditor, ReelScript, ReelTimeline, StyleId } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
@@ -69,6 +70,12 @@ export interface ClaudeService {
   editorFor(projectId: string): Promise<{ editor: ReelEditor | null; urls: EditorUrls }>;
   saveEditor(projectId: string, editor: ReelEditor): Promise<{ project: Project; urls: EditorUrls }>;
   fitVoice(projectId: string): Promise<{ project: Project; urls: EditorUrls; fit: 'speech' | 'loudness'; note: string | null }>;
+  /** Phase 2: connected Instagram and YouTube accounts, and their numbers. */
+  socialAccounts(): Promise<{ accounts: SocialAccount[]; youtubeReady: boolean }>;
+  youtubeConnectUrl(): Promise<{ url: string }>;
+  connectInstagram(token: string): Promise<{ accounts: SocialAccount[] }>;
+  disconnectSocial(platform: SocialPlatform): Promise<{ accounts: SocialAccount[] }>;
+  analytics(platform: SocialPlatform, range: AnalyticsRange, fresh?: boolean): Promise<{ summary: AnalyticsSummary; cached: boolean }>;
   /** The channel logo: shown on the end card and the cover. */
   logo(): Promise<{ url: string | null }>;
   uploadLogo(file: Blob): Promise<{ url: string | null }>;
@@ -123,6 +130,11 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     editorFor: (projectId) => call(`/projects/${projectId}/editor`),
     saveEditor: (projectId, editor) => call(`/projects/${projectId}/editor`, 'PUT', { editor }),
     fitVoice: (projectId) => call(`/projects/${projectId}/voice/fit`, 'POST'),
+    socialAccounts: () => call('/social/accounts'),
+    youtubeConnectUrl: () => call('/social/youtube/connect'),
+    connectInstagram: (token) => call('/social/instagram', 'POST', { token }),
+    disconnectSocial: (platform) => call(`/social/${platform}`, 'DELETE'),
+    analytics: (platform, range, fresh) => call(`/social/analytics/${platform}?range=${range}${fresh ? '&fresh=1' : ''}`),
     logo: () => call('/profile/logo'),
     uploadLogo: (file) => {
       const token = getToken();

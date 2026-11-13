@@ -20,6 +20,8 @@ import { ExportStagePage } from './pages/app/ExportStagePage';
 import { StyleStagePage } from './pages/app/StyleStagePage';
 import { AnimateStagePage } from './pages/app/AnimateStagePage';
 import { FootagePage } from './pages/app/FootagePage';
+import { AnalyticsPage } from './pages/app/AnalyticsPage';
+import { ConnectionsSettings } from './pages/app/ConnectionsSettings';
 import { FootageEditPage } from './pages/app/FootageEditPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { LandingPage } from './pages/LandingPage';
@@ -47,6 +49,7 @@ export const routes = [
       { path: 'discover', element: <DiscoverPage /> },
       { path: 'library', element: <LibraryPage /> },
       { path: 'footage', element: <FootagePage /> },
+      { path: 'analytics', element: <AnalyticsPage /> },
       { path: 'footage/:id', element: <FootageEditPage /> },
       {
         path: 'projects/:id',
@@ -69,6 +72,7 @@ export const routes = [
         element: <SettingsPage />,
         children: [
           { index: true, element: <ProfileSettings /> },
+          { path: 'connections', element: <ConnectionsSettings /> },
           { path: 'account', element: <AccountSettings /> },
           { path: 'diagnostics', element: <DiagnosticsSettings /> },
         ],

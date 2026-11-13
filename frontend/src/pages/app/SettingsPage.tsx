@@ -4,6 +4,7 @@ import { cn } from '../../lib/cn';
 
 const TABS = [
   { to: '/app/settings', label: 'Profile & handle', end: true },
+  { to: '/app/settings/connections', label: 'Connections' },
   { to: '/app/settings/account', label: 'Account' },
   { to: '/app/settings/diagnostics', label: 'Diagnostics' },
 ];
