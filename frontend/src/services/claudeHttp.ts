@@ -1,42 +1,23 @@
-import type { AudioTrack, CoverSettings, Platform, Project, ReelEditor, ReelScript, ReelVoice } from '@motionmind/shared';
+import type { AnalyticsRange, AnalyticsSummary, SocialAccount, SocialPlatform } from '@motionmind/shared';
+import type { AudioTrack, CoverSettings, Platform, Project, ReelAnimation, ReelEditor, ReelScript, ReelTimeline, StyleId } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
 
-export interface ClaudeStatus {
-  connected: boolean;
-  model: string;
-}
-
-export interface ClaudeAnswer {
-  reply: { text: string; model: string; inputTokens: number; outputTokens: number };
-  ms: number;
-}
-
-export interface Connector {
-  id: 'claude' | 'elevenlabs';
-  name: string;
-  purpose: string;
-  connected: boolean;
-  detail: string | null;
-}
-
-export interface ElevenLabsCheck {
-  ok: boolean;
-  detail: string;
-  voices?: { id: string; name: string }[];
-}
-
-/** Playable URLs for the editor's uploaded voice and music. */
+/** Playable URLs for the uploaded voice and music. */
 export interface EditorUrls {
   voice?: string;
   music?: string;
-  /** Playable URL of each sound effect, by its storage path. */
-  sfx?: Record<string, string>;
+}
+
+export interface LayoutCheck {
+  report: { ok: boolean; total: number; issues: { code: string; time: number; text: string | null; message: string; seconds: number }[] };
+  /** What to paste into the same claude.ai chat so Claude fixes the problems; null when there are none. */
+  request: string | null;
 }
 
 export interface RenderJob {
   id: string;
-  status: 'bundling' | 'rendering' | 'done' | 'failed';
+  status: 'bundling' | 'rendering' | 'finishing' | 'done' | 'failed';
   progress: number;
   file?: string;
   error?: string;
@@ -63,47 +44,62 @@ export interface TrendIdea {
   why: string;
 }
 
+/** What the app asks of the API for a reel. Everything that needs Claude is a prompt to copy into claude.ai and an answer to paste back. */
 export interface ClaudeService {
-  /** Discover: what people are reading right now, and reel ideas made from it. */
+  /** Discover: what people are reading right now, and reel ideas made from it (prompt, then the pasted answer). */
   trending(lang: 'en' | 'hi'): Promise<Trending>;
-  trendingPrompt(lang: 'en' | 'hi'): Promise<string>;
-  trendingIdeas(lang: 'en' | 'hi'): Promise<{ date: string; ideas: TrendIdea[] }>;
+  trendingPrompt(lang: 'en' | 'hi', note?: string): Promise<string>;
   importTrendingIdeas(text: string): Promise<TrendIdea[]>;
-  /** The app's connectors (Claude, ElevenLabs), all on server keys. */
-  connectors(): Promise<Connector[]>;
-  testElevenLabs(): Promise<ElevenLabsCheck>;
-  status(): Promise<ClaudeStatus>;
-  ask(prompt: string): Promise<ClaudeAnswer>;
-  /** Claude writes the project's reel script; returns the updated project. */
-  writeScript(projectId: string): Promise<Project>;
-  /** For claude.ai: the prompt to copy, then the answer to paste back. */
-  scriptPrompt(projectId: string): Promise<string>;
-  importScript(projectId: string, text: string): Promise<Project>;
-  /** Research: Claude searches the web (API), or the same through claude.ai, then the user approves it. */
-  research(projectId: string): Promise<Project>;
-  researchPrompt(projectId: string): Promise<string>;
+  /** Script: the prompt to copy, then the answer to paste back. */
+  scriptPrompt(projectId: string, style?: StyleId | null, note?: string): Promise<string>;
+  importScript(projectId: string, text: string, style?: StyleId | null): Promise<Project>;
+  /** Research: the prompt to copy, the answer to paste back, then the user approves it. */
+  researchPrompt(projectId: string, note?: string): Promise<string>;
   importResearch(projectId: string, text: string): Promise<Project>;
   approveResearch(projectId: string): Promise<Project>;
-  /** Voice (ElevenLabs on the server key). */
-  voices(): Promise<{ voices: { id: string; name: string }[]; defaultVoiceId: string | null }>;
-  voiceFor(projectId: string): Promise<{ voice: ReelVoice | null; urls: string[]; stale: boolean }>;
-  generateVoice(projectId: string, voiceId?: string, voiceName?: string): Promise<{ project: Project; urls: string[] }>;
-  /** Reel editor: upload voice/music, then save the editor state. */
-  uploadAudio(projectId: string, kind: 'voice' | 'music' | 'sfx', file: Blob, fileName: string): Promise<{ track: Pick<AudioTrack, 'path' | 'fileName' | 'mime'>; url: string }>;
+  /** Animate: Claude writes the reel as a HyperFrames composition in claude.ai; the user pastes it back. */
+  animationFor(projectId: string): Promise<{ animation: ReelAnimation | null; timeline: ReelTimeline | null; stale: boolean }>;
+  animationPrompt(projectId: string, note?: string): Promise<string>;
+  importAnimation(projectId: string, text: string): Promise<Project>;
+  /** Layout check: opens the animation in Chrome on this PC and looks for overlapping, hidden or cut-off text. */
+  checkLayout(projectId: string): Promise<LayoutCheck>;
+  /** Style: the rulebook Claude animates with. */
+  saveStyle(projectId: string, style: StyleId): Promise<Project>;
+  /** Voice: upload the recording and the music, save how they are cut, and fit the script's words to the voice. */
+  uploadAudio(projectId: string, kind: 'voice' | 'music', file: Blob, fileName: string): Promise<{ track: Pick<AudioTrack, 'path' | 'fileName' | 'mime'>; url: string }>;
   editorFor(projectId: string): Promise<{ editor: ReelEditor | null; urls: EditorUrls }>;
   saveEditor(projectId: string, editor: ReelEditor): Promise<{ project: Project; urls: EditorUrls }>;
-  /** Export: render the MP4 (only on a local server). */
-  /** Cover (thumbnail): save its settings with the script, and render the image (PNG or JPG) on this machine. */
+  fitVoice(projectId: string): Promise<{ project: Project; urls: EditorUrls; fit: 'speech' | 'loudness'; note: string | null }>;
+  /** Phase 2: connected Instagram and YouTube accounts, and their numbers. */
+  socialAccounts(): Promise<{ accounts: SocialAccount[]; youtubeReady: boolean }>;
+  youtubeConnectUrl(): Promise<{ url: string }>;
+  connectInstagram(token: string): Promise<{ accounts: SocialAccount[] }>;
+  disconnectSocial(platform: SocialPlatform): Promise<{ accounts: SocialAccount[] }>;
+  analytics(platform: SocialPlatform, range: AnalyticsRange, fresh?: boolean): Promise<{ summary: AnalyticsSummary; cached: boolean }>;
+  /** The channel logo: shown on the end card and the cover. */
+  logo(): Promise<{ url: string | null }>;
+  uploadLogo(file: Blob): Promise<{ url: string | null }>;
+  removeLogo(): Promise<{ ok: boolean }>;
+  /** Captions and hashtags for the post: the prompt to copy, then the answer to paste back. */
+  postPrompt(projectId: string, platform: Platform, note?: string): Promise<string>;
+  importPost(projectId: string, platform: Platform, text: string): Promise<Project>;
+  /** Cover (thumbnail): save the scene, and take the frame on this machine. */
   saveCover(projectId: string, cover: CoverSettings): Promise<Project>;
-  renderCover(projectId: string, cover: CoverSettings, format: 'png' | 'jpeg'): Promise<{ file: string; url: string }>;
+  renderCover(projectId: string, cover: CoverSettings, platform?: Platform): Promise<{ file: string; url: string }>;
+  /** Export: render the MP4 (only on a local server). */
   startExport(projectId: string, platform?: Platform): Promise<{ job: RenderJob; withVoice: boolean }>;
-  /** `jobs` has the latest export of each platform; `job` is the first platform's (older servers send only that). */
+  /** `jobs` has the latest export of each platform; `job` is the first platform's. */
   exportStatus(projectId: string): Promise<{ available: boolean; job: RenderJob | null; jobs?: Partial<Record<Platform, RenderJob | null>> }>;
   /** Storyboard: save the user's edits to the script. */
   saveScript(projectId: string, script: ReelScript): Promise<Project>;
 }
 
-/** Claude always runs on the API, on the server's Anthropic key. */
+/** `?a=1&b=2` from the values that are set. */
+function query(params: Record<string, string | null | undefined>): string {
+  const q = Object.entries(params).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v!)}`);
+  return q.length ? `?${q.join('&')}` : '';
+}
+
 export function httpClaudeService(baseUrl: string, getToken: () => string | null, fetchImpl: typeof fetch = fetch): ClaudeService {
   async function call<T>(path: string, method = 'GET', body?: unknown) {
     const token = getToken();
@@ -111,19 +107,16 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     return apiRequest<T>(baseUrl, path, { method, body, token, fetchImpl });
   }
   return {
-    connectors: async () => (await call<{ connectors: Connector[] }>('/connectors')).connectors,
-    testElevenLabs: async () => (await call<{ result: ElevenLabsCheck }>('/connectors/elevenlabs/test', 'POST')).result,
-    status: () => call<ClaudeStatus>('/claude/status'),
-    ask: (prompt) => call<ClaudeAnswer>('/claude/ask', 'POST', { prompt }),
-    writeScript: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'POST')).project,
-    scriptPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt`)).prompt,
-    importScript: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/script/import`, 'POST', { text })).project,
-    research: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research`, 'POST')).project,
-    researchPrompt: async (projectId) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt`)).prompt,
+    scriptPrompt: async (projectId, style, note) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt${query({ style, note })}`)).prompt,
+    importScript: async (projectId, text, style) => (await call<{ project: Project }>(`/projects/${projectId}/script/import`, 'POST', style ? { text, style } : { text })).project,
+    researchPrompt: async (projectId, note) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt${query({ note })}`)).prompt,
     importResearch: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/research/import`, 'POST', { text })).project,
-    voices: () => call('/voices'),
-    voiceFor: (projectId) => call(`/projects/${projectId}/voice`),
-    generateVoice: (projectId, voiceId, voiceName) => call(`/projects/${projectId}/voice`, 'POST', { voiceId, voiceName }),
+    approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,
+    animationFor: (projectId) => call(`/projects/${projectId}/animation`),
+    animationPrompt: async (projectId, note) => (await call<{ prompt: string }>(`/projects/${projectId}/animation/prompt${query({ note })}`)).prompt,
+    importAnimation: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/animation/import`, 'POST', { text })).project,
+    checkLayout: (projectId) => call(`/projects/${projectId}/animation/check`, 'POST'),
+    saveStyle: async (projectId, style) => (await call<{ project: Project }>(`/projects/${projectId}/style`, 'PUT', { style })).project,
     uploadAudio: (projectId, kind, file, fileName) => {
       const token = getToken();
       if (!token) throw new ServiceError('You are signed out.', 'unauthorized');
@@ -134,17 +127,30 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
         raw: { data: file, contentType: 'application/octet-stream', headers: { 'X-File-Name': encodeURIComponent(fileName) } },
       });
     },
-    trending: (lang) => call(`/discover/trending?lang=${lang}`),
-    trendingPrompt: async (lang) => (await call<{ prompt: string }>(`/discover/prompt?lang=${lang}`)).prompt,
-    trendingIdeas: (lang) => call(`/discover/ideas`, 'POST', { lang }),
-    importTrendingIdeas: async (text) => (await call<{ ideas: TrendIdea[] }>(`/discover/import`, 'POST', { text })).ideas,
     editorFor: (projectId) => call(`/projects/${projectId}/editor`),
     saveEditor: (projectId, editor) => call(`/projects/${projectId}/editor`, 'PUT', { editor }),
+    fitVoice: (projectId) => call(`/projects/${projectId}/voice/fit`, 'POST'),
+    socialAccounts: () => call('/social/accounts'),
+    youtubeConnectUrl: () => call('/social/youtube/connect'),
+    connectInstagram: (token) => call('/social/instagram', 'POST', { token }),
+    disconnectSocial: (platform) => call(`/social/${platform}`, 'DELETE'),
+    analytics: (platform, range, fresh) => call(`/social/analytics/${platform}?range=${range}${fresh ? '&fresh=1' : ''}`),
+    logo: () => call('/profile/logo'),
+    uploadLogo: (file) => {
+      const token = getToken();
+      if (!token) throw new ServiceError('You are signed out.', 'unauthorized');
+      return apiRequest(baseUrl, '/profile/logo', { method: 'POST', token, fetchImpl, raw: { data: file, contentType: 'application/octet-stream' } });
+    },
+    removeLogo: () => call('/profile/logo', 'DELETE'),
+    postPrompt: async (projectId, platform, note) => (await call<{ prompt: string }>(`/projects/${projectId}/post/prompt${query({ platform, note })}`)).prompt,
+    importPost: async (projectId, platform, text) => (await call<{ project: Project }>(`/projects/${projectId}/post/import`, 'POST', { text, platform })).project,
     saveCover: async (projectId, cover) => (await call<{ project: Project }>(`/projects/${projectId}/cover`, 'PUT', { cover })).project,
-    renderCover: (projectId, cover, format) => call(`/projects/${projectId}/cover/render`, 'POST', { cover, format }),
+    renderCover: (projectId, cover, platform) => call(`/projects/${projectId}/cover/render`, 'POST', platform ? { cover, platform } : { cover }),
     startExport: (projectId, platform) => call(`/projects/${projectId}/export`, 'POST', platform ? { platform } : undefined),
     exportStatus: (projectId) => call(`/projects/${projectId}/export`),
     saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,
-    approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,
+    trending: (lang) => call(`/discover/trending?lang=${lang}`),
+    trendingPrompt: async (lang, note) => (await call<{ prompt: string }>(`/discover/prompt${query({ lang, note })}`)).prompt,
+    importTrendingIdeas: async (text) => (await call<{ ideas: TrendIdea[] }>(`/discover/import`, 'POST', { text })).ideas,
   };
 }

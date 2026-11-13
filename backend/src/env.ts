@@ -11,17 +11,24 @@ const schema = z
     SUPABASE_URL: z.string().url().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
     AUTH_SECRET: base64Secret('AUTH_SECRET'),
-    // Claude for every user (script writing, Ask Claude). Users never add their own keys.
-    ANTHROPIC_API_KEY: z.string().min(20).optional(),
-    // Voiceover for every user. Also read by the reel engine's tts.mjs.
-    ELEVENLABS_API_KEY: z.string().min(10).optional(),
-    ELEVENLABS_VOICE_ID: z.string().optional(),
     // Login-code email. Leave SMTP_HOST empty in the root .env during development to print codes in the terminal instead.
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().positive().default(465),
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
     SMTP_FROM: z.string().optional(),
+    // Raw footage editing. Tools are found on PATH; these override it. FOOTAGE_DIR defaults to footage/ at the repo root.
+    FOOTAGE_DIR: z.string().optional(),
+    FFMPEG_BIN: z.string().optional(),
+    FFPROBE_BIN: z.string().optional(),
+    WHISPER_CPP_BIN: z.string().optional(),
+    WHISPER_MODEL: z.string().optional(),
+    YTDLP_BIN: z.string().optional(),
+    // Phase 2 analytics: a Google OAuth client (YouTube Data + Analytics APIs), redirect URI http://localhost:PORT/api/social/youtube/callback.
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    // 1 = the Analytics page shows sample numbers (to try it before connecting real accounts).
+    SOCIAL_DEMO: z.enum(['0', '1']).optional().transform((v) => v === '1'),
   })
   .superRefine((env, ctx) => {
     if (env.API_DATA_MODE === 'supabase' && (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY)) {
@@ -30,6 +37,9 @@ const schema = z
     // Catch the template placeholder at startup instead of as "Invalid API key" on the first request.
     if (env.API_DATA_MODE === 'supabase' && /^(PASTE_|server-only-service-role-key$)/.test(env.SUPABASE_SERVICE_ROLE_KEY ?? '')) {
       ctx.addIssue({ code: 'custom', message: 'SUPABASE_SERVICE_ROLE_KEY is still the placeholder. Paste the service_role key from Supabase > Project Settings > API into .env' });
+    }
+    if (Boolean(env.GOOGLE_CLIENT_ID) !== Boolean(env.GOOGLE_CLIENT_SECRET)) {
+      ctx.addIssue({ code: 'custom', message: 'Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET for YouTube analytics, or neither' });
     }
     if (env.SMTP_HOST && (!env.SMTP_USER || !env.SMTP_PASS)) {
       ctx.addIssue({ code: 'custom', message: 'SMTP_USER and SMTP_PASS are required when SMTP_HOST is set' });

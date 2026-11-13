@@ -1,5 +1,6 @@
 import type { Platform, Profile, Project, QualityTier } from '@motionmind/shared';
 import type { ClaudeService } from './claudeHttp';
+import type { FootageService } from './footageHttp';
 
 export interface Session {
   userId: string;
@@ -53,4 +54,6 @@ export interface Services {
   projects: ProjectService;
   /** Built lazily because it needs the current access token. */
   claude: (getToken: () => string | null) => ClaudeService;
+  /** Raw footage editing, on the API's machine. */
+  footage: (getToken: () => string | null) => FootageService;
 }

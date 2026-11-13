@@ -1,21 +1,15 @@
 import { createContext, useContext } from 'react';
 import type { Services } from '../services/types';
-import { AiModeStore } from './AiModeStore';
 import { AuthStore } from './AuthStore';
 import { ProfileStore } from './ProfileStore';
 import { ProjectStore } from './ProjectStore';
 import { ToastStore } from './ToastStore';
-import { log } from '../lib/logger';
 
 export class RootStore {
   readonly auth: AuthStore;
   readonly profile: ProfileStore;
   readonly projects: ProjectStore;
   readonly toasts = new ToastStore();
-  readonly aiMode = new AiModeStore((mode) => {
-    // Saved on the account when signed in; the browser keeps it either way.
-    if (this.auth?.session) void this.profile.update({ aiMode: mode }).catch((e) => log.warn('settings', `Couldn't save the AI mode: ${(e as Error).message}`));
-  });
 
   constructor(readonly services: Services) {
     this.auth = new AuthStore(this);

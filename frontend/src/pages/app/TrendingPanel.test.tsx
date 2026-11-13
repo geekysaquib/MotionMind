@@ -14,9 +14,9 @@ const TREND: Trending = {
 };
 const IDEA: TrendIdea = { topic: 'How did Chandrayaan-3 land softly on the Moon?', hook: 'Fifteen minutes of terror.', seconds: 45, why: 'Landing anniversary' };
 
-async function setup(aiMode: 'keys' | 'paste', over: Partial<ClaudeService> = {}) {
-  const store = await makeStore({ signedIn: true, aiMode });
-  const calls = { trending: [] as string[], asked: 0, imported: [] as string[] };
+async function setup(over: Partial<ClaudeService> = {}) {
+  const store = await makeStore({ signedIn: true });
+  const calls = { trending: [] as string[], imported: [] as string[] };
   store.services.claude = () =>
     ({
       trending: async (lang: string) => {
@@ -24,10 +24,6 @@ async function setup(aiMode: 'keys' | 'paste', over: Partial<ClaudeService> = {}
         return { ...TREND, lang };
       },
       trendingPrompt: async () => 'THE PROMPT',
-      trendingIdeas: async () => {
-        calls.asked++;
-        return { date: TREND.date, ideas: [IDEA] };
-      },
       importTrendingIdeas: async (text: string) => {
         calls.imported.push(text);
         return [IDEA];
@@ -48,7 +44,7 @@ describe('Discover > Trending now', () => {
   });
 
   it('opens on what people are reading, with views and links, in English or Hindi', async () => {
-    const calls = await setup('keys');
+    const calls = await setup();
     expect(screen.getByText('Chandrayaan-3')).toBeTruthy();
     expect(screen.getByText('8,12,345 views')).toBeTruthy();
     expect(screen.getAllByRole('link', { name: 'Use as topic' })[0]!.getAttribute('href')).toBe('/app?new=1&topic=Chandrayaan-3');
@@ -59,22 +55,8 @@ describe('Discover > Trending now', () => {
     expect(calls.trending).toEqual(['en', 'hi']);
   });
 
-  it('with an API key, Claude makes the ideas in one click and they are kept for next time', async () => {
-    const calls = await setup('keys');
-    expect(screen.queryByRole('button', { name: 'Copy prompt' })).toBeNull();
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Make reel ideas' }));
-    });
-    expect(calls.asked).toBe(1);
-    expect(screen.getByRole('link', { name: /How did Chandrayaan-3 land softly/ }).getAttribute('href')).toBe(`/app?new=1&topic=${encodeURIComponent(IDEA.topic)}`);
-    expect(screen.getByText('Why now: Landing anniversary')).toBeTruthy();
-    cleanup();
-    await setup('keys'); // a fresh visit shows the saved ideas straight away
-    expect(screen.getByText(/Ideas from 2026-11-04/)).toBeTruthy();
-  });
-
-  it('with copy and paste, shows the claude.ai steps instead of the key button, and takes the pasted answer', async () => {
-    const calls = await setup('paste');
+  it('turns the pages into ideas through claude.ai, and keeps them for next time', async () => {
+    const calls = await setup();
     expect(screen.queryByRole('button', { name: 'Make reel ideas' })).toBeNull();
     expect(screen.getByText('Turn these into reel ideas in claude.ai')).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Claude's answer"), { target: { value: '{"ideas":[]}' } });
@@ -82,11 +64,15 @@ describe('Discover > Trending now', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Use this answer' }));
     });
     expect(calls.imported).toEqual(['{"ideas":[]}']);
-    expect(screen.getByRole('link', { name: /How did Chandrayaan-3 land softly/ })).toBeTruthy();
+    expect(screen.getByRole('link', { name: /How did Chandrayaan-3 land softly/ }).getAttribute('href')).toBe(`/app?new=1&topic=${encodeURIComponent(IDEA.topic)}`);
+    expect(screen.getByText('Why now: Landing anniversary')).toBeTruthy();
+    cleanup();
+    await setup(); // a fresh visit shows the saved ideas straight away
+    expect(screen.getByText(/Ideas from 2026-11-04/)).toBeTruthy();
   });
 
   it('says what went wrong when Wikipedia cannot be reached', async () => {
-    await setup('keys', {
+    await setup({
       trending: async () => {
         throw new Error("Couldn't reach Wikipedia to see what is trending.");
       },

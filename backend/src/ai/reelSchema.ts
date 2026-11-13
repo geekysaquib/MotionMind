@@ -1,8 +1,8 @@
 import { z } from 'zod/v4';
 
 // The reel format Claude writes, matching the engine's Beat/ReelSpec (backend/reel-engine/src/script.ts).
-// Kept to plain strings, enums and arrays so it works as a structured-output schema. World, scene and
-// train fields are optional so scripts written before the 3D worlds still load.
+// Kept to plain strings, enums and arrays so it works as a structured-output schema. Fields of the old 3D
+// worlds (world, theme, scene, shot, events) in older scripts are dropped when a script is read.
 
 const tone = z.enum(['red', 'teal', 'purple', 'blue', 'amber']);
 
@@ -13,26 +13,7 @@ const row = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('note'), text: z.string() }),
 ]);
 
-// Same lists as PROP_KINDS / TRAIN_SHOTS / WorldEvent in the engine.
-const propKind = z.enum(['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'qr', 'speaker', 'lock', 'database', 'router', 'battery', 'heart', 'gear', 'truck', 'plane', 'train', 'tree', 'hospital', 'school', 'cart', 'camera', 'bulb', 'globe', 'envelope', 'clock', 'rocket', 'syringe', 'chart', 'atm', 'brain', 'virus', 'dna', 'flask', 'microscope', 'sun', 'flame', 'solar', 'windmill', 'bus', 'ship', 'shield', 'book', 'bell', 'custom']);
-
-const scene = z
-  .object({
-    props: z
-      .array(z.object({ id: z.string().describe('short id; reuse the same id in later scenes for the same object'), kind: propKind.describe("one of the named kinds, or 'custom' for anything else"), label: z.string().optional().describe('1 to 3 words shown above it'), logo: z.string().max(80).optional().describe("custom only: the website of a real company or product (like 'irctc.co.in' or 'npci.org.in') to show its LOGO as a raised tile. Use it for every brand or company the narration names. Takes the place of glyph."), glyph: z.string().max(40).optional().describe("custom only: a Lucide icon name like 'microscope' or 'wheat', drawn as a raised 3D tile. Preferred over an emoji."), icon: z.string().max(8).optional().describe("ONE emoji that shows what it is; required for 'custom'"), shape: z.enum(['block', 'tall', 'wide', 'flat', 'round']).optional().describe("custom only: body shape"), tone: tone.optional().describe("custom only: body colour") }))
-      .describe('1 to 4 objects this scene shows'),
-    links: z.array(z.object({ from: z.string(), to: z.string(), label: z.string().optional() })).optional().describe('signals or money moving between two of the props'),
-    effect: z.enum(['rings', 'pulse', 'none']).optional().describe('rings = signal waves from the focus; pulse = it glows'),
-    focus: z.string().optional().describe('id of the prop the camera and effect centre on'),
-  })
-  .describe('The 3D isometric scene for this beat (iso world)');
-
-const trainShot = z.enum(['phone', 'tower', 'map', 'crowd', 'station', 'accuracy', 'wide']);
-const trainEvent = z.enum(['rings', 'towerIds', 'pins', 'gpsLog', 'stationGlow', 'errorBand', 'none']);
-
 export const reelScriptSchema = z.object({
-  world: z.enum(['iso', 'train']).optional().describe("'train' only for railway / train-tracking topics; 'iso' for everything else"),
-  theme: z.enum(['city', 'nature', 'lab', 'plain', 'night', 'sunset', 'ocean', 'desert']).optional().describe('iso world: the look of the ground and background that fits the topic'),
   title: z.string().describe('Short reel title, 2 to 6 words'),
   steps: z.array(z.string()).describe('3 or 4 one-word step names for the progress header'),
   glossary: z
@@ -54,11 +35,8 @@ export const reelScriptSchema = z.object({
           eyebrow: z.string().describe('Tiny label above the headline, e.g. "Step 1 · Mobile tower"'),
           headline: z.string().describe('Under 9 words. Wrap 1 or 2 key words in *asterisks* to highlight them'),
           tone,
-          rows: z.array(row).describe('0 to 2 visual rows that make the point concrete'),
+          rows: z.array(row).describe('1 or 2 short rows that sum up the point (used for the cover and as a fallback picture)'),
         }),
-        scene: scene.optional(),
-        shot: trainShot.optional().describe('train world: phone (rider close-up), tower, map (towers along the line), crowd, station, accuracy, wide'),
-        events: z.array(trainEvent).optional().describe('train world effects for this beat'),
       }),
     )
     .describe('7 to 11 beats: a hook, the explanation in steps, and a short payoff'),

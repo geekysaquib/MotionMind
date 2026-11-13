@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import type { Project, ReelScript } from '@motionmind/shared';
+import type { Project, ReelScript, StyleId } from '@motionmind/shared';
 import type { RootStore } from './RootStore';
 import type { NewProject } from '../services/types';
 import { log } from '../lib/logger';
@@ -75,18 +75,6 @@ export class ProjectStore {
     return p;
   }
 
-  /** Claude writes the reel script for this project (server side, with the user's Anthropic key). */
-  async writeScript(id: string) {
-    log.info('claude', 'Writing reel script', { projectId: id });
-    const started = Date.now();
-    const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).writeScript(id);
-    log.info('claude', 'Reel script written', { projectId: id, beats: p.script?.beats.length, model: p.script?.model, ms: Date.now() - started });
-    runInAction(() => {
-      this.items = [p, ...this.items.filter((x) => x.id !== id)];
-    });
-    return p;
-  }
-
   private get claude() {
     return this.root.services.claude(() => this.root.auth.session?.accessToken ?? null);
   }
@@ -101,15 +89,6 @@ export class ProjectStore {
       this.items = [p, ...this.items.filter((x) => x.id !== p.id)];
     });
     return p;
-  }
-
-  /** Claude researches the topic on the web (server key). Saved unapproved until the user approves it. */
-  async research(id: string) {
-    log.info('claude', 'Researching topic', { projectId: id });
-    const started = Date.now();
-    const p = await this.claude.research(id);
-    log.info('claude', 'Research done', { projectId: id, facts: p.research?.facts.length, sources: p.research?.sources.length, ms: Date.now() - started });
-    return this.replace(p);
   }
 
   async importResearch(id: string, text: string) {
@@ -131,8 +110,8 @@ export class ProjectStore {
   }
 
   /** Saves a script written in claude.ai and pasted back (for people without an API key). */
-  async importScript(id: string, text: string) {
-    const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).importScript(id, text);
+  async importScript(id: string, text: string, style?: StyleId | null) {
+    const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).importScript(id, text, style);
     log.info('claude', 'Pasted script imported', { projectId: id, beats: p.script?.beats.length });
     runInAction(() => {
       this.items = [p, ...this.items.filter((x) => x.id !== id)];

@@ -36,7 +36,7 @@ export function TermsEditor({ script, onChange }: { script: ReelScript; onChange
         <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-400">
           <Building2 className="h-3.5 w-3.5" /> Brands and logos
         </span>
-        <p className="mt-1 text-xs text-ink-400">The logo is fetched from the website. In a scene, set an object to “custom” and type the website in its Logo box to draw it in 3D.</p>
+        <p className="mt-1 text-xs text-ink-400">The logo is fetched from the website and shown in every scene that names the company.</p>
         <div className="mt-2 space-y-2">
           {brands.length === 0 && <p className="text-xs text-ink-400">None in this script.</p>}
           {brands.map((b, i) => (

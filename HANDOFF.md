@@ -34,7 +34,7 @@ Checks: `npm run typecheck`, `npm test` (Jest, 140 tests), `npm run build`.
 | Layout | `frontend/`, `backend/`, `backend/reel-engine/`, `shared/`, `supabase/`. **One `package.json` and one `.env`, at the root.** |
 | Database | Supabase project **motion-mind** (`dxmtfsmdfncrrwwcxpzj`, Mumbai). **Never OrbitDev.** Database only: browser never talks to it, all tables locked to the API (service_role). |
 | Sign-in | **No Supabase Auth.** 6-digit email code over **SMTP with a Gmail app password**; our API issues the session token. |
-| AI keys | **Users never set up keys.** Server keys only: `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`. Settings has exactly two connectors: **Claude** and **ElevenLabs**. |
+| AI | **No API keys.** Claude is used only in claude.ai by copy and paste (Research, Script, Animate, Discover ideas). Decided 2026-11-10; the key mode, ElevenLabs, free voice and Connectors were removed. |
 | No API key? | Saquib has Claude Pro, not an API key. Pro can't power the API, so Research and Script also have a **"do it in claude.ai"** route: copy a prompt, paste Claude's answer back. Keep both routes. |
 | Graphics | **Every reel is 3D**, for any topic, matching the original reel's look. No flat slides. |
 | Tests | **Jest** (not Vitest). |
@@ -45,7 +45,7 @@ Checks: `npm run typecheck`, `npm test` (Jest, 140 tests), `npm run build`.
 
 ### Platform
 - Email-code sign-in (SMTP, or code printed in the API terminal when SMTP is empty), sessions, onboarding (handle, channel, niche, language), dashboard, project library, settings.
-- Settings tabs: **Profile & handle, Connectors (Claude + ElevenLabs: Ready/Not available, test, Ask Claude), Account, Diagnostics (app log: filter, copy, download)**.
+- Settings tabs: **Profile & handle, Account, Diagnostics** (app log: filter, copy).
 - Crash screen with "Copy log"; errors batched to `/api/client-logs`.
 
 ### Stages (project tabs)
@@ -55,8 +55,8 @@ Checks: `npm run typecheck`, `npm test` (Jest, 140 tests), `npm run build`.
 | Script | **Write with Claude** (Opus 5.5, structured output), or **write it in claude.ai** and paste. Live preview. | same |
 | Storyboard | Edit each scene's narration, headline, label, step, colour; reorder/add/delete; live preview of the draft. | — |
 | Graphics | Still of every scene. | — |
-| Voice | **Upload your own voiceover** (one file for the whole reel; browser reads length + loudness, `autoCuts` guesses scene starts), or pick an ElevenLabs voice and record every scene. Captions follow word timings; warns if narration changed since. | `ELEVENLABS_API_KEY` for ElevenLabs only |
-| Export | Renders the MP4 with Remotion **on your PC**, with progress, playback, download. First export downloads Remotion's Chrome. | local `npm run dev` |
+| Voice | **Upload your own voiceover** (one file). Auto-fit finds where each scene starts and when each word is spoken (whisper.cpp, or loudness without it); drag breaks and trim to fine-tune; optional music. |
+| Export | Renders the MP4 with HyperFrames + FFmpeg **on your PC**, with progress, playback, download. | local `npm run dev` |
 | Reel editor | Waveform timeline with draggable scene breaks, voice pace (whole reel + per scene, 0.7-1.5x, pitch kept), edit narration/label/headline per scene, background music (loops, volume), caption size/position/look, live preview, Save. Export uses all of it. | migration `20261104000200_project_editor.sql` applied |
 
 ### Reel engine (`backend/reel-engine/src`)
@@ -78,8 +78,6 @@ Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `rese
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | set |
 | `AUTH_SECRET` | set (generated) |
 | `SMTP_*` | set by Saquib |
-| `ANTHROPIC_API_KEY` | **empty**: Write/Research with Claude show "not set up" until added (claude.ai route works without it) |
-| `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` | **empty**: Voice stage needs it |
 
 
 ## Known limits / open items
@@ -97,9 +95,10 @@ Tables: `app_users`, `login_codes`, `profiles`, `projects` (with `script`, `rese
 
 ## Suggested next steps
 
-1. Add `ANTHROPIC_API_KEY` and `ELEVENLABS_API_KEY` if you want API-key mode (copy and paste works without them).
+1. Install whisper.cpp (`WHISPER_CPP_BIN`, `WHISPER_MODEL`) so the voice fit hears the words; without it the fit uses loudness.
 2. Run `npm run assets:usage` after 20 to 30 real reels and hand-build the most-used missing 3D models.
 3. Push the branch.
+4. Edit raw footage, next slices: install whisper.cpp + a model and set `WHISPER_CPP_BIN` / `WHISPER_MODEL` for captions; brand sheet learned from 3 to 5 reference reels (yt-dlp download, FFmpeg scene cuts and frames, Claude reads them into fonts, colours, caption style, pacing; the user approves it); background music; Remotion motion graphics (hook title, lower thirds) laid over the cut.
 
 ## Commit history (newest first)
 

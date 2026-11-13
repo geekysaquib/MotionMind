@@ -13,11 +13,15 @@ const secret = randomBytes(32).toString('base64');
 const H = { authorization: 'Bearer dev:user-a' };
 const B = { authorization: 'Bearer dev:user-b' };
 const beat = (id: string) => ({ id, narration: 'Ek second.', keywords: [], chapter: 0, card: { eyebrow: 'UPI', headline: 'Fast', tone: 'teal' as const, rows: [] } });
-const SCRIPT: ReelScript = { title: 'How UPI works', world: 'iso', steps: ['App'], beats: [beat('a'), beat('b')] };
-const COVER: CoverSettings = { scene: 1, headline: 'How *UPI* works', kicker: 'Explained', style: 'center', size: 'feed', tone: 'purple', brand: true };
+const SCRIPT: ReelScript = { title: 'How UPI works', steps: ['App'], beats: [beat('a'), beat('b')], animation: { html: '<!doctype html><html></html>', timingKey: 'x', writtenAt: 'now' } };
+const COVER: CoverSettings = { scene: 1 };
 
 class FakeRenderer implements Renderer {
-  stills: { props: Record<string, unknown>; format: string }[] = [];
+  stills: { html: string; at: number }[] = [];
+  removed: string[] = [];
+  async removeProject(userId: string, projectId: string) {
+    this.removed.push(`${userId}:${projectId}`);
+  }
   start(): never {
     throw new Error('not used');
   }
@@ -27,9 +31,9 @@ class FakeRenderer implements Renderer {
   filePath() {
     return null;
   }
-  async still(props: Record<string, unknown>, format: 'png' | 'jpeg') {
-    this.stills.push({ props, format });
-    return `11111111-1111-1111-1111-111111111111.${format === 'jpeg' ? 'jpg' : 'png'}`;
+  async still(html: string, at: number) {
+    this.stills.push({ html, at });
+    return '11111111-1111-1111-1111-111111111111.png';
   }
 }
 
@@ -39,7 +43,7 @@ async function setup(renderer?: Renderer, withScript = true) {
   const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'UPI', durationSec: 30, qualityTier: 'draft' } });
   const project = created.json().project as { id: string; ownerId: string };
   if (withScript) await data.updateProject(project.ownerId, project.id, { script: SCRIPT, stage: 'storyboard' });
-  return { app, id: project.id };
+  return { app, id: project.id, data, ownerId: project.ownerId };
 }
 
 describe('cover settings', () => {
@@ -57,12 +61,11 @@ describe('cover settings', () => {
     expect(sb.json().project.script.cover).toEqual(COVER);
   });
 
-  it('refuse a missing headline, an unknown style or size, a scene that does not exist, and other users', async () => {
+  it('refuse an unknown scene, extra fields, and other users', async () => {
     const { app, id } = await setup();
     const put = (cover: unknown, headers = H) => app.inject({ method: 'PUT', url: `/api/projects/${id}/cover`, headers, payload: { cover } });
-    expect((await put({ ...COVER, headline: '  ' })).json().message).toBe('Write a headline for the cover.');
-    expect((await put({ ...COVER, style: 'wild' })).statusCode).toBe(400);
-    expect((await put({ ...COVER, size: 'huge' })).statusCode).toBe(400);
+    expect((await put({ ...COVER, layout: 'x' })).statusCode).toBe(400);
+    expect((await put({ scene: -1 })).statusCode).toBe(400);
     expect((await put({ ...COVER, scene: 5 })).json().message).toBe("That scene doesn't exist.");
     expect((await put(COVER, B)).statusCode).toBe(404);
     const empty = await setup(undefined, false);
@@ -71,20 +74,25 @@ describe('cover settings', () => {
 });
 
 describe('cover render', () => {
-  it('renders the image with the reel and the cover settings, as PNG or JPG, and returns its link', async () => {
+  it("takes a frame of Claude's animation late in the chosen scene, and returns its link", async () => {
     const renderer = new FakeRenderer();
     const { app, id } = await setup(renderer);
     const png = await app.inject({ method: 'POST', url: `/api/projects/${id}/cover/render`, headers: H, payload: { cover: COVER } });
     expect(png.statusCode).toBe(200);
     expect(png.json()).toEqual({ file: '11111111-1111-1111-1111-111111111111.png', url: '/api/renders/11111111-1111-1111-1111-111111111111.png' });
-    const jpg = await app.inject({ method: 'POST', url: `/api/projects/${id}/cover/render`, headers: H, payload: { cover: COVER, format: 'jpeg' } });
-    expect(jpg.json().url).toMatch(/\.jpg$/);
-    expect(renderer.stills).toHaveLength(2);
-    const props = renderer.stills[0]!.props as { cover: CoverSettings; world: string; beats: unknown[] };
-    expect(props.cover).toEqual(COVER);
-    expect(props.world).toBe('iso');
-    expect(props.beats).toHaveLength(2);
-    expect(renderer.stills[1]!.format).toBe('jpeg');
+    expect(renderer.stills).toHaveLength(1);
+    expect(renderer.stills[0]!.html).toContain('<html>');
+    // Each scene ('Ek second.', no voice) is estimated at 2 / 2.7 + 0.6 s; scene 2 at 80% of its length.
+    const len = 2 / 2.7 + 0.6;
+    expect(renderer.stills[0]!.at).toBeCloseTo(len + len * 0.8, 1);
+  });
+
+  it('needs the animation first', async () => {
+    const renderer = new FakeRenderer();
+    const { app, id, data, ownerId } = await setup(renderer);
+    await data.updateProject(ownerId, id, { script: { ...SCRIPT, animation: undefined } });
+    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/cover/render`, headers: H, payload: { cover: COVER } });
+    expect(res.json().error).toBe('no_animation');
   });
 
   it('says it runs on the PC when there is no renderer, and validates what it is given', async () => {
@@ -94,7 +102,7 @@ describe('cover render', () => {
     expect(res.json().message).toMatch(/runs on your PC/);
     const { app, id } = await setup(new FakeRenderer());
     expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/cover/render`, headers: H, payload: { cover: { ...COVER, scene: 9 } } })).statusCode).toBe(400);
-    expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/cover/render`, headers: H, payload: { cover: COVER, format: 'gif' } })).statusCode).toBe(400);
+
     expect((await app.inject({ method: 'POST', url: `/api/projects/${id}/cover/render`, payload: { cover: COVER } })).statusCode).toBe(401);
   });
 
@@ -107,5 +115,12 @@ describe('cover render', () => {
     const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/cover/render`, headers: H, payload: { cover: COVER } });
     expect(res.statusCode).toBe(500);
     expect(res.json().message).toBe('The cover could not be made: Chrome did not start');
+  });
+
+  it("is told to delete the project's videos and covers when the project is deleted", async () => {
+    const renderer = new FakeRenderer();
+    const { app, id, ownerId } = await setup(renderer);
+    expect((await app.inject({ method: 'DELETE', url: `/api/projects/${id}`, headers: H })).statusCode).toBe(200);
+    expect(renderer.removed).toEqual([`${ownerId}:${id}`]);
   });
 });

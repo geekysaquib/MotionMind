@@ -1,20 +1,17 @@
-import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { observer } from 'mobx-react-lite';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Plus, Trash2, Layers3 } from 'lucide-react';
-import { reelWorld, WORLD_THEMES, type Project, type ReelBeat, type ReelScript, type ReelTone, type WorldTheme } from '@motionmind/shared';
+import type { Project, ReelBeat, ReelScript, ReelTone } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
-import { Alert, Button, Card, Spinner } from '../../components/ui';
+import { Alert, Button, Card } from '../../components/ui';
 import { errorText } from '../../lib/format';
-import { brandFor, specFromScript } from '../../components/reelSpec';
+import { AnimationPreview } from '../../components/AnimationPreview';
 import { cn } from '../../lib/cn';
-import { SceneEditor } from '../../components/SceneEditor';
+import { cleanRows, RowsEditor } from '../../components/RowsEditor';
 import { TermsEditor } from '../../components/TermsEditor';
 
-const THEME_LABELS: Record<WorldTheme, string> = { city: 'City (apps, payments, services)', nature: 'Nature (food, biology, outdoors)', lab: 'Lab (science, chips, AI)', plain: 'Plain (anything abstract)', night: 'Night (security, space, late-night tech)', sunset: 'Sunset (stories, culture, travel)', ocean: 'Ocean (water, ships, climate)', desert: 'Desert (energy, mining, history)' };
-
-const ReelPreview = lazy(() => import('../../components/ReelPreview'));
 
 const TONES: { id: ReelTone; label: string; swatch: string }[] = [
   { id: 'teal', label: 'Teal', swatch: 'bg-[#14B8A6]' },
@@ -32,10 +29,10 @@ function cleanKeywords(b: ReelBeat): ReelBeat {
   return { ...b, keywords: b.keywords.filter((k) => words.has(k.toLowerCase())) };
 }
 
-/** Storyboard stage: edit the script beat by beat (words, card, colour, order) with the reel playing alongside. */
+/** Storyboard stage: edit the script beat by beat (words, card, scene picture, colour, order) with the reel playing alongside. */
 export const StoryboardStagePage = observer(function StoryboardStagePage() {
   const project = useOutletContext<Project>();
-  const { projects, profile } = useStores();
+  const { projects } = useStores();
   const [draft, setDraft] = useState<ReelScript | null>(project.script);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +42,8 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
   useEffect(() => setDraft(project.script), [project.script]);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(project.script);
-  const spec = useMemo(() => (draft && draft.beats.length ? specFromScript(draft, brandFor(profile.profile)) : null), [draft, profile.profile]);
+  // A recording was fitted to the narration as it is saved: changing a line changes what was recorded.
+  const narrationChanged = Boolean(draft && project.script && project.editor?.upload && draft.beats.map((b) => b.narration.trim()).join('') !== project.script.beats.map((b) => b.narration.trim()).join(''));
 
   if (!draft) {
     return (
@@ -87,7 +85,7 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
     setSaving(true);
     setError(null);
     try {
-      await projects.saveScript(project.id, { ...draft, glossary: draft.glossary?.filter((g) => g.short.trim() && g.full.trim()), brands: draft.brands?.filter((b) => b.name.trim() && b.domain.trim()), beats: draft.beats.map(cleanKeywords) });
+      await projects.saveScript(project.id, { ...draft, glossary: draft.glossary?.filter((g) => g.short.trim() && g.full.trim()), brands: draft.brands?.filter((b) => b.name.trim() && b.domain.trim()), beats: draft.beats.map((b) => cleanKeywords({ ...b, card: { ...b.card, rows: cleanRows(b.card.rows) } })) });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -117,17 +115,16 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
               </Button>
             </div>
           </div>
-          {reelWorld(draft) === 'iso' && (
-            <label className="mt-4 block text-xs text-ink-400">
-              Look of the 3D world
-              <select className={cn(inputCls, 'mt-1 max-w-xs')} value={draft.theme ?? 'city'} onChange={(e) => setDraft({ ...draft, theme: e.target.value as WorldTheme })}>
-                {WORLD_THEMES.map((t) => (
-                  <option key={t} value={t}>
-                    {THEME_LABELS[t]}
-                  </option>
-                ))}
-              </select>
-            </label>
+          {narrationChanged && (
+            <div className="mt-4">
+              <Alert tone="info">
+                You changed a narration line after recording. The recording no longer matches these words: after you save, go to the{' '}
+                <Link to={`/app/projects/${project.id}/voice`} className="font-semibold underline">
+                  Voice step
+                </Link>{' '}
+                and record or generate the changed lines again, then fit the script. Card, short-form and brand edits don't affect the voice.
+              </Alert>
+            </div>
           )}
           <div className="mt-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">Header steps</span>
@@ -150,7 +147,9 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
         {draft.beats.map((b, i) => (
           <Card key={b.id}>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-sm font-semibold">Scene {i + 1}</span>
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                Scene {i + 1}
+              </span>
               <div className="flex items-center gap-1">
                 <IconButton label={`Move scene ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)} icon={<ArrowUp className="h-4 w-4" />} />
                 <IconButton label={`Move scene ${i + 1} down`} disabled={i === draft.beats.length - 1} onClick={() => move(i, 1)} icon={<ArrowDown className="h-4 w-4" />} />
@@ -196,39 +195,19 @@ export const StoryboardStagePage = observer(function StoryboardStagePage() {
                 />
               ))}
             </div>
-            {reelWorld(draft) === 'iso' && (
-              <SceneEditor
-                beat={b}
-                index={i}
-                known={knownProps(draft, i)}
-                previous={draft.beats[i - 1]?.scene}
-                onChange={(scene) => update(i, (x) => ({ ...x, scene }))}
-              />
-            )}
+            <RowsEditor rows={b.card.rows} index={i} onChange={(rows) => updateCard(i, { rows })} />
           </Card>
         ))}
       </div>
 
       <div className="xl:sticky xl:top-6 xl:self-start">
         <h3 className="mb-3 text-sm font-semibold text-ink-400">Preview {dirty && <span className="text-amber-600">(unsaved changes)</span>}</h3>
-        {spec && (
-          <Suspense fallback={<Spinner label="Loading the reel engine" />}>
-            <ReelPreview spec={spec} />
-          </Suspense>
-        )}
+        <AnimationPreview project={project} />
+        {dirty && <p className="mt-2 text-xs text-ink-400">The preview shows the saved animation. Changes to the words need a new animation on the Animate step.</p>}
       </div>
     </div>
   );
 });
-
-/** Objects the other scenes use, once each, so a scene can reuse one and the camera stays in one world. */
-function knownProps(script: ReelScript, except: number) {
-  const seen = new Map<string, NonNullable<ReelBeat['scene']>['props'][number]>();
-  script.beats.forEach((b, j) => {
-    if (j !== except) for (const p of b.scene?.props ?? []) if (!seen.has(p.id)) seen.set(p.id, p);
-  });
-  return [...seen.values()];
-}
 
 function IconButton({ label, icon, onClick, disabled }: { label: string; icon: ReactNode; onClick: () => void; disabled?: boolean }) {
   return (

@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { ClipboardCopy, ExternalLink } from 'lucide-react';
 import type { Project } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
+import { pickedStyle } from '../../lib/pickedStyle';
 import { Alert, Button, Card } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
@@ -13,7 +14,8 @@ interface ClaudeAiPanelProps {
   chatHint?: string;
   placeholder: string;
   disabled?: boolean;
-  getPrompt: () => Promise<string>;
+  /** The prompt to copy, with the creator's own instructions (if any) added. */
+  getPrompt: (note: string) => Promise<string>;
   onImport: (text: string) => Promise<unknown>;
   logScope: string;
 }
@@ -25,6 +27,7 @@ interface ClaudeAiPanelProps {
 export function ClaudeAiPanel({ title, chatHint, placeholder, disabled, getPrompt, onImport, logScope }: ClaudeAiPanelProps) {
   const [copied, setCopied] = useState(false);
   const [text, setText] = useState('');
+  const [note, setNote] = useState('');
   const [busy, setBusy] = useState<'copy' | 'import' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +35,7 @@ export function ClaudeAiPanel({ title, chatHint, placeholder, disabled, getPromp
     setBusy('copy');
     setError(null);
     try {
-      await navigator.clipboard.writeText(await getPrompt());
+      await navigator.clipboard.writeText(await getPrompt(note.trim()));
       setCopied(true);
       log.info('claude', `${logScope} prompt copied for claude.ai`);
     } catch (e) {
@@ -62,6 +65,21 @@ export function ClaudeAiPanel({ title, chatHint, placeholder, disabled, getPromp
       <ol className="mt-4 space-y-4 text-sm">
         <li>
           <div className="font-medium">1. Copy the prompt</div>
+          <label className="mt-2 block text-xs text-ink-400" htmlFor="prompt-note">
+            Want something changed? Tell Claude (optional). It goes into the prompt you copy.
+          </label>
+          <textarea
+            id="prompt-note"
+            aria-label="Your instructions for Claude"
+            maxLength={1500}
+            className="field mt-1.5 min-h-[64px] text-sm"
+            placeholder="For example: keep it under 40 seconds, explain it for beginners, use a funnier hook"
+            value={note}
+            onChange={(e) => {
+              setNote(e.target.value);
+              setCopied(false);
+            }}
+          />
           <div className="mt-2">
             <Button variant="secondary" icon={<ClipboardCopy className="h-4 w-4" />} loading={busy === 'copy'} disabled={disabled} onClick={() => void copyPrompt()}>
               {copied ? 'Copied' : 'Copy prompt'}
@@ -97,14 +115,15 @@ export function ClaudeAiPanel({ title, chatHint, placeholder, disabled, getPromp
 /** Script stage: write the script in claude.ai instead of with the server's API key. */
 export const PasteScriptPanel = observer(function PasteScriptPanel({ project }: { project: Project }) {
   const { projects, services, auth } = useStores();
+  const style = pickedStyle(project);
   return (
     <ClaudeAiPanel
       title="Write it in claude.ai"
       placeholder='{ "title": "...", "steps": [...], "beats": [...] }'
       disabled={!project.topic}
       logScope="Script"
-      getPrompt={() => services.claude(() => auth.session?.accessToken ?? null).scriptPrompt(project.id)}
-      onImport={(text) => projects.importScript(project.id, text)}
+      getPrompt={(note) => services.claude(() => auth.session?.accessToken ?? null).scriptPrompt(project.id, style, note)}
+      onImport={(text) => projects.importScript(project.id, text, style)}
     />
   );
 });

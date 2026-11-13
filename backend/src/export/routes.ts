@@ -2,58 +2,40 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { PLATFORM_IDS, editorSpecParts, reelWorld, type Platform, type Project } from '@motionmind/shared';
+import { PLATFORM_IDS, reelTimeline, type Platform, type Project } from '@motionmind/shared';
 import type { AppDeps } from '../app';
-import { voicePath } from '../voice/audioStore';
+import type { AudioClip, HtmlRenderInput } from './hyperframes';
+import { finishedAnimation } from '../animation/endCard';
+import { logoDataUrl } from '../profile/logo';
 
-/** The reel as the engine renders it (same rules as the web app's specFromScript). */
-export async function reelSpecFor(deps: AppDeps, userId: string, project: Project, platform?: Platform, origin?: string) {
+/**
+ * What the renderer needs for a project: Claude's composition, its length, and the audio to lay under it
+ * (the user's own recording, and the music).
+ */
+export async function htmlRenderFor(deps: AppDeps, project: Project): Promise<{ input: HtmlRenderInput; withVoice: boolean }> {
   const script = project.script!;
-  const profile = await deps.data.getProfile(userId);
-  const name = profile?.channelName?.trim() || 'Motion Mind';
-  const initials = name.split(/\s+/).map((w) => w[0] ?? '').join('').slice(0, 2).toUpperCase() || 'MM';
-  const spec: Record<string, unknown> = {
-    title: script.title,
-    // Same rule as the web app's worldFor().
-    world: reelWorld(script),
-    theme: script.theme,
-    layout: script.layout,
-    steps: script.steps,
-    brand: { name, initials, handle: profile?.handle ? `@${profile.handle}` : '@motionmind', tagline: '' },
-    beats: script.beats,
-    glossary: script.glossary,
-    brands: script.brands,
-    // The renderer's browser loads company logos from this API.
-    ...(origin ? { logoBase: origin } : {}),
-    ...(platform ? { platform } : {}),
-  };
-  // The Reel editor: uploaded voice, music, pace and caption style.
+  const timeline = reelTimeline(script, project.editor);
   const editor = project.editor;
-  const sfxPaths = (editor?.sfx ?? []).map((c) => c.track.path);
-  const paths = [editor?.upload?.track.path, editor?.music?.track.path, ...sfxPaths].filter((p): p is string => Boolean(p));
-  const urls = paths.length ? await deps.audio.urls(paths) : [];
-  const parts = editorSpecParts(editor, script.beats.length, {
-    voice: editor?.upload ? urls[paths.indexOf(editor.upload.track.path)] || undefined : undefined,
-    music: editor?.music ? urls[paths.indexOf(editor.music.track.path)] || undefined : undefined,
-    sfx: Object.fromEntries(sfxPaths.flatMap((p) => (urls[paths.indexOf(p)] ? [[p, urls[paths.indexOf(p)]!]] : []))),
-  });
-  Object.assign(spec, parts);
-
-  // ElevenLabs voice is used only when no uploaded recording drives the reel.
-  const voice = project.voice;
-  const matches = voice && JSON.stringify(voice.narrations) === JSON.stringify(script.beats.map((b) => b.narration));
-  if (!parts.voiceTrack && voice && matches && editor?.voiceSource !== 'upload') {
-    spec.voice = voice.beats;
-    spec.audioUrls = await deps.audio.urls(voice.beats.map((_, i) => voicePath(userId, project.id, i)));
+  const audio: AudioClip[] = [];
+  if (timeline.source === 'recording' && editor?.upload) {
+    const [url] = await deps.audio.urls([editor.upload.track.path]);
+    const up = editor.upload;
+    if (url) audio.push({ url, at: 0, from: up.trimStart ?? 0, to: up.trimEnd ?? up.track.durationSec });
   }
-  return { spec, withVoice: Boolean(spec.audioUrls || parts.voiceTrack) };
+  if (editor?.music) {
+    const [url] = await deps.audio.urls([editor.music.track.path]);
+    if (url) audio.push({ url, at: 0, volume: editor.music.volume, loop: true });
+  }
+  const withVoice = audio.some((c) => !c.loop);
+  const html = finishedAnimation(project, await deps.data.getProfile(project.ownerId), await logoDataUrl(deps.audio, project.ownerId));
+  return { input: { html, duration: timeline.duration, audio }, withVoice };
 }
 
 /** Signed-in: start and follow an MP4 export. Public: download a finished file by its unguessable name. */
 export function registerExportRoutes(api: FastifyInstance, deps: AppDeps) {
   const unavailable = {
     error: 'export_unavailable',
-    message: 'MP4 export runs on your PC for now: start Motion Mind with npm run dev and export from there.',
+    message: 'MP4 export runs on your PC: start Motion Mind with npm run dev and export from there.',
   };
   const projectFor = async (userId: string, id: string) => (z.string().uuid().safeParse(id).success ? deps.data.getProject(userId, id) : null);
 
@@ -62,13 +44,14 @@ export function registerExportRoutes(api: FastifyInstance, deps: AppDeps) {
     const project = await projectFor(req.userId, (req.params as { id: string }).id);
     if (!project) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
     if (!project.script?.beats.length) return reply.code(400).send({ error: 'no_script', message: 'Write the script first.' });
+    if (!project.script.animation) return reply.code(400).send({ error: 'no_animation', message: 'Make the animation first, on the Animate step.' });
     // One platform per call; without one, the project's first. The web app starts each chosen platform in turn.
     const asked = z.object({ platform: z.enum(PLATFORM_IDS).optional() }).safeParse(req.body ?? {});
     if (!asked.success) return reply.code(400).send({ error: 'invalid_platform', message: 'Pick Instagram or YouTube Shorts.' });
     const platform = asked.data.platform ?? project.platforms[0] ?? 'instagram';
     if (!project.platforms.includes(platform)) return reply.code(400).send({ error: 'invalid_platform', message: 'This reel is not set up for that platform. Add it on the Topic page first.' });
-    const { spec, withVoice } = await reelSpecFor(deps, req.userId, project, platform, `${req.protocol}://${req.headers.host}`);
-    const job = deps.renderer.start(req.userId, project.id, spec, platform);
+    const { input, withVoice } = await htmlRenderFor(deps, project);
+    const job = deps.renderer.start(req.userId, project.id, input, platform);
     req.log.info({ projectId: project.id, jobId: job.id, withVoice, platform }, 'export started');
     return { job, withVoice, platform };
   });

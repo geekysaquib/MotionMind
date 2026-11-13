@@ -13,7 +13,6 @@ const profilePatchSchema = z
     channelName: short(60),
     niche: short(60),
     language: z.enum(['en', 'hi', 'hinglish']),
-    aiMode: z.enum(['paste', 'keys']).nullable(),
     onboardedAt: z.string().datetime().nullable(),
   })
   .partial()
@@ -90,7 +89,13 @@ export function registerAccountRoutes(api: FastifyInstance, deps: AppDeps) {
 
   api.delete('/projects/:id', async (req, reply) => {
     const id = projectId(req.params);
-    const removed = id ? await deps.data.removeProject(req.userId, id) : false;
-    return removed ? { ok: true } : reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
+    const project = id ? await deps.data.getProject(req.userId, id) : null;
+    const removed = project ? await deps.data.removeProject(req.userId, project.id) : false;
+    if (!project || !removed) return reply.code(404).send({ error: 'not_found', message: 'Project not found.' });
+    // The project's files go with it: recordings and music in the storage bucket, and the videos and covers made on this machine.
+    // The reel itself is already deleted, so a failure here is logged, never shown as a failed delete.
+    await deps.audio.removeFolder(`${req.userId}/${project.id}`).catch((err) => req.log.warn({ err, projectId: project.id }, 'could not delete the project files from storage'));
+    await deps.renderer?.removeProject?.(req.userId, project.id).catch((err) => req.log.warn({ err, projectId: project.id }, 'could not delete the project renders'));
+    return { ok: true };
   });
 }

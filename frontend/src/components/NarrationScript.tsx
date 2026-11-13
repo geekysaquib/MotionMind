@@ -1,61 +1,43 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link } from 'react-router-dom';
-import { ClipboardCopy, ExternalLink, Languages } from 'lucide-react';
-import type { Project } from '@motionmind/shared';
+import { ClipboardCopy, Languages } from 'lucide-react';
+import { BRAND, type Project } from '@motionmind/shared';
 import { useStores } from '../stores/RootStore';
 import { Alert, Button, Card } from './ui';
+import { ClaudeAiPanel } from '../pages/app/PasteScriptPanel';
 import { errorText } from '../lib/format';
-import { log } from '../lib/logger';
-import { BRAND } from '@motionmind/shared';
-import { closingLine, followName, LANGUAGE_LABELS, parseTranslation, translatePrompt, TranslationError, type ScriptLanguage } from '../lib/translate';
+import { closingLine, followName } from '../lib/closing';
+import { LANGUAGES, parseTranslation, translatePrompt } from '../lib/translate';
 
-type Lang = 'en' | 'hi';
-type Saved = Partial<Record<Lang, string[]>>;
+const AS_WRITTEN = 'As written';
+const OTHER = 'Other language';
 
-const storeKey = (projectId: string) => `mm-translations-${projectId}`;
-
-function load(projectId: string, count: number): Saved {
-  try {
-    const raw = JSON.parse(window.localStorage.getItem(storeKey(projectId)) ?? '{}') as Saved;
-    const out: Saved = {};
-    for (const l of ['en', 'hi'] as const) if (Array.isArray(raw[l]) && raw[l]!.length === count) out[l] = raw[l];
-    return out;
-  } catch {
-    return {};
-  }
-}
-
-/**
- * The voice step's script: the narration, ready to copy into a text-to-speech tool. It can be shown in English or Hindi:
- * Claude translates it with the server key, or you copy a prompt into claude.ai and paste the answer back.
- */
+/** The voice step's script: what to record, scene by scene, in the language it was written in or any other. */
 export const NarrationScript = observer(function NarrationScript({ project }: { project: Project }) {
-  const { aiMode, projects, services, auth, toasts, profile } = useStores();
+  const { toasts, profile, projects } = useStores();
   const script = project.script!;
   const original = script.beats.map((b) => b.narration.trim());
-  const [lang, setLang] = useState<ScriptLanguage>('original');
-  const [saved, setSaved] = useState<Saved>(() => load(project.id, original.length));
-  const [busy, setBusy] = useState<'translate' | 'apply' | null>(null);
+  const [choice, setChoice] = useState<string>(AS_WRITTEN);
+  const [other, setOther] = useState('');
+  const [tts, setTts] = useState(false);
+  const language = choice === OTHER ? other.trim() : choice === AS_WRITTEN ? '' : choice;
+  // Translations are kept per language for this visit, so switching back and forth does not ask Claude again.
+  const [translated, setTranslated] = useState<Record<string, { lines: string[]; closing: string }>>({});
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pasted, setPasted] = useState('');
 
-  const translated = lang === 'original' ? null : saved[lang];
-  const lines = lang === 'original' ? original : translated ?? null;
-  // Every voice script ends by asking the viewer to follow the channel, in the language being shown.
-  const closing = closingLine(lang === 'original' ? (profile.profile?.language ?? 'hinglish') : lang, followName(profile.profile, BRAND.name), project.platforms);
-  const fullText = lines ? [...lines, closing].join('\n\n') : '';
+  const key = `${language}|${tts ? 'tts' : ''}`;
+  const changed = choice !== AS_WRITTEN || tts;
+  const done = translated[key] ?? null;
+  const ready = choice !== OTHER || Boolean(language);
+  const showing = !changed ? original : ready ? (done?.lines ?? null) : null;
+  const closingLanguage = choice === 'English' ? 'en' : choice === 'Hindi' ? 'hi' : choice === 'Hinglish' ? 'hinglish' : choice === AS_WRITTEN ? (profile.profile?.language ?? 'hinglish') : null;
+  const ownClosing = closingLine(closingLanguage ?? 'en', followName(profile.profile, BRAND.name), project.platforms);
+  const sourceClosing = closingLine(profile.profile?.language ?? 'hinglish', followName(profile.profile, BRAND.name), project.platforms);
+  const closing = changed && done ? done.closing : ownClosing;
+  const fullText = showing ? [...showing, closing].join('\n\n') : '';
   const words = fullText.split(/\s+/).filter(Boolean).length;
-
-  function keep(l: Lang, result: string[]) {
-    const next = { ...saved, [l]: result };
-    setSaved(next);
-    try {
-      window.localStorage.setItem(storeKey(project.id), JSON.stringify(next));
-    } catch {
-      /* the translation stays for this visit */
-    }
-  }
 
   async function copy(text: string, what: string) {
     try {
@@ -66,45 +48,19 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
     }
   }
 
-  async function translateWithClaude() {
-    if (lang === 'original') return;
-    setBusy('translate');
-    setError(null);
-    try {
-      const api = services.claude(() => auth.session?.accessToken ?? null);
-      const res = await api.ask(translatePrompt(original, lang));
-      keep(lang, parseTranslation(res.reply.text, original.length));
-      log.info('voice', `Script translated to ${lang}`);
-    } catch (e) {
-      setError(e instanceof TranslationError ? `${e.message} Try again.` : errorText(e));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  function usePasted() {
-    if (lang === 'original') return;
-    setError(null);
-    try {
-      keep(lang, parseTranslation(pasted, original.length));
-      setPasted('');
-    } catch (e) {
-      setError(errorText(e));
-    }
-  }
-
   async function useInReel() {
-    if (!translated || lang === 'original') return;
-    setBusy('apply');
+    if (!showing || !changed) return;
+    setBusy(true);
     setError(null);
     try {
-      await projects.saveScript(project.id, { ...script, beats: script.beats.map((b, i) => ({ ...b, narration: translated[i]! })) });
-      toasts.push('success', `The reel's narration and captions are now in ${LANGUAGE_LABELS[lang]}.`);
-      setLang('original');
+      await projects.saveScript(project.id, { ...script, beats: script.beats.map((b, i) => ({ ...b, narration: showing[i]! })) });
+      toasts.push('success', 'The narration is updated. Make the voice from it, upload it, and the fit follows.');
+      setChoice(AS_WRITTEN);
+      setTts(false);
     } catch (e) {
       setError(errorText(e));
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
@@ -112,39 +68,53 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold">Your narration script</h2>
-          <p className="mt-1 text-sm text-ink-400">Copy it into any text-to-speech tool (or read it yourself), then upload the recording below.</p>
+          <h2 className="font-semibold">What to record</h2>
+          <p className="mt-1 text-sm text-ink-400">Read the scenes in order, or paste them into a text-to-speech tool. Then upload the audio below: the fit follows it on its own.</p>
         </div>
-        <label className="text-xs text-ink-400">
-          <span className="flex items-center gap-1">
-            <Languages className="h-3.5 w-3.5" /> Language
-          </span>
-          <select
-            className="mt-1 block rounded-lg border border-line/15 bg-transparent px-3 py-2 text-sm text-ink-100"
-            value={lang}
-            onChange={(e) => {
-              setLang(e.target.value as ScriptLanguage);
-              setError(null);
-            }}
-          >
-            {(Object.keys(LANGUAGE_LABELS) as ScriptLanguage[]).map((l) => (
-              <option key={l} value={l}>
-                {LANGUAGE_LABELS[l]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex items-end gap-2">
+          <label className="text-xs text-ink-400">
+            <span className="flex items-center gap-1">
+              <Languages className="h-3.5 w-3.5" /> Language
+            </span>
+            <select
+              aria-label="Language"
+              className="field mt-1 py-2"
+              value={choice}
+              onChange={(e) => {
+                setChoice(e.target.value);
+                setError(null);
+              }}
+            >
+              <option>{AS_WRITTEN}</option>
+              {LANGUAGES.map((l) => (
+                <option key={l}>{l}</option>
+              ))}
+              <option>{OTHER}</option>
+            </select>
+          </label>
+          {choice === OTHER && <input aria-label="Language name" className="field w-40 py-2" placeholder="e.g. Malayalam" value={other} onChange={(e) => setOther(e.target.value)} />}
+        </div>
       </div>
 
-      {lines ? (
+      <label className="mt-4 flex items-start gap-2 rounded-xl border border-line/10 bg-line/[0.03] p-3 text-sm">
+        <input type="checkbox" className="mt-1" checked={tts} onChange={(e) => setTts(e.target.checked)} />
+        <span>
+          <span className="font-medium">Spell it for text-to-speech</span>
+          <span className="block text-xs text-ink-400">
+            Voices for Hindi and other Indian languages say English words badly (CDN, OTP, IRCTC). Claude rewrites them in your language's script, the way they sound: "CDN" becomes "सीडीएन". Use this before you generate the voice.
+          </span>
+        </span>
+      </label>
+
+      {showing ? (
         <>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm text-ink-400">
               {words} words, about {Math.max(1, Math.round(words / 2.5))} seconds spoken
             </span>
             <div className="flex flex-wrap gap-2">
-              {translated && (
-                <Button variant="secondary" loading={busy === 'apply'} onClick={() => void useInReel()}>
+              {changed && (
+                <Button variant="secondary" loading={busy} onClick={() => void useInReel()}>
                   Use in the reel
                 </Button>
               )}
@@ -154,7 +124,7 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
             </div>
           </div>
           <ol className="mt-4 space-y-3">
-            {lines.map((line, i) => (
+            {showing.map((line, i) => (
               <li key={script.beats[i]!.id} className="rounded-xl border border-line/10 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-ink-400">Scene {i + 1}</span>
@@ -173,59 +143,46 @@ export const NarrationScript = observer(function NarrationScript({ project }: { 
                 </Button>
               </div>
               <p className="mt-1 text-sm leading-relaxed">{closing}</p>
+              {closingLanguage === null && !done && <p className="mt-1 text-xs text-ink-400">This closing line is in English. Translate it yourself if you need it in {language}.</p>}
             </li>
           </ol>
-          {translated ? (
-            <p className="mt-3 text-xs text-ink-400">This translation is only for copying until you press "Use in the reel", which replaces the narration and captions with it.</p>
-          ) : (
+          {!changed ? (
             <p className="mt-3 text-xs text-ink-400">
-              Want to change a line? Edit it on the{' '}
+              Want to change a line? You can edit it on the{' '}
               <Link to={`/app/projects/${project.id}/storyboard`} className="text-accent hover:underline">
                 Storyboard
               </Link>
-              . Speak the scenes in order, with a short pause between them: you set where each scene starts after you upload.
+              , but do it before you record: if you change a line after recording, the fit is marked out of date and you need to record that line again and fit.
+            </p>
+          ) : (
+            <p className="mt-3 text-xs text-ink-400">
+              This translation is only for copying until you press "Use in the reel". That replaces the narration, and the words the animation is timed to, so record or generate the voice from it.
             </p>
           )}
         </>
-      ) : aiMode.paste ? (
-        <ol className="mt-4 space-y-4 text-sm">
-          <li>
-            <div className="font-medium">1. Copy the translation prompt</div>
-            <Button className="mt-2" variant="secondary" icon={<ClipboardCopy className="h-4 w-4" />} onClick={() => void copy(translatePrompt(original, lang as Lang), 'Prompt')}>
-              Copy prompt
-            </Button>
-          </li>
-          <li>
-            <div className="font-medium">2. Paste it into claude.ai and send it</div>
-            <a href="https://claude.ai/new" target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-accent hover:underline">
-              Open claude.ai <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          </li>
-          <li>
-            <div className="font-medium">3. Paste Claude's answer here</div>
-            <textarea
-              aria-label="Translated lines"
-              className="mt-2 min-h-[100px] w-full rounded-xl border border-line/15 bg-transparent p-3 font-mono text-xs outline-none focus:border-accent"
-              placeholder='["...", "..."]'
-              value={pasted}
-              onChange={(e) => setPasted(e.target.value)}
-            />
-            <Button className="mt-2" disabled={!pasted.trim()} onClick={usePasted}>
-              Use this translation
-            </Button>
-          </li>
-        </ol>
       ) : (
         <div className="mt-4">
-          <p className="text-sm text-ink-400">
-            Claude will translate all {original.length} scenes into {LANGUAGE_LABELS[lang]}.
-          </p>
-          <Button className="mt-3" loading={busy === 'translate'} onClick={() => void translateWithClaude()}>
-            Translate with Claude
-          </Button>
+          {ready ? (
+            <ClaudeAiPanel
+              title={tts ? `Spell it for text-to-speech in claude.ai${language ? ` (${language})` : ''}` : `Translate it to ${language} in claude.ai`}
+              placeholder='["...", "..."]'
+              logScope="Translate"
+              getPrompt={async (note) => translatePrompt([...original, sourceClosing], language, note, tts)}
+              onImport={async (text) => {
+                const all = parseTranslation(text, original.length + 1);
+                setTranslated({ ...translated, [key]: { lines: all.slice(0, -1), closing: all[all.length - 1]! } });
+              }}
+            />
+          ) : (
+            <p className="text-sm text-ink-400">Type the language above.</p>
+          )}
         </div>
       )}
-      {error && <div className="mt-4"><Alert>{error}</Alert></div>}
+      {error && (
+        <div className="mt-4">
+          <Alert>{error}</Alert>
+        </div>
+      )}
     </Card>
   );
 });

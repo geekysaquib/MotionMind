@@ -1,10 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { beforeEach, describe, expect, it } from '@jest/globals';
 import { buildApp } from '../app';
 import { ConsoleMailer } from '../auth/mailer';
 import { SessionTokens } from '../auth/session';
 import { DevTokenVerifier } from '../auth/verifiers';
-import type { ClaudeClient } from '../ai/claude';
 import { MemoryDataRepository } from '../data/repository';
 import { clearTrendingCache } from './trending';
 import { parseIdeas } from './ideas';
@@ -34,8 +33,7 @@ function fakeFetch(handler: (url: string) => { status: number; body?: unknown })
   return { impl, calls };
 }
 
-async function setup(opts: { fetchImpl: typeof fetch; key?: string; ask?: (prompt: string) => string }) {
-  const claude = { ask: async (prompt: string) => ({ text: opts.ask?.(prompt) ?? '', model: 'm', inputTokens: 1, outputTokens: 1 }) } as unknown as ClaudeClient;
+async function setup(opts: { fetchImpl: typeof fetch }) {
   const app = await buildApp({
     data: new MemoryDataRepository(),
     sessions: new SessionTokens(secret),
@@ -45,8 +43,6 @@ async function setup(opts: { fetchImpl: typeof fetch; key?: string; ask?: (promp
     webOrigin: 'http://localhost:5173',
     mode: 'memory',
     fetchImpl: opts.fetchImpl,
-    anthropicApiKey: opts.key,
-    claude: () => claude,
   });
   return app;
 }
@@ -112,21 +108,5 @@ describe('reel ideas from trending pages', () => {
     expect((await app.inject({ method: 'POST', url: '/api/discover/import', headers: H, payload: { text: 'no json here' } })).statusCode).toBe(400);
     expect((await app.inject({ method: 'POST', url: '/api/discover/import', headers: H, payload: { text: '{"ideas":[]}' } })).json().message).toMatch(/missing something/);
     expect(parseIdeas(JSON.stringify({ ideas: [{ topic: 'Why does the sky look blue?', hook: 'hook' }] }))[0]).toMatchObject({ seconds: 60, why: '' });
-  });
-
-  it("asks Claude on the server's key, and says so when there is no key", async () => {
-    const ask = jest.fn((_p: string) => JSON.stringify(IDEAS));
-    const f = fakeFetch(() => ({ status: 200, body: wiki(ARTICLES) }));
-    const withKey = await setup({ fetchImpl: f.impl, key: 'k', ask });
-    const res = await withKey.inject({ method: 'POST', url: '/api/discover/ideas', headers: H, payload: { lang: 'en' } });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().ideas[0].seconds).toBe(45);
-    expect(res.json().date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(ask.mock.calls[0]![0]).toContain('Unified Payments Interface');
-
-    const noKey = await setup({ fetchImpl: f.impl });
-    const refused = await noKey.inject({ method: 'POST', url: '/api/discover/ideas', headers: H, payload: {} });
-    expect(refused.statusCode).toBe(503);
-    expect(refused.json().error).toBe('claude_not_configured');
   });
 });

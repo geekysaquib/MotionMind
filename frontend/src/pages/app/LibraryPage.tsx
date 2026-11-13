@@ -11,7 +11,6 @@ import { PlatformIcons } from '../../components/BrandIcons';
 import { timeAgo } from '../../lib/format';
 import { cn } from '../../lib/cn';
 import { ProgressRing, Reveal } from '../../components/motion';
-import { ProjectCover } from '../../components/ProjectCover';
 import { nextStage, progressOf } from '../../lib/progress';
 
 /** A stable pair of hues per project, so every cover looks different but never changes. */
@@ -68,7 +67,8 @@ export const LibraryPage = observer(function LibraryPage() {
             return (
               <Reveal key={p.id} delay={(i % 3) * 70}>
                 <Link to={`/app/projects/${p.id}`} className="card card-hover group block overflow-hidden">
-                  <ProjectCover project={p} tint={`hsl(${h1} 70% 92%)`}>
+                  <div className="relative flex aspect-[4/3] items-end p-4" style={{ background: `hsl(${h1} 70% 92%)` }}>
+                    <span className="line-clamp-3 text-lg font-bold text-ink-100">{p.script?.title ?? p.title}</span>
                     <div className="absolute inset-x-3 top-3 flex items-start justify-between">
                       <span className="inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-0.5 text-xs font-semibold text-ink-100 shadow-sm">
                         {p.durationSec}s <PlatformIcons list={p.platforms} />
@@ -77,7 +77,7 @@ export const LibraryPage = observer(function LibraryPage() {
                         <span className="text-[9px]">{Math.round(progressOf(p) * 100)}%</span>
                       </ProgressRing>
                     </div>
-                  </ProjectCover>
+                  </div>
                   <div className="p-4">
                     <div className="line-clamp-2 font-medium transition group-hover:text-accent">{p.title}</div>
                     <div className="mt-1 flex items-center gap-1 text-xs text-ink-400">

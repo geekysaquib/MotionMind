@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useOutletContext } from 'react-router-dom';
-import { CheckCircle2, ExternalLink, Search } from 'lucide-react';
+import { CheckCircle2, ExternalLink } from 'lucide-react';
 import { FACT_STATUS_LABELS, type FactStatus, type Project } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { Alert, Badge, Button, Card } from '../../components/ui';
@@ -18,17 +18,16 @@ const STATUS_TONE: Record<FactStatus, 'mint' | 'violet' | 'amber' | 'coral'> = {
 /** Research stage: Claude finds how the topic really works, with sources; the user approves it before the script. */
 export const ResearchStagePage = observer(function ResearchStagePage() {
   const project = useOutletContext<Project>();
-  const { projects, services, auth, aiMode } = useStores();
-  const [busy, setBusy] = useState<'research' | 'approve' | null>(null);
+  const { projects, services, auth } = useStores();
+  const [busy, setBusy] = useState<'approve' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const research = project.research;
 
-  async function run(kind: 'research' | 'approve') {
+  async function run(kind: 'approve') {
     setBusy(kind);
     setError(null);
     try {
-      if (kind === 'research') await projects.research(project.id);
-      else await projects.approveResearch(project.id);
+      if (kind === 'approve') await projects.approveResearch(project.id);
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -39,43 +38,17 @@ export const ResearchStagePage = observer(function ResearchStagePage() {
   return (
     <div className="max-w-3xl">
       <div className="space-y-6">
-        {aiMode.paste ? (
-          <ClaudeAiPanel
+        <ClaudeAiPanel
             title="Research it in claude.ai"
             chatHint="Turn on web search in claude.ai first, so Claude can read real sources."
             placeholder='{ "summary": "...", "facts": [...], "sources": [...] }'
             disabled={!project.topic}
             logScope="Research"
-            getPrompt={() => services.claude(() => auth.session?.accessToken ?? null).researchPrompt(project.id)}
+            getPrompt={(note) => services.claude(() => auth.session?.accessToken ?? null).researchPrompt(project.id, note)}
             onImport={(text) => projects.importResearch(project.id, text)}
           />
-        ) : (
-        <Card>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="font-semibold">Research with Claude</h2>
-              <p className="mt-1 text-sm text-ink-400">
-                Uses the server's Claude API key. Claude searches the web for how <span className="text-ink-100">{project.topic ?? 'this topic'}</span> really works, and keeps every source.
-              </p>
-            </div>
-            <Button icon={<Search className="h-4 w-4" />} loading={busy === 'research'} disabled={!project.topic} onClick={() => void run('research')}>
-              {research ? 'Research again' : 'Research with Claude'}
-            </Button>
-          </div>
-          {!project.topic && <div className="mt-4"><Alert tone="info">Add a topic on the Topic tab first.</Alert></div>}
-          {busy === 'research' && <p className="mt-4 text-sm text-ink-400">Claude is searching and reading sources. This usually takes 30 to 90 seconds.</p>}
-          {error && (
-            <div className="mt-4">
-              <Alert>
-                {error}{' '}
-                <Link to="/app/settings/diagnostics" className="font-semibold underline">
-                  See the log
-                </Link>
-              </Alert>
-            </div>
-          )}
-        </Card>
-        )}
+
+        {error && <Alert>{error}</Alert>}
 
         {research && (
           <Card>

@@ -1,7 +1,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { normalizePlatforms, type Platform } from '@motionmind/shared';
-import { closingLine } from '../lib/translate';
+import { closingLine } from '../lib/closing';
 import { PlatformPicker } from './PlatformPicker';
 
 describe('PlatformPicker', () => {

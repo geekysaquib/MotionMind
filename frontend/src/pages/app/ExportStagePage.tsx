@@ -7,6 +7,7 @@ import { useStores } from '../../stores/RootStore';
 import { EmptyState } from '../../components/EmptyState';
 import { PlatformIcon } from '../../components/BrandIcons';
 import { CoverMaker } from '../../components/CoverMaker';
+import { PostKit } from '../../components/PostKit';
 import { config } from '../../config';
 import { Alert, Button, Card, Spinner } from '../../components/ui';
 import { errorText } from '../../lib/format';
@@ -15,7 +16,7 @@ import type { RenderJob } from '../../services/claudeHttp';
 
 const POLL_MS = 2000;
 
-const isRunning = (j: RenderJob | null | undefined) => j?.status === 'bundling' || j?.status === 'rendering';
+const isRunning = (j: RenderJob | null | undefined) => j?.status === 'bundling' || j?.status === 'rendering' || j?.status === 'finishing';
 
 /** One platform's export: its own button, progress, preview and download. */
 function PlatformCard({ platform, project, job, withVoice, available, onStart }: { platform: Platform; project: Project; job: RenderJob | null; withVoice: boolean | null; available: boolean | null; onStart: () => void }) {
@@ -32,7 +33,7 @@ function PlatformCard({ platform, project, job, withVoice, available, onStart }:
             <PlatformIcon platform={platform} className="h-5 w-5" /> {meta.label}
           </h3>
           <p className="mt-1 text-sm text-ink-400">
-            1080 × 1920 H.264 MP4 at 30 fps. {platform === 'youtube' ? 'Text keeps clear of the Shorts title and buttons, and the end card says subscribe.' : 'The end card says follow.'} Uses the voiceover if it matches the script.
+            1080 × 1920 H.264 MP4 at 30 fps. Uses your recording and the timing fitted to it.
           </p>
           {available && (
             <div className="mt-4">
@@ -45,7 +46,7 @@ function PlatformCard({ platform, project, job, withVoice, available, onStart }:
                     <div className="bar-live h-full rounded-full transition-all duration-500" style={{ width: `${Math.round((job?.progress ?? 0) * 100)}%` }} />
                   </div>
                   <p className="mt-2 text-sm text-ink-400">
-                    {job?.status === 'bundling' ? 'Preparing the engine. The very first export also downloads a headless Chrome, which takes a few minutes.' : `Rendering… ${Math.round((job?.progress ?? 0) * 100)}%`}
+                    {job?.status === 'bundling' ? 'Preparing the engine. The very first export also downloads a headless Chrome, which takes a few minutes.' : job?.status === 'finishing' ? 'Finishing: levelling the sound with FFmpeg…' : `Rendering… ${Math.round((job?.progress ?? 0) * 100)}%`}
                   </p>
                 </div>
               )}
@@ -80,7 +81,7 @@ function PlatformCard({ platform, project, job, withVoice, available, onStart }:
   );
 }
 
-/** Export stage: renders the final 1080x1920 MP4 for each chosen platform with Remotion on the machine running the API. */
+/** Export stage: renders the final 1080x1920 MP4 for each chosen platform with HyperFrames and FFmpeg on the machine running the API. */
 export const ExportStagePage = observer(function ExportStagePage() {
   const project = useOutletContext<Project>();
   const { services, auth } = useStores();
@@ -155,7 +156,7 @@ export const ExportStagePage = observer(function ExportStagePage() {
         {available && platforms.length > 1 && (
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-ink-400">This reel is for Instagram Reels and YouTube Shorts. Each gets its own video.</p>
+              <p className="text-sm text-ink-400">This reel is for Instagram Reels and YouTube Shorts. Both get the same video, in their own file.</p>
               <Button variant="secondary" icon={<Film className="h-4 w-4" />} disabled={running} onClick={() => void startAll()}>
                 Export both
               </Button>
@@ -170,6 +171,7 @@ export const ExportStagePage = observer(function ExportStagePage() {
         {error && <Alert>{error}</Alert>}
       </div>
       <CoverMaker project={project} />
+      <PostKit project={project} />
     </div>
   );
 });

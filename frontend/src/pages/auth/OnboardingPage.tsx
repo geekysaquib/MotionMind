@@ -46,14 +46,18 @@ export const OnboardingPage = observer(function OnboardingPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <DemoBanner />
-      <div className="flex flex-1 items-center justify-center px-6 py-12">
+    <div className="relative flex h-full flex-col overflow-hidden bg-ink-950">
+      <div className="aurora pointer-events-none absolute inset-0" aria-hidden />
+      <div className="grid-bg pointer-events-none absolute inset-0" aria-hidden />
+      <div className="relative z-10">
+        <DemoBanner />
+      </div>
+      <div className="relative z-10 flex flex-1 items-center justify-center overflow-y-auto px-6 py-12">
         <div className="w-full max-w-lg animate-fade-up">
           <Logo />
           <div className="mt-8 flex gap-2" aria-label={`Step ${step} of 2`}>
             {[1, 2].map((n) => (
-              <div key={n} className={cn('h-1 flex-1 rounded-full', n <= step ? 'bg-mint-600' : 'bg-line/10')} />
+              <div key={n} className={cn('h-1 flex-1 rounded-full', n <= step ? 'bg-brand' : 'bg-line/10')} />
             ))}
           </div>
           <div className="card mt-6 p-8">

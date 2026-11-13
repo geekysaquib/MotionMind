@@ -1,9 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronRight, Compass, FolderClosed, FolderOpen, LayoutDashboard, LogOut, Plus, Settings } from 'lucide-react';
+import { ChevronRight, Compass, FolderClosed, FolderOpen, BarChart3, LayoutDashboard, LogOut, Plus, Scissors, Settings } from 'lucide-react';
 import { useStores } from '../stores/RootStore';
-import { FloatingIcons } from '../components/FloatingIcons';
-import { ClaudeIcon } from '../components/BrandIcons';
 import { Logo } from '../components/Logo';
 import { DemoBanner } from '../components/DemoBanner';
 import { ProgressRing } from '../components/motion';
@@ -14,10 +12,12 @@ const NAV = [
   { to: '/app', label: 'Home', icon: LayoutDashboard, end: true },
   { to: '/app/library', label: 'Projects', icon: FolderOpen },
   { to: '/app/discover', label: 'Discover', icon: Compass },
+  { to: '/app/footage', label: 'Raw footage', icon: Scissors },
+  { to: '/app/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
-const SETTINGS_TABS: Record<string, string> = { connectors: 'AI & connectors', account: 'Account', diagnostics: 'Diagnostics', claude: 'AI & connectors' };
+const SETTINGS_TABS: Record<string, string> = { connections: 'Connections', connectors: 'AI & connectors', account: 'Account', diagnostics: 'Diagnostics', claude: 'AI & connectors' };
 
 /** Where you are, as a short trail for the top bar: Projects / <reel> / <step>. */
 function useCrumbs(): { label: string; to?: string }[] {
@@ -27,6 +27,8 @@ function useCrumbs(): { label: string; to?: string }[] {
   if (parts.length === 0) return [{ label: 'Home' }];
   if (parts[0] === 'library') return [{ label: 'Projects' }];
   if (parts[0] === 'discover') return [{ label: 'Discover' }];
+  if (parts[0] === 'analytics') return [{ label: 'Analytics' }];
+  if (parts[0] === 'footage') return parts[1] ? [{ label: 'Raw footage', to: '/app/footage' }, { label: 'Edit' }] : [{ label: 'Raw footage' }];
   if (parts[0] === 'settings') return [{ label: 'Settings', to: '/app/settings' }, { label: parts[1] ? (SETTINGS_TABS[parts[1]] ?? parts[1]) : 'Profile & handle' }];
   if (parts[0] === 'projects' && parts[1]) {
     const p = projects.byId(parts[1]);
@@ -37,7 +39,7 @@ function useCrumbs(): { label: string; to?: string }[] {
 }
 
 export const AppShell = observer(function AppShell() {
-  const { profile, auth, aiMode, projects } = useStores();
+  const { profile, auth, projects } = useStores();
   const nav = useNavigate();
   const crumbs = useCrumbs();
   const { pathname } = useLocation();
@@ -46,10 +48,10 @@ export const AppShell = observer(function AppShell() {
   const total = projects.stats.total;
 
   return (
-    <div className="flex h-full flex-col bg-ink-900">
+    <div className="flex h-full flex-col bg-ink-950">
       <DemoBanner />
       <div className="flex min-h-0 flex-1">
-        <aside className="hidden w-56 shrink-0 flex-col border-r border-line/[0.08] bg-ink-900 p-3 md:flex">
+        <aside className="hidden w-60 shrink-0 flex-col border-r border-line/[0.07] bg-ink-950 p-3 md:flex">
           <div className="flex items-center justify-between px-2 py-2">
             <Link to="/app" aria-label="Home">
               <Logo size="sm" animated />
@@ -59,7 +61,7 @@ export const AppShell = observer(function AppShell() {
           <div className="mt-3 flex gap-2">
             <button
               onClick={() => nav('/app?new=1')}
-              className="group flex h-9 flex-1 items-center gap-2 rounded-lg border border-line/[0.14] bg-ink-900 px-3 text-sm font-semibold shadow-sm transition hover:bg-ink-800"
+              className="group flex h-10 flex-1 items-center gap-2 rounded-xl bg-brand px-3.5 text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
             >
               <Plus className="h-4 w-4 transition group-hover:rotate-90" /> New reel
             </button>
@@ -72,10 +74,10 @@ export const AppShell = observer(function AppShell() {
                 to={to}
                 end={end}
                 className={({ isActive }) =>
-                  cn('icon-hover flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition', isActive ? 'bg-ink-700/70 text-ink-100' : 'text-ink-300 hover:bg-ink-800 hover:text-ink-100')
+                  cn('icon-hover flex h-10 items-center gap-2.5 rounded-xl px-3 text-sm font-medium transition', isActive ? 'bg-mint-500/15 text-ink-100 ring-1 ring-mint-500/25' : 'text-ink-300 hover:bg-line/[0.06] hover:text-ink-100')
                 }
               >
-                <Icon className="h-4 w-4 shrink-0 text-ink-400" />
+                <Icon className="h-4 w-4 shrink-0 opacity-80" />
                 <span className="flex-1">{label}</span>
                 {label === 'Projects' && total > 0 && <span className="text-xs font-semibold text-ink-400">{total}</span>}
               </NavLink>
@@ -91,7 +93,7 @@ export const AppShell = observer(function AppShell() {
                   <NavLink
                     to={`/app/projects/${r.id}`}
                     className={({ isActive }) =>
-                      cn('flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm transition', isActive ? 'bg-ink-700/70 font-medium text-ink-100' : 'text-ink-300 hover:bg-ink-800 hover:text-ink-100')
+                      cn('flex h-9 items-center gap-2.5 rounded-xl px-3 text-sm transition', isActive ? 'bg-line/[0.08] font-medium text-ink-100' : 'text-ink-300 hover:bg-line/[0.06] hover:text-ink-100')
                     }
                   >
                     <FolderClosed className="h-4 w-4 shrink-0 text-ink-400" />
@@ -103,19 +105,8 @@ export const AppShell = observer(function AppShell() {
             </ul>
           </div>
 
-          <NavLink to="/app/settings/connectors" className="mt-3 block rounded-xl border border-line/[0.09] bg-ink-800/60 p-3 transition hover:border-mint-500/40" title="Change how you work with AI">
-            <div className="flex items-center gap-2 text-xs font-semibold text-ink-300">
-              <ClaudeIcon className="h-3.5 w-3.5" /> AI mode
-            </div>
-            <div className="mt-1.5 font-display text-base font-bold">{aiMode.paste ? 'Copy and paste' : 'API keys'}</div>
-            <div className="mt-0.5 flex items-center justify-between text-xs text-ink-400">
-              <span>{aiMode.paste ? 'Uses your Claude subscription' : 'One click, server keys'}</span>
-              <span className="font-semibold text-accent">Change</span>
-            </div>
-          </NavLink>
-
           <div className="mt-3 flex items-center gap-2.5 border-t border-line/[0.08] px-1 pt-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-[11px] font-bold text-white">{initials}</div>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">{initials}</div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold leading-tight">{p?.displayName ?? 'Creator'}</div>
               <div className="truncate text-xs text-ink-400">{auth.session?.email ?? (p?.handle ? `@${p.handle}` : '')}</div>
@@ -127,7 +118,7 @@ export const AppShell = observer(function AppShell() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line/[0.08] bg-ink-900 px-4 md:px-6">
+          <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line/[0.07] bg-ink-950/80 px-4 backdrop-blur-xl md:px-6">
             <div className="md:hidden">
               <Logo size="sm" />
             </div>
@@ -155,14 +146,13 @@ export const AppShell = observer(function AppShell() {
             <div className="ml-auto hidden items-center gap-2 md:flex">
               <button
                 onClick={() => nav('/app?new=1')}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-mint-600 px-3.5 text-sm font-semibold text-white shadow-glow transition hover:bg-mint-700"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-brand px-4 text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
               >
                 <Plus className="h-4 w-4" /> New reel
               </button>
             </div>
           </header>
-          <div className="relative flex min-h-0 flex-1 flex-col bg-ink-800/70">
-          <FloatingIcons />
+          <div className="canvas-glow relative flex min-h-0 flex-1 flex-col rounded-tl-3xl border-l border-t border-line/[0.07] bg-ink-800">
           <main className="relative min-h-0 flex-1 overflow-y-auto">
             <div key={pathname.split("/").slice(0, 3).join("/")} className="animate-fade-up">
               <Outlet />

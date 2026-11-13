@@ -1,6 +1,7 @@
 import { RESERVED_HANDLES, normalizeHandle, normalizePlatforms, type Profile, type Project } from '@motionmind/shared';
 import { config } from '../config';
 import { httpClaudeService } from './claudeHttp';
+import { httpFootageService } from './footageHttp';
 import { ServiceError, type AuthService, type ProfileService, type ProjectService, type Services, type Session } from './types';
 
 /**
@@ -67,7 +68,7 @@ export function memoryServices(storage: Storage = window.localStorage, apiUrl = 
       if (!user) {
         user = { id: uid(), email: e };
         db.users.push(user);
-        db.profiles.push({ id: user.id, handle: null, displayName: null, channelName: null, niche: null, language: 'hinglish', aiMode: null, onboardedAt: null });
+        db.profiles.push({ id: user.id, handle: null, displayName: null, channelName: null, niche: null, language: 'hinglish', onboardedAt: null });
       }
       startSession(user);
     },
@@ -112,7 +113,7 @@ export function memoryServices(storage: Storage = window.localStorage, apiUrl = 
     async create(input) {
       if (!db.session) throw new ServiceError('You are signed out.', 'unauthorized');
       const now = new Date().toISOString();
-      const p: Project = { id: uid(), ownerId: db.session.userId, title: input.title, topic: input.topic, stage: 'topic', status: 'draft', qualityTier: input.qualityTier, platforms: normalizePlatforms(input.platforms), durationSec: input.durationSec, script: null, research: null, voice: null, editor: null, createdAt: now, updatedAt: now };
+      const p: Project = { id: uid(), ownerId: db.session.userId, title: input.title, topic: input.topic, stage: 'topic', status: 'draft', qualityTier: input.qualityTier, platforms: normalizePlatforms(input.platforms), durationSec: input.durationSec, script: null, research: null, editor: null, createdAt: now, updatedAt: now };
       db.projects.push(p);
       save();
       return { ...p };
@@ -130,5 +131,5 @@ export function memoryServices(storage: Storage = window.localStorage, apiUrl = 
     },
   };
 
-  return { mode: 'memory', auth, profiles, projects, claude: (getToken) => httpClaudeService(apiUrl, getToken) };
+  return { mode: 'memory', auth, profiles, projects, claude: (getToken) => httpClaudeService(apiUrl, getToken), footage: (getToken) => httpFootageService(apiUrl, getToken) };
 }

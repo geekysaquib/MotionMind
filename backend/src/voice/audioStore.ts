@@ -5,11 +5,14 @@ export interface AudioStore {
   put(path: string, audio: Buffer, contentType?: string): Promise<void>;
   /** Deletes files, ignoring any that are already gone. */
   remove(paths: string[]): Promise<void>;
+  /** Deletes every file in a folder (all of a project's files), ignoring a folder that is already gone. */
+  removeFolder(folder: string): Promise<void>;
+  /** One file's bytes and type, or null when it is not there. */
+  get(path: string): Promise<{ data: Buffer; contentType: string } | null>;
   /** Short-lived URLs the browser can play without signing in (the player can't send headers). */
   urls(paths: string[]): Promise<string[]>;
 }
 
-export const voicePath = (userId: string, projectId: string, i: number) => `${userId}/${projectId}/beat_${i}.mp3`;
 
 /** Tests and demo mode: audio kept in RAM, served as data URLs. */
 export class MemoryAudioStore implements AudioStore {
@@ -24,6 +27,19 @@ export class MemoryAudioStore implements AudioStore {
       this.files.delete(p);
       this.types.delete(p);
     }
+  }
+  async removeFolder(folder: string) {
+    const prefix = folder.endsWith('/') ? folder : `${folder}/`;
+    for (const p of [...this.files.keys()]) {
+      if (p.startsWith(prefix)) {
+        this.files.delete(p);
+        this.types.delete(p);
+      }
+    }
+  }
+  async get(path: string) {
+    const data = this.files.get(path);
+    return data ? { data, contentType: this.types.get(path) ?? 'application/octet-stream' } : null;
   }
   async urls(paths: string[]) {
     return paths.map((p) => {
@@ -46,6 +62,24 @@ export class SupabaseAudioStore implements AudioStore {
     if (!paths.length) return;
     const { error } = await this.db.storage.from(this.bucket).remove(paths);
     if (error) throw error;
+  }
+
+  async removeFolder(folder: string) {
+    const dir = folder.replace(/\/+$/, '');
+    // Files sit one level down (<user>/<project>/<file>); page through in case there are many.
+    for (;;) {
+      const { data, error } = await this.db.storage.from(this.bucket).list(dir, { limit: 100 });
+      if (error) throw error;
+      const files = (data ?? []).filter((f) => f.id).map((f) => `${dir}/${f.name}`);
+      if (!files.length) return;
+      await this.remove(files);
+    }
+  }
+
+  async get(path: string) {
+    const { data, error } = await this.db.storage.from(this.bucket).download(path);
+    if (error || !data) return null;
+    return { data: Buffer.from(await data.arrayBuffer()), contentType: data.type || 'application/octet-stream' };
   }
 
   async urls(paths: string[]) {

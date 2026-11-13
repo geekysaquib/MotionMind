@@ -1,16 +1,21 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { registerAccountRoutes } from './account/routes';
-import type { ClaudeClient } from './ai/claude';
 import { registerClaudeRoutes } from './ai/routes';
-import { registerConnectorRoutes } from './connectors/routes';
 import { registerDiscoverRoutes } from './discover/routes';
+import { registerAnimationAssets, registerAnimationRoutes } from './animation/routes';
 import { registerCoverRoutes } from './cover/routes';
+import { registerPostRoutes } from './post/routes';
+import { registerLogoRoutes } from './profile/logo';
+import { registerSocialCallback, registerSocialRoutes, type SocialDeps } from './social/routes';
+import { MemorySocialStore, type SocialStore } from './social/store';
+import { httpInstagramClient } from './social/instagram';
 import { MemoryAudioStore, type AudioStore } from './voice/audioStore';
-import { registerVoiceRoutes } from './voice/routes';
 import { registerEditorRoutes } from './editor/routes';
 import type { Renderer } from './export/renderer';
+import type { LayoutChecker } from './animation/layout';
 import { registerExportRoutes, registerRenderDownload } from './export/routes';
+import { registerFootageFiles, registerFootageRoutes, type FootageDeps } from './footage/routes';
 import { registerLogoRoute, type LogoFetcher } from './logo/routes';
 import type { Mailer } from './auth/mailer';
 import { registerLoginRoutes } from './auth/routes';
@@ -36,18 +41,18 @@ export interface AppDeps {
   logger?: boolean;
   /** Where browser log reports go. Defaults to one console line each. */
   clientLogSink?: (report: ClientLogReport) => void;
-  /** The server's Anthropic key (ANTHROPIC_API_KEY). Users never set up keys. */
-  anthropicApiKey?: string;
-  /** The server's ElevenLabs key (ELEVENLABS_API_KEY), for voiceover. */
-  elevenLabsApiKey?: string;
-  /** ELEVENLABS_VOICE_ID: the voice used when the user doesn't pick one. */
-  defaultVoiceId?: string;
   /** Where voiceover MP3s are stored. Defaults to memory (tests, demo). */
   audio: AudioStore;
   /** MP4 export (Remotion), rendered on the machine running the API. Absent in tests. */
   renderer?: Renderer;
-  /** Builds the Claude client. Tests pass a fake. */
-  claude?: (apiKey: string) => ClaudeClient;
+  /** Looks for overlapping or hidden text in Claude's animation (runs Chrome on this machine). */
+  layoutChecker?: LayoutChecker;
+  /** Connected Instagram and YouTube accounts (Phase 2 analytics). Defaults to memory. */
+  socialStore?: SocialStore;
+  /** The Instagram and YouTube API clients. Defaults to Instagram only (YouTube needs Google OAuth in .env). */
+  social?: SocialDeps;
+  /** Raw footage editing (FFmpeg, whisper.cpp) on the machine running the API. Absent: the routes answer 501. */
+  footage?: FootageDeps;
 }
 
 declare module 'fastify' {
@@ -57,7 +62,12 @@ declare module 'fastify' {
 }
 
 export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioStore }): Promise<FastifyInstance> {
-  const deps: AppDeps = { ...input, audio: input.audio ?? new MemoryAudioStore() };
+  const deps: AppDeps = {
+    ...input,
+    audio: input.audio ?? new MemoryAudioStore(),
+    socialStore: input.socialStore ?? new MemorySocialStore(),
+    social: input.social ?? { instagram: httpInstagramClient(input.fetchImpl), redirectBase: `http://localhost:${process.env.PORT ?? 8787}` },
+  };
   const app = Fastify({
     logger: deps.logger ? { redact: ['req.headers.authorization', 'body.apiKey', 'body.code'] } : false,
   });
@@ -69,6 +79,9 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
   app.get('/health', async () => ({ ok: true, mode: deps.mode }));
   registerRenderDownload(app, deps);
   registerLogoRoute(app, deps);
+  registerAnimationAssets(app);
+  registerFootageFiles(app, deps);
+  registerSocialCallback(app, deps);
 
   // Public
   app.register(async (auth) => registerLoginRoutes(auth, deps), { prefix: '/api/auth' });
@@ -86,12 +99,15 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
       });
       registerAccountRoutes(api, deps);
       registerClaudeRoutes(api, deps);
-      registerConnectorRoutes(api, deps);
       registerDiscoverRoutes(api, deps);
-      registerVoiceRoutes(api, deps);
       registerEditorRoutes(api, deps);
       registerExportRoutes(api, deps);
       registerCoverRoutes(api, deps);
+      registerPostRoutes(api, deps);
+      registerLogoRoutes(api, deps);
+      registerAnimationRoutes(api, deps);
+      registerSocialRoutes(api, deps);
+      registerFootageRoutes(api, deps);
     },
     { prefix: '/api' },
   );

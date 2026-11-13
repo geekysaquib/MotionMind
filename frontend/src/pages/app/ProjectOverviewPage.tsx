@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { ArrowRight, Trash2 } from 'lucide-react';
-import { normalizePlatforms, type Platform, type Project, type ProjectStatus, type QualityTier } from '@motionmind/shared';
+import { normalizePlatforms, type Platform, type Project, type ProjectStatus } from '@motionmind/shared';
 import { PlatformPicker } from '../../components/PlatformPicker';
 import { useStores } from '../../stores/RootStore';
 import { Button, Card, Field, Select } from '../../components/ui';
@@ -16,18 +16,17 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
   const [title, setTitle] = useState(p.title);
   const [topic, setTopic] = useState(p.topic ?? '');
   const [duration, setDuration] = useState(p.durationSec);
-  const [tier, setTier] = useState<QualityTier>(p.qualityTier);
   const [platforms, setPlatforms] = useState<Platform[]>(normalizePlatforms(p.platforms));
   const [status, setStatus] = useState<ProjectStatus>(p.status);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const dirty = title !== p.title || topic !== (p.topic ?? '') || duration !== p.durationSec || tier !== p.qualityTier || platforms.join() !== normalizePlatforms(p.platforms).join() || status !== p.status;
+  const dirty = title !== p.title || topic !== (p.topic ?? '') || duration !== p.durationSec || platforms.join() !== normalizePlatforms(p.platforms).join() || status !== p.status;
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
-      await projects.update(p.id, { title: title.trim(), topic: topic.trim() || null, durationSec: duration, qualityTier: tier, ...(platforms.join() !== normalizePlatforms(p.platforms).join() ? { platforms } : {}), status });
+      await projects.update(p.id, { title: title.trim(), topic: topic.trim() || null, durationSec: duration, ...(platforms.join() !== normalizePlatforms(p.platforms).join() ? { platforms } : {}), status });
       toasts.push('success', 'Saved.');
     } catch (err) {
       toasts.push('error', errorText(err));
@@ -81,12 +80,6 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
                 </option>
               ))}
             </Select>
-            <Select label="Quality" value={tier} onChange={(e) => setTier(e.target.value as QualityTier)}>
-              <option value="draft">Draft</option>
-              <option value="standard">Standard</option>
-              <option value="premium">Premium</option>
-              <option value="cinematic">Cinematic</option>
-            </Select>
             <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
               <option value="draft">Draft</option>
               <option value="in_progress">In progress</option>
@@ -97,7 +90,7 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
           <div>
             <span className="label">Platforms</span>
             <PlatformPicker value={platforms} onChange={setPlatforms} />
-            <p className="mt-1 text-xs text-ink-400">Each platform gets its own video: text sits clear of that app's buttons, and the closing line says follow or subscribe.</p>
+            <p className="mt-1 text-xs text-ink-400">The closing line says follow, subscribe or both. You export one video for every platform you pick.</p>
           </div>
           <Button type="submit" loading={busy} disabled={!dirty || !title.trim()}>
             Save changes
@@ -120,7 +113,7 @@ export const ProjectOverviewPage = observer(function ProjectOverviewPage() {
               </li>
             ))}
           </ol>
-          <Link to={`/app/projects/${p.id}/${nextStage(p).path || 'research'}`} className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-mint-600 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:bg-mint-700">
+          <Link to={`/app/projects/${p.id}/${nextStage(p).path || 'research'}`} className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:brightness-110">
             Continue: {nextStage(p).label} <ArrowRight className="h-4 w-4" />
           </Link>
         </Card>

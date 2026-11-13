@@ -1,6 +1,6 @@
 import type { ReelEditor } from './editor';
 
-export const STAGES = ['topic', 'research', 'script', 'storyboard', 'graphics', 'voice', 'final'] as const;
+export const STAGES = ['topic', 'research', 'graphics', 'script', 'voice', 'storyboard', 'final'] as const;
 export type Stage = (typeof STAGES)[number];
 export type ProjectStatus = 'draft' | 'in_progress' | 'completed' | 'archived';
 export type QualityTier = 'draft' | 'standard' | 'premium' | 'cinematic';
@@ -36,22 +36,10 @@ export interface Project {
   script: ReelScript | null;
   /** Fact-checked research for the topic, or null before the Research stage. */
   research: ResearchReport | null;
-  /** ElevenLabs voiceover timings; the audio files themselves live in storage. */
-  voice: ReelVoice | null;
-  /** The Reel editor's state: uploaded voiceover and cuts, pace, music, caption style. */
+  /** The voice step's state: the user's own recording, how it is fitted to the script, and music. */
   editor: ReelEditor | null;
   createdAt: string;
   updatedAt: string;
-}
-
-/** Per-beat voiceover: how long each line is and when each word is spoken (seconds). */
-export interface ReelVoice {
-  voiceId: string;
-  voiceName?: string;
-  beats: { durationSec: number; words: { start: number; end: number }[] }[];
-  /** Narration the audio was made from, to tell when the script changed since. */
-  narrations: string[];
-  createdAt: string;
 }
 
 export type FactStatus = 'verified' | 'single_source' | 'estimate' | 'conflicting';
@@ -82,28 +70,6 @@ export type ReelRow =
   | { kind: 'kv'; k: string; v: string; tone?: ReelTone }
   | { kind: 'note'; text: string };
 
-/** Objects the 3D isometric world can draw (same list as the reel engine's PROP_KINDS). */
-export type ScenePropKind = 'phone' | 'laptop' | 'tower' | 'server' | 'cloud' | 'bank' | 'shop' | 'building' | 'house' | 'factory' | 'person' | 'document' | 'money' | 'chip' | 'car' | 'satellite' | 'qr' | 'speaker' | 'lock' | 'database' | 'router' | 'battery' | 'heart' | 'gear' | 'truck' | 'plane' | 'train' | 'tree' | 'hospital' | 'school' | 'cart' | 'camera' | 'bulb' | 'globe' | 'envelope' | 'clock' | 'rocket' | 'syringe' | 'chart' | 'atm' | 'brain' | 'virus' | 'dna' | 'flask' | 'microscope' | 'sun' | 'flame' | 'solar' | 'windmill' | 'bus' | 'ship' | 'shield' | 'book' | 'bell' | 'custom';
-
-/** Every kind the scene editor offers (the engine's PROP_KINDS). */
-export const SCENE_PROP_KINDS: ScenePropKind[] = ['phone', 'laptop', 'tower', 'server', 'cloud', 'bank', 'shop', 'building', 'house', 'factory', 'person', 'document', 'money', 'chip', 'car', 'satellite', 'qr', 'speaker', 'lock', 'database', 'router', 'battery', 'heart', 'gear', 'truck', 'plane', 'train', 'tree', 'hospital', 'school', 'cart', 'camera', 'bulb', 'globe', 'envelope', 'clock', 'rocket', 'syringe', 'chart', 'atm', 'brain', 'virus', 'dna', 'flask', 'microscope', 'sun', 'flame', 'solar', 'windmill', 'bus', 'ship', 'shield', 'book', 'bell', 'custom'];
-export const SCENE_PROP_SHAPES: ScenePropShape[] = ['block', 'tall', 'wide', 'flat', 'round'];
-export const WORLD_THEMES: WorldTheme[] = ['city', 'nature', 'lab', 'plain', 'night', 'sunset', 'ocean', 'desert'];
-
-/** Body of a 'custom' object. */
-export type ScenePropShape = 'block' | 'tall' | 'wide' | 'flat' | 'round';
-
-/** The look of the ground and background in the iso world. */
-export type WorldTheme = 'city' | 'nature' | 'lab' | 'plain' | 'night' | 'sunset' | 'ocean' | 'desert';
-
-/** A beat's 3D scene: which objects are on screen, what moves between them, and the effect. */
-export interface ReelScene {
-  props: { id: string; kind: ScenePropKind; label?: string; icon?: string; glyph?: string; logo?: string; shape?: ScenePropShape; tone?: 'red' | 'teal' | 'purple' | 'blue' | 'amber' }[];
-  links?: { from: string; to: string; label?: string }[];
-  effect?: 'rings' | 'pulse' | 'none';
-  focus?: string;
-}
-
 export interface ReelBeat {
   id: string;
   narration: string;
@@ -112,34 +78,19 @@ export interface ReelBeat {
   /** 0 = hook, then 1..steps.length */
   chapter: number;
   card: { eyebrow: string; headline: string; tone: ReelTone; rows: ReelRow[] };
-  /** 3D isometric world: what this beat shows. */
-  scene?: ReelScene;
-  /** Train world: a named camera shot and effects. */
-  shot?: 'phone' | 'tower' | 'map' | 'crowd' | 'station' | 'accuracy' | 'wide';
-  events?: ('rings' | 'towerIds' | 'pins' | 'gpsLog' | 'stationGlow' | 'errorBand' | 'none')[];
-}
-
-/**
- * Which 3D world renders a script. Claude picks it; older scripts without a choice get the train world
- * when they are about trains, and the isometric scene kit otherwise. Every reel is 3D.
- */
-export function reelWorld(script: Pick<ReelScript, 'world' | 'title' | 'steps'> & { beats: Pick<ReelBeat, 'narration'>[] }): 'iso' | 'train' {
-  if (script.world) return script.world;
-  const text = [script.title, ...script.steps, ...script.beats.slice(0, 3).map((b) => b.narration)].join(' ');
-  return /\b(train|trains|railway|railways|rail|metro)\b/i.test(text) ? 'train' : 'iso';
 }
 
 /** A reel script: what the voice says and what each on-screen card shows. The reel engine renders it. */
 export interface ReelScript {
   title: string;
-  /** Which 3D world renders it. Missing on older scripts, which render as flat cards. */
-  world?: 'iso' | 'train';
-  /** Iso world: the look of the ground and background. */
-  theme?: WorldTheme;
-  /** Locked spots of the 3D objects, by object id (ground x, y in world units). Without it the engine arranges them. */
-  layout?: Record<string, { x: number; y: number }>;
+  /** The look the reel is drawn in (picked on the Style step). Missing = the default style. */
+  style?: import('./styles').StyleId;
   /** The cover (thumbnail) settings. Missing means the defaults. */
   cover?: import('./cover').CoverSettings;
+  /** Captions and hashtags for posting the reel, made on the Export step. */
+  post?: import('./cover').ReelPost;
+  /** The animation Claude wrote for this reel (HyperFrames HTML), made on the Animate step. */
+  animation?: import('./animation').ReelAnimation;
   steps: string[];
   beats: ReelBeat[];
   /** Short forms used in the reel with what they stand for. The reel shows the full form whenever a beat uses one. */
@@ -160,8 +111,6 @@ export interface Profile {
   channelName: string | null;
   niche: string | null;
   language: 'en' | 'hi' | 'hinglish';
-  /** How the user works with AI. Null until they choose. */
-  aiMode: 'paste' | 'keys' | null;
   onboardedAt: string | null;
 }
 
@@ -170,7 +119,7 @@ export const STAGE_LABELS: Record<Stage, string> = {
   research: 'Research',
   script: 'Script',
   storyboard: 'Storyboard',
-  graphics: 'Graphics',
+  graphics: 'Style',
   voice: 'Voice',
   final: 'Final video',
 };
