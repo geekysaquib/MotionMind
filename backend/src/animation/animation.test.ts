@@ -11,7 +11,7 @@ const secret = randomBytes(32).toString('base64');
 const H = { authorization: 'Bearer dev:u1' };
 const SCRIPT = {
   title: 'Tatkal ke 60 second',
-  style: 'whiteboard',
+  style: 'briefing-board',
   steps: ['Queue'],
   glossary: [{ short: 'IRCTC', full: 'Indian Railway Catering and Tourism Corporation' }],
   brands: [{ name: 'IRCTC', domain: 'irctc.co.in' }],
@@ -37,7 +37,7 @@ describe('Animate step', () => {
     expect(timeline.source).toBe('estimate');
     expect(prompt).toContain('HyperFrames');
     expect(prompt).toContain('window.__timelines["main"]');
-    expect(prompt).toContain('Whiteboard Explainer');
+    expect(prompt).toContain('Engineering Briefing Board');
     expect(prompt).toContain('The end card is NOT yours to make');
     expect(prompt).toContain('<!-- motionmind:no-end-card -->');
     expect(prompt).toContain('PLAN FIRST');
@@ -63,7 +63,7 @@ describe('Animate step', () => {
     expect(bad.statusCode).toBe(400);
     const ok = await app.inject({ method: 'POST', url: `/api/projects/${id}/animation/import`, headers: H, payload: { text: '```html\n' + HTML + '\n```' } });
     expect(ok.statusCode).toBe(200);
-    expect(ok.json().project.script.animation).toMatchObject({ html: HTML, style: 'whiteboard' });
+    expect(ok.json().project.script.animation).toMatchObject({ html: HTML, style: 'briefing-board' });
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/animation`, headers: H })).json().stale).toBe(false);
     await data.updateProject('u1', id, { editor: { upload: { track: { path: 'u1/x/voice.mp3', fileName: 'v.mp3', mime: 'audio/mpeg', durationSec: 9 }, cuts: [] }, music: null } });
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/animation`, headers: H })).json().stale).toBe(true);

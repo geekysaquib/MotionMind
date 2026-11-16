@@ -8,7 +8,7 @@ import { STYLES, styleOf, type ReelScript, type ReelTimeline, type StyleId } fro
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-/** The style's full rulebook (lemo-opuscar rulebooks are MIT, LemoLab; Live Map is Motion Mind's own). */
+/** The style's full rulebook (most adapted from Lemo-Opuscar by LemoLab, CC BY-NC 4.0 with its permission to adapt for your own films; the rest are Motion Mind's own). */
 export function rulebook(style: StyleId): string {
   try {
     return readFileSync(path.join(here, 'rulebooks', `${style}.md`), 'utf8');

@@ -10,6 +10,8 @@ import { log } from '../../lib/logger';
 import { cn } from '../../lib/cn';
 import { pickedStyle, rememberStyle } from '../../lib/pickedStyle';
 import { StyleSample } from '../../components/StyleSample';
+import { StyleFilm } from '../../components/StyleFilm';
+import { STYLE_FILMS } from '../../components/styleFilms';
 
 /**
  * Style stage: which rulebook Claude follows when it animates the reel. Nothing is drawn by Motion Mind itself:
@@ -78,7 +80,14 @@ export const StyleStagePage = observer(function StyleStagePage() {
               className={cn('group overflow-hidden rounded-2xl border bg-ink-900 text-left transition hover:shadow-soft disabled:opacity-70', selected ? 'border-accent ring-2 ring-accent/40' : 'border-line/10')}
             >
               <div className="relative flex h-72 items-center justify-center overflow-hidden" style={{ background: `linear-gradient(160deg, ${st.swatch[0]}, ${st.swatch[1]}55)` }}>
-                <StyleSample id={id} name={st.name} className="h-[88%] rounded-2xl shadow-[0_18px_40px_-14px_rgba(0,0,0,.6)] ring-1 ring-white/20" />
+                {STYLE_FILMS[id] ? (
+                  <>
+                    <StyleFilm id={id} name={st.name} className="absolute inset-0 h-full w-full object-cover" />
+                    <span className="absolute bottom-2 left-3 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white/85">Sample film · LemoLab</span>
+                  </>
+                ) : (
+                  <StyleSample id={id} name={st.name} className="h-[88%] rounded-2xl shadow-[0_18px_40px_-14px_rgba(0,0,0,.6)] ring-1 ring-white/20" />
+                )}
                 <div className="absolute left-3 top-3 flex gap-2">
                   {rank === 0 && !recent.includes(id) && (
                     <Badge tone="mint">
@@ -108,7 +117,12 @@ export const StyleStagePage = observer(function StyleStagePage() {
           );
         })}
       </div>
-      <p className="text-xs text-ink-400">Whiteboard, Dark Keynote, Transit Map and Newsroom use style rulebooks from lemo-opuscar by LemoLab (MIT licence). Live Map is Motion Mind's own.</p>
+      <p className="text-xs text-ink-400">
+        Styles with a sample film use rulebooks adapted from{' '}
+        <a className="underline" href="https://github.com/lemomo-ai/lemo-opuscar" target="_blank" rel="noreferrer">Lemo-Opuscar by Lemomo (LemoLab)</a> (docs{' '}
+        <a className="underline" href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noreferrer">CC BY-NC 4.0</a>, adapted for making your own films as its licence allows; films{' '}
+        <a className="underline" href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>, shown as published). Live Map, Spotlight Noir, Terminal Dashboard and Deep Blue Glass are Motion Mind's own.
+      </p>
     </div>
   );
 });

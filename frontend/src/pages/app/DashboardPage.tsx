@@ -20,7 +20,7 @@ function greeting(d = new Date()) {
 const TIPS = [
   { title: 'Ask “how does it work?”', text: 'Questions make better reels than subjects. “How does a Soundbox know the money arrived?” beats “UPI”.' },
   { title: 'Approve the research first', text: 'The script is written from the research you approve, so check the facts marked “estimate” before you move on.' },
-  { title: 'Pick a different style', text: 'On the Style step, try a look you have not used lately: Live Map, Whiteboard, Dark Keynote, Transit Map or Newsroom.' },
+  { title: 'Pick a different style', text: 'On the Style step, try a look you have not used lately: Radar Sweep, 3D Map Explainer, Data Story, Broadcast News or one of the other 22.' },
   { title: 'Leave a pause between scenes', text: 'When you record, stop for a breath between scenes. Motion Mind uses those pauses to find where each scene starts.' },
   { title: 'A quiet room beats editing', text: 'A clean recording lets the auto-fit hear every word, so the animation lands exactly when you say it.' },
 ];

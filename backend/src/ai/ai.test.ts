@@ -143,9 +143,9 @@ describe('storyboard edits', () => {
     const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'UPI', topic: 'x', durationSec: 60, qualityTier: 'standard' } });
     const id = created.json().project.id;
     await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: JSON.stringify(SCRIPT) } });
-    const picked = await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: H, payload: { style: 'whiteboard' } });
+    const picked = await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: H, payload: { style: 'briefing-board' } });
     expect(picked.statusCode).toBe(200);
-    expect(picked.json().project).toMatchObject({ stage: 'script', script: { style: 'whiteboard' } });
+    expect(picked.json().project).toMatchObject({ stage: 'script', script: { style: 'briefing-board' } });
     expect(picked.json().project.script.editedAt).toBeUndefined();
     expect((await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: H, payload: { style: 'vaporwave' } })).statusCode).toBe(400);
     expect((await app.inject({ method: 'PUT', url: `/api/projects/${id}/style`, headers: { authorization: 'Bearer dev:u2' }, payload: { style: 'newsroom' } })).statusCode).toBe(404);
@@ -190,9 +190,9 @@ describe('Script prompt and older scripts', () => {
     const { app } = await setup();
     const created = await app.inject({ method: 'POST', url: '/api/projects', headers: H, payload: { title: 'Tatkal', topic: 'IRCTC Tatkal backend', durationSec: 45, qualityTier: 'standard' } });
     const id = created.json().project.id;
-    const prompt = (await app.inject({ method: 'GET', url: `/api/projects/${id}/script/prompt?style=whiteboard`, headers: H })).json().prompt as string;
-    expect(prompt).toContain('"Whiteboard" style');
-    expect(prompt).toContain('marker');
+    const prompt = (await app.inject({ method: 'GET', url: `/api/projects/${id}/script/prompt?style=briefing-board`, headers: H })).json().prompt as string;
+    expect(prompt).toContain('"Briefing Board" style');
+    expect(prompt).toContain('whiteboard wall');
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/script/prompt?style=nope`, headers: H })).json().prompt).toContain('"Live Map" style');
     const designed = {
       ...SCRIPT,
@@ -201,9 +201,9 @@ describe('Script prompt and older scripts', () => {
         visual: { elements: [{ id: 'lb', kind: 'card', label: 'Load balancer', icon: 'split', x: 50, y: 40, on: 'npci' }, { id: 'db', kind: 'stamp', label: 'Confirmed' }], links: [{ from: 'lb', to: 'db', label: 'book' }] },
       })),
     };
-    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: JSON.stringify(designed), style: 'whiteboard' } });
+    const res = await app.inject({ method: 'POST', url: `/api/projects/${id}/script/import`, headers: H, payload: { text: JSON.stringify(designed), style: 'briefing-board' } });
     expect(res.statusCode).toBe(200);
-    expect(res.json().project.script.style).toBe('whiteboard');
+    expect(res.json().project.script.style).toBe('briefing-board');
     // Fields of the old scene designer are dropped.
     expect(res.json().project.script.beats[0].visual).toBeUndefined();
   });
