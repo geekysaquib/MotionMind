@@ -1,4 +1,5 @@
 import type { StyleId } from '@motionmind/shared';
+import { REF_STYLE_SAMPLES } from './styleSamplesRef';
 
 // Short looping previews of each style, drawn with CSS animation only (no scripts, no network). They are a hint of the
 // look and motion Claude is asked for, not the reel itself: the real animation is written for your topic.
@@ -98,4 +99,5 @@ export const STYLE_SAMPLE_HTML: Record<StyleId, string> = {
   'dark-keynote': darkKeynote,
   'transit-map': transitMap,
   newsroom,
+  ...REF_STYLE_SAMPLES,
 };
