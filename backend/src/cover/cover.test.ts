@@ -79,7 +79,12 @@ describe('cover render', () => {
     const { app, id } = await setup(renderer);
     const png = await app.inject({ method: 'POST', url: `/api/projects/${id}/cover/render`, headers: H, payload: { cover: COVER } });
     expect(png.statusCode).toBe(200);
-    expect(png.json()).toEqual({ file: '11111111-1111-1111-1111-111111111111.png', url: '/api/renders/11111111-1111-1111-1111-111111111111.png' });
+    expect(png.json()).toMatchObject({ file: '11111111-1111-1111-1111-111111111111.png', url: '/api/renders/11111111-1111-1111-1111-111111111111.png' });
+    // The cover is kept with the project as its thumbnail, for the platform it was made for.
+    expect(png.json().project.script.cover).toMatchObject({ ...COVER, thumbs: { instagram: '11111111-1111-1111-1111-111111111111.png' } });
+    // Saving the cover settings again keeps the thumbnail.
+    const again = await app.inject({ method: 'PUT', url: `/api/projects/${id}/cover`, headers: H, payload: { cover: COVER } });
+    expect(again.json().project.script.cover.thumbs).toEqual({ instagram: '11111111-1111-1111-1111-111111111111.png' });
     expect(renderer.stills).toHaveLength(1);
     expect(renderer.stills[0]!.html).toContain('<html>');
     // Each scene ('Ek second.', no voice) is estimated at 2 / 2.7 + 0.6 s; scene 2 at 80% of its length.

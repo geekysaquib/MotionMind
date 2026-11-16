@@ -54,7 +54,7 @@ const FAQ = [
   { q: 'Do I need design or editing skills?', a: 'No. You choose and approve; the studio does the research, writing, visuals and timing.' },
   { q: 'Do I need an API key?', a: 'No. Pick “Copy and paste” in Settings: Motion Mind gives you a ready prompt, you run it in claude.ai with your own subscription, and paste the answer back. If your server has API keys, you can switch to one-click mode instead.' },
   { q: 'Which languages are supported?', a: 'Hindi, Hinglish and English for narration and captions. The voice script can be translated between English and Hindi.' },
-  { q: 'How does the voice work?', a: 'Copy the narration into any text-to-speech tool, or record it yourself, then upload one file. You mark where each scene starts, and set the speed for any scene. With an ElevenLabs key, the studio can also speak every scene for you.' },
+  { q: 'How does the voice work?', a: 'Record the narration yourself or paste it into any text-to-speech tool, then upload one file. Motion Mind finds where every scene starts and when every word is spoken, so the animation lands on your voice.' },
   { q: 'Is the reel above real?', a: 'Yes. It is a test reel made with the Motion Mind engine about how the Where is my Train app works offline.' },
 ];
 

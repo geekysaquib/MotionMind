@@ -125,7 +125,6 @@ export const AnalyticsPage = observer(function AnalyticsPage() {
         setAccounts([]);
         setError({ text: errorText(e), code: e instanceof ServiceError ? e.code : undefined });
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const load = useCallback(
@@ -142,7 +141,6 @@ export const AnalyticsPage = observer(function AnalyticsPage() {
         setLoading(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [platform, range],
   );
 
@@ -158,9 +156,10 @@ export const AnalyticsPage = observer(function AnalyticsPage() {
   if (!accounts) return <div className="p-8"><Spinner label="Loading" /></div>;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
+    <div className="page">
       <PageHeader
-        title="Analytics"
+        eyebrow="Analytics"
+        title="How your channel is doing"
         subtitle="How your reels and Shorts are doing, from your own Instagram and YouTube accounts."
         actions={
           platform ? (

@@ -114,7 +114,6 @@ export const ExportStagePage = observer(function ExportStagePage() {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
   useEffect(() => {
@@ -123,7 +122,6 @@ export const ExportStagePage = observer(function ExportStagePage() {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs, running]);
 
   async function start(platform: Platform) {

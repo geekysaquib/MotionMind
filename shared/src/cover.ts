@@ -1,4 +1,4 @@
-import type { ReelScript } from './projects';
+import type { Platform, ReelScript } from './projects';
 
 // The cover (thumbnail) of a reel: a frame of the animation from the scene you pick, with the reel's title set large
 // over it and the handle, so it reads on the profile grid.
@@ -12,6 +12,18 @@ export interface CoverSettings {
   headline?: string;
   /** False = just the frame, with no words on it. */
   text?: boolean;
+  /** The last cover image made for each platform (a file name served at /api/renders/). Set by the server; used as the project's thumbnail. */
+  thumbs?: Partial<Record<Platform, string>>;
+}
+
+/** A cover image's file name: a random UUID, so the link can't be guessed. */
+export const COVER_FILE = /^[0-9a-f-]{36}\.(png|jpg)$/;
+
+/** The picture to show for a project in lists: its Instagram cover, else its YouTube one. */
+export function coverThumb(script: Pick<ReelScript, 'cover'> | null | undefined): string | null {
+  const t = script?.cover?.thumbs;
+  const file = t?.instagram ?? t?.youtube;
+  return file && COVER_FILE.test(file) ? file : null;
 }
 
 /** The cover a script starts with: its first scene, which is the hook. */

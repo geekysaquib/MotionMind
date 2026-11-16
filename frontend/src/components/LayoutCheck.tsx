@@ -32,7 +32,6 @@ export function LayoutCheck({ project }: { project: Project }) {
       setError(errorText(e));
       setState('error');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
   // Each new animation is checked once, automatically.

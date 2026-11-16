@@ -50,16 +50,6 @@ export function ClaudeIcon({ className, title }: IconProps) {
   );
 }
 
-/** ElevenLabs' two bars. */
-export function ElevenLabsIcon({ className, title }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" className={cn('h-4 w-4 shrink-0', className)} role={title ? 'img' : undefined} aria-label={title} aria-hidden={title ? undefined : true}>
-      <rect x="6.5" y="3" width="4" height="18" rx="1.2" fill="currentColor" />
-      <rect x="13.5" y="3" width="4" height="18" rx="1.2" fill="currentColor" />
-    </svg>
-  );
-}
-
 /** Wikipedia's W, for the trending source. */
 export function WikipediaIcon({ className, title }: IconProps) {
   return (
@@ -82,15 +72,6 @@ export function PlatformIcons({ list, className }: { list: Platform[] | undefine
       {names.map((p) => (
         <PlatformIcon key={p} platform={p} className="h-3.5 w-3.5" />
       ))}
-    </span>
-  );
-}
-
-/** A small pill: the platform's logo and short name. */
-export function PlatformBadge({ platform, className }: { platform: Platform; className?: string }) {
-  return (
-    <span className={cn('inline-flex items-center gap-1 rounded-md bg-ink-800 px-1.5 py-0.5 text-[11px] font-semibold text-ink-300', className)}>
-      <PlatformIcon platform={platform} className="h-3.5 w-3.5" /> {PLATFORMS[platform].short}
     </span>
   );
 }

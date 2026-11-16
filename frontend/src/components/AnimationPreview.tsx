@@ -22,7 +22,6 @@ export function useAnimationPreview(project: Project) {
       .then(() => api.animationFor(project.id))
       .then(setState)
       .catch(setError);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id, project.script?.animation?.writtenAt, project.editor?.updatedAt]);
 
   // The voice under the preview: the user's own recording.
@@ -35,7 +34,6 @@ export function useAnimationPreview(project: Project) {
         .then((r) => setClips(r.urls.voice ? [{ url: r.urls.voice, at: 0, from: project.editor?.upload?.trimStart ?? 0 }] : []))
         .catch(() => setClips([]));
     else setClips([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state?.timeline, project.id]);
 
   const gsapUrl = useMemo(() => `${config.apiUrl || window.location.origin}/api/static/gsap.min.js`, []);

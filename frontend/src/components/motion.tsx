@@ -113,3 +113,32 @@ export function Typewriter({ phrases, className }: { phrases: string[]; classNam
     </span>
   );
 }
+
+/**
+ * Parallax: moves the element at `speed` times the scroll of its scroll container (the app's main pane, or the
+ * window), on the compositor only (translate3d, one rAF per frame). Off for people who ask for less motion.
+ */
+export function useParallax<T extends HTMLElement>(speed = 0.25) {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || reduced() || typeof requestAnimationFrame === 'undefined') return;
+    const scroller: HTMLElement | Window = el.closest<HTMLElement>('[data-scroll-root]') ?? window;
+    const read = () => (scroller instanceof Window ? scroller.scrollY : scroller.scrollTop);
+    let raf = 0;
+    const apply = () => {
+      raf = 0;
+      el.style.transform = `translate3d(0, ${(read() * speed).toFixed(1)}px, 0)`;
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(apply);
+    };
+    scroller.addEventListener('scroll', onScroll, { passive: true });
+    apply();
+    return () => {
+      scroller.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [speed]);
+  return ref;
+}

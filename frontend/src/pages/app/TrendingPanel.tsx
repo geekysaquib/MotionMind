@@ -48,7 +48,6 @@ export const TrendingPanel = observer(function TrendingPanel() {
       .trending(lang)
       .then(setTrending)
       .catch((e) => setError(errorText(e)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
 
   useEffect(load, [load]);

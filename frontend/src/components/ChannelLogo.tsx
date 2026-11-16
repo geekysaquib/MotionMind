@@ -9,7 +9,7 @@ import { MAX_LOGO_FILE_BYTES, prepareLogo } from '../lib/logoImage';
 
 /** The creator's Instagram or YouTube picture: it goes on the end card and the cover of every reel. */
 export const ChannelLogo = observer(function ChannelLogo() {
-  const { services, auth, toasts } = useStores();
+  const { services, auth, toasts, profile } = useStores();
   const api = services.claude(() => auth.session?.accessToken ?? null);
   const [url, setUrl] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -23,7 +23,6 @@ export const ChannelLogo = observer(function ChannelLogo() {
       .then((r) => setUrl(r.url))
       .catch(() => undefined)
       .finally(() => setLoaded(true));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function choose(file: File | undefined) {
@@ -35,6 +34,7 @@ export const ChannelLogo = observer(function ChannelLogo() {
       if (!/^image\/(png|jpeg|webp)$/.test(file.type)) throw new Error('Use a PNG, JPEG or WebP picture.');
       const r = await api.uploadLogo(await prepareLogo(file));
       setUrl(r.url);
+      profile.setLogo(r.url);
       log.info('logo', 'Channel logo uploaded', { bytes: file.size });
       toasts.push('success', 'Logo saved. It is on the end card and the cover of your next export.');
     } catch (e) {
@@ -51,6 +51,7 @@ export const ChannelLogo = observer(function ChannelLogo() {
     try {
       await api.removeLogo();
       setUrl(null);
+      profile.setLogo(null);
     } catch (e) {
       setError(errorText(e));
     } finally {

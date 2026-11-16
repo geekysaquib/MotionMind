@@ -80,8 +80,8 @@ export function DiscoverPage() {
   const [active, setActive] = useState<string>('trending');
   const cat = CATEGORIES.find((c) => c.id === active);
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
-      <PageHeader title="Discover topics" subtitle="See what people are reading right now, or start from an idea. Pick one and the new-reel form opens with it filled in." />
+    <div className="page">
+      <PageHeader eyebrow="Discover" title={<>Find your next <span className="text-gradient">reel</span></>} subtitle="See what people are reading right now, or start from an idea. Pick one and the new-reel form opens with it filled in." />
 
       <div className="flex flex-wrap gap-2" role="tablist" aria-label="Topic categories">
         <button

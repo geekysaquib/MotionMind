@@ -108,7 +108,6 @@ export function HtmlReelPlayer({ html, duration, clips = [], gsapUrl }: { html: 
       cancelAnimationFrame(raf);
       audios.current.forEach((a) => a.pause());
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing]);
 
   return (

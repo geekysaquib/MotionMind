@@ -95,7 +95,7 @@ export function registerAccountRoutes(api: FastifyInstance, deps: AppDeps) {
     // The project's files go with it: recordings and music in the storage bucket, and the videos and covers made on this machine.
     // The reel itself is already deleted, so a failure here is logged, never shown as a failed delete.
     await deps.audio.removeFolder(`${req.userId}/${project.id}`).catch((err) => req.log.warn({ err, projectId: project.id }, 'could not delete the project files from storage'));
-    await deps.renderer?.removeProject?.(req.userId, project.id).catch((err) => req.log.warn({ err, projectId: project.id }, 'could not delete the project renders'));
+    await deps.renderer?.removeProject?.(req.userId, project.id, Object.values(project.script?.cover?.thumbs ?? {}).filter((f): f is string => typeof f === 'string')).catch((err) => req.log.warn({ err, projectId: project.id }, 'could not delete the project renders'));
     return { ok: true };
   });
 }

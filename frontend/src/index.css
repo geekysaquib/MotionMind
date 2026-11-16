@@ -56,7 +56,7 @@
 @layer components {
   .card { @apply rounded-2xl border border-line/[0.08] bg-ink-900 shadow-soft transition duration-300; background-image: linear-gradient(180deg, rgb(var(--line) / 0.035), transparent 40%); }
   .card-hover { @apply hover:-translate-y-0.5 hover:border-mint-500/40 hover:shadow-[0_18px_40px_-22px_rgba(139,92,246,0.55)]; }
-  .glass { @apply border border-line/[0.08] bg-ink-900/60 backdrop-blur-xl; }
+  .glass { @apply border border-line/[0.08] bg-ink-900/90; }
   .skeleton { @apply animate-pulse rounded-lg bg-line/[0.06]; }
   /* Brand gradient: used for the main button, key words and glows. */
   .bg-brand { background-image: linear-gradient(135deg, #7c3aed 0%, #6366f1 55%, #8b5cf6 100%); }
@@ -88,6 +88,16 @@
   /* Background outline icons: a slow drift with a gentle turn. */
   .float-icon { transform: rotate(var(--r, 0deg)); animation: icon-drift var(--t, 12s) ease-in-out infinite; will-change: transform; }
   @keyframes icon-drift { 0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--r, 0deg)); } 50% { transform: translate3d(10px, -22px, 0) rotate(calc(var(--r, 0deg) + 9deg)); } }
+  /* A page of the app: the full width of its pane, with the same breathing room on every page. */
+  .page { @apply w-full space-y-6 px-4 py-6 md:px-8 md:py-8; }
+  /* Section change: a short fade and lift, on the compositor only. */
+  .page-enter { animation: page-in .38s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes page-in { from { opacity: 0; transform: translate3d(0, 10px, 0); } to { opacity: 1; transform: none; } }
+  /* Chart bars grow from the base when they appear. */
+  .grow-bar { transform-origin: bottom; animation: grow-y .6s cubic-bezier(.2,.8,.2,1) both; }
+  .grow-x { transform-origin: left; animation: grow-x .7s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes grow-y { from { transform: scaleY(0); } }
+  @keyframes grow-x { from { transform: scaleX(0); } }
   .label { @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-400; }
   .field {
     @apply w-full rounded-xl border border-line/[0.12] bg-ink-850 px-3.5 py-2.5 text-sm text-ink-100 placeholder:text-ink-400/60

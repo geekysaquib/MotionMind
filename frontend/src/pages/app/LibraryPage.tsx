@@ -6,19 +6,13 @@ import type { ProjectStatus } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { PageHeader } from '../../layout/AppShell';
 import { Spinner } from '../../components/ui';
-import { StageBadge, StatusBadge } from './ProjectBadges';
+import { StatusBadge } from './ProjectBadges';
 import { PlatformIcons } from '../../components/BrandIcons';
 import { timeAgo } from '../../lib/format';
 import { cn } from '../../lib/cn';
-import { ProgressRing, Reveal } from '../../components/motion';
+import { ProgressRing } from '../../components/motion';
+import { ProjectThumb } from '../../components/ProjectThumb';
 import { nextStage, progressOf } from '../../lib/progress';
-
-/** A stable pair of hues per project, so every cover looks different but never changes. */
-function hues(id: string): [number, number] {
-  let h = 0;
-  for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  return [250 + (h % 70), 190 + ((h * 7) % 120)]; // violet to sky to pink, so covers fit the palette
-}
 
 const FILTERS: { id: 'all' | ProjectStatus; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -41,8 +35,8 @@ export const LibraryPage = observer(function LibraryPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6 md:p-10">
-      <PageHeader title="Project library" subtitle="Every reel you've started, saved automatically." />
+    <div className="page">
+      <PageHeader eyebrow="Library" title="Your reels" subtitle="Every reel you've started, saved as you go. The cover you make on the Export step becomes its thumbnail." />
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex rounded-lg bg-ink-700/70 p-1 text-sm">
           {FILTERS.map((f) => (
@@ -61,39 +55,38 @@ export const LibraryPage = observer(function LibraryPage() {
       ) : list.length === 0 ? (
         <p className="card p-10 text-center text-sm text-ink-400">{projects.items.length ? 'Nothing matches this filter.' : 'No projects yet. Use "New reel" to start one.'}</p>
       ) : (
-        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {list.map((p, i) => {
-            const [h1] = hues(p.id);
+        <ul className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7">
+          {list.map((p) => {
+            const pr = progressOf(p);
             return (
-              <Reveal key={p.id} delay={(i % 3) * 70}>
+              <li key={p.id}>
                 <Link to={`/app/projects/${p.id}`} className="card card-hover group block overflow-hidden">
-                  <div className="relative flex aspect-[4/3] items-end p-4" style={{ background: `hsl(${h1} 70% 92%)` }}>
-                    <span className="line-clamp-3 text-lg font-bold text-ink-100">{p.script?.title ?? p.title}</span>
-                    <div className="absolute inset-x-3 top-3 flex items-start justify-between">
-                      <span className="inline-flex items-center gap-1.5 rounded-md bg-white/90 px-2 py-0.5 text-xs font-semibold text-ink-100 shadow-sm">
+                  <div className="relative aspect-[4/5] overflow-hidden bg-ink-800">
+                    <ProjectThumb project={p} className="transition duration-500 group-hover:scale-[1.04]" />
+                    <div className="absolute inset-x-2 top-2 flex items-start justify-between">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                         {p.durationSec}s <PlatformIcons list={p.platforms} />
                       </span>
-                      <ProgressRing value={progressOf(p)} size={40} stroke={5} className="rounded-full bg-white/90 text-ink-100 shadow-sm">
-                        <span className="text-[9px]">{Math.round(progressOf(p) * 100)}%</span>
+                      <ProgressRing value={pr} size={30} stroke={4} className="rounded-full bg-black/60 text-white">
+                        <span className="text-[8px] font-semibold">{Math.round(pr * 100)}</span>
                       </ProgressRing>
                     </div>
                   </div>
-                  <div className="p-4">
-                    <div className="line-clamp-2 font-medium transition group-hover:text-accent">{p.title}</div>
-                    <div className="mt-1 flex items-center gap-1 text-xs text-ink-400">
-                      Next: {nextStage(p).label} <ArrowRight className="h-3 w-3 transition group-hover:translate-x-1" />
+                  <div className="space-y-1.5 p-3">
+                    <div className="truncate text-sm font-semibold transition group-hover:text-accent" title={p.title}>{p.title}</div>
+                    <div className="flex items-center gap-1 text-[11px] text-ink-400">
+                      Next: {nextStage(p).label} <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
                     </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <StageBadge stage={p.stage} />
+                    <div className="flex items-center gap-1.5">
                       <StatusBadge status={p.status} />
-                      <span className="ml-auto text-xs text-ink-400">{timeAgo(p.updatedAt)}</span>
+                      <span className="ml-auto text-[11px] text-ink-400">{timeAgo(p.updatedAt)}</span>
                     </div>
                   </div>
                 </Link>
-              </Reveal>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );

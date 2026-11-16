@@ -4,7 +4,8 @@ import { ChevronRight, Compass, FolderClosed, FolderOpen, BarChart3, LayoutDashb
 import { useStores } from '../stores/RootStore';
 import { Logo } from '../components/Logo';
 import { DemoBanner } from '../components/DemoBanner';
-import { ProgressRing } from '../components/motion';
+import { ProgressRing, useParallax } from '../components/motion';
+import { ChannelAvatar } from '../components/ChannelAvatar';
 import { progressOf, STAGE_INFO } from '../lib/progress';
 import { cn } from '../lib/cn';
 
@@ -17,7 +18,7 @@ const NAV = [
   { to: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
-const SETTINGS_TABS: Record<string, string> = { connections: 'Connections', connectors: 'AI & connectors', account: 'Account', diagnostics: 'Diagnostics', claude: 'AI & connectors' };
+const SETTINGS_TABS: Record<string, string> = { connections: 'Connections', account: 'Account', diagnostics: 'Diagnostics' };
 
 /** Where you are, as a short trail for the top bar: Projects / <reel> / <step>. */
 function useCrumbs(): { label: string; to?: string }[] {
@@ -44,7 +45,6 @@ export const AppShell = observer(function AppShell() {
   const crumbs = useCrumbs();
   const { pathname } = useLocation();
   const p = profile.profile;
-  const initials = (p?.displayName ?? p?.handle ?? '?').slice(0, 2).toUpperCase();
   const total = projects.stats.total;
 
   return (
@@ -106,10 +106,10 @@ export const AppShell = observer(function AppShell() {
           </div>
 
           <div className="mt-3 flex items-center gap-2.5 border-t border-line/[0.08] px-1 pt-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">{initials}</div>
+            <ChannelAvatar size={34} />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold leading-tight">{p?.displayName ?? 'Creator'}</div>
-              <div className="truncate text-xs text-ink-400">{auth.session?.email ?? (p?.handle ? `@${p.handle}` : '')}</div>
+              <div className="truncate text-sm font-semibold leading-tight">{p?.channelName || p?.displayName || 'Creator'}</div>
+              <div className="truncate text-xs text-ink-400">{p?.handle ? `@${p.handle}` : auth.session?.email}</div>
             </div>
             <button onClick={() => void auth.signOut()} className="rounded-lg p-1.5 text-ink-400 hover:bg-ink-800 hover:text-ink-100" aria-label="Sign out" title="Sign out">
               <LogOut className="h-4 w-4" />
@@ -118,7 +118,7 @@ export const AppShell = observer(function AppShell() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line/[0.07] bg-ink-950/80 px-4 backdrop-blur-xl md:px-6">
+          <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line/[0.07] bg-ink-950 px-4 md:px-6">
             <div className="md:hidden">
               <Logo size="sm" />
             </div>
@@ -153,11 +153,12 @@ export const AppShell = observer(function AppShell() {
             </div>
           </header>
           <div className="canvas-glow relative flex min-h-0 flex-1 flex-col rounded-tl-3xl border-l border-t border-line/[0.07] bg-ink-800">
-          <main className="relative min-h-0 flex-1 overflow-y-auto">
-            <div key={pathname.split("/").slice(0, 3).join("/")} className="animate-fade-up">
-              <Outlet />
-            </div>
-          </main>
+            <main data-scroll-root className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              {/* A new section of the app fades in; moving between steps of one project keeps its frame still. */}
+              <div key={pathname.split('/').slice(0, 4).join('/')} className="page-enter">
+                <Outlet />
+              </div>
+            </main>
           </div>
         </div>
       </div>
@@ -165,14 +166,18 @@ export const AppShell = observer(function AppShell() {
   );
 });
 
-export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: React.ReactNode }) {
+/** The top of a page, like a product site's section: a small eyebrow, a big title, a line under it and the page's actions. */
+export function PageHeader({ title, subtitle, eyebrow, actions }: { title: React.ReactNode; subtitle?: string; eyebrow?: string; actions?: React.ReactNode }) {
+  const glow = useParallax<HTMLDivElement>(0.35);
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="animate-fade-up font-display text-2xl font-bold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-1 animate-fade-up text-sm text-ink-400 [animation-delay:80ms]">{subtitle}</p>}
+    <header className="relative isolate flex flex-wrap items-end justify-between gap-4 pb-2">
+      <div ref={glow} aria-hidden className="pointer-events-none absolute -left-10 -top-24 -z-10 h-56 w-[36rem] max-w-full rounded-full bg-mint-500/10 blur-3xl" />
+      <div className="min-w-0">
+        {eyebrow && <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">{eyebrow}</div>}
+        <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">{title}</h1>
+        {subtitle && <p className="mt-2 max-w-2xl text-sm text-ink-400 md:text-base">{subtitle}</p>}
       </div>
       {actions}
-    </div>
+    </header>
   );
 }

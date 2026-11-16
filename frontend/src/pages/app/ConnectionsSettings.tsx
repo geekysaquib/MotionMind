@@ -58,7 +58,6 @@ export const ConnectionsSettings = observer(function ConnectionsSettings() {
         setAccounts([]);
         setError(errorText(e));
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Google sends the browser back here with ?connected=youtube or ?error=...
@@ -69,7 +68,6 @@ export const ConnectionsSettings = observer(function ConnectionsSettings() {
     if (connected) toasts.push('success', 'YouTube channel connected.');
     if (err) setError(CALLBACK_ERRORS[err] ?? `YouTube sign-in failed (${err}).`);
     setParams({}, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const byPlatform = (p: SocialPlatform) => accounts?.find((a) => a.platform === p) ?? null;

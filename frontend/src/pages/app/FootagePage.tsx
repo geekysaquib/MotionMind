@@ -1,7 +1,8 @@
+import { PageHeader } from '../../layout/AppShell';
 import { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, CircleAlert, Clapperboard, Scissors, Upload } from 'lucide-react';
+import { CheckCircle2, CircleAlert, Clapperboard, Upload } from 'lucide-react';
 import { FOOTAGE_LIMITS, keptRanges, rangesDuration } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { Alert, Badge, Button, Card, Spinner } from '../../components/ui';
@@ -85,7 +86,6 @@ export const FootagePage = observer(function FootagePage() {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function upload(file: File) {
@@ -108,15 +108,12 @@ export const FootagePage = observer(function FootagePage() {
   const ffmpegMissing = tools && !tools.ffmpeg.ready;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 md:p-8">
-      <div>
-        <h1 className="flex items-center gap-2 font-display text-2xl font-bold">
-          <Scissors className="h-6 w-6 text-accent" /> Edit raw footage
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm text-ink-400">
-          Upload a clip you filmed. Motion Mind cuts every pause, writes captions from what you say, and shows you the cut as a storyboard. Approve it and the 1080 × 1920 reel is exported on this computer.
-        </p>
-      </div>
+    <div className="page">
+      <PageHeader
+        eyebrow="Raw footage"
+        title="Edit what you filmed"
+        subtitle="Upload a clip you filmed. Motion Mind cuts every pause, writes captions from what you say, and shows you the cut as a storyboard. Approve it and the 1080 × 1920 reel is exported on this computer."
+      />
 
       {error && <Alert>{error}</Alert>}
       {available === false && <Alert tone="info">Raw footage editing runs on your PC: start Motion Mind with npm run dev.</Alert>}

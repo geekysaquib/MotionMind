@@ -86,7 +86,6 @@ export const FootageEditPage = observer(function FootageEditPage() {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // While a job runs, follow it; when it finishes, take its result.
@@ -96,7 +95,6 @@ export const FootageEditPage = observer(function FootageEditPage() {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, running]);
 
   useCutPreview(video, segments, previewCut);
@@ -176,7 +174,7 @@ export const FootageEditPage = observer(function FootageEditPage() {
   const analyzed = Boolean(edit.silences);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
+    <div className="page">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <Link to="/app/footage" className="inline-flex items-center gap-1 text-sm text-ink-400 hover:text-ink-100">

@@ -85,7 +85,7 @@ export interface ClaudeService {
   importPost(projectId: string, platform: Platform, text: string): Promise<Project>;
   /** Cover (thumbnail): save the scene, and take the frame on this machine. */
   saveCover(projectId: string, cover: CoverSettings): Promise<Project>;
-  renderCover(projectId: string, cover: CoverSettings, platform?: Platform): Promise<{ file: string; url: string }>;
+  renderCover(projectId: string, cover: CoverSettings, platform?: Platform): Promise<{ file: string; url: string; project?: Project }>;
   /** Export: render the MP4 (only on a local server). */
   startExport(projectId: string, platform?: Platform): Promise<{ job: RenderJob; withVoice: boolean }>;
   /** `jobs` has the latest export of each platform; `job` is the first platform's. */

@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Circle, Clapperboard, Lightbulb, Play, Rocket } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Circle, Clapperboard, Lightbulb, Play, Rocket, TrendingDown, TrendingUp } from 'lucide-react';
 import { useStores } from '../../stores/RootStore';
 import { Spinner } from '../../components/ui';
 import { CountUp, ProgressRing, Reveal } from '../../components/motion';
+import { BarChart, BarList, Sparkline } from '../../components/charts';
+import { ProjectThumb } from '../../components/ProjectThumb';
+import { PageHeader } from '../../layout/AppShell';
+import { insights } from '../../lib/insights';
 import { NewReelForm } from './NewReelForm';
 import { StatusBadge } from './ProjectBadges';
 import { PlatformIcons } from '../../components/BrandIcons';
@@ -31,6 +35,7 @@ export const DashboardPage = observer(function DashboardPage() {
   const [params] = useSearchParams();
   const [tip, setTip] = useState(0);
   const s = projects.stats;
+  const k = useMemo(() => insights(projects.items), [projects.items]);
   const name = profile.profile?.displayName?.split(' ')[0] ?? 'creator';
   const active = projects.items.filter((p) => p.status !== 'archived');
   const resume = active.find((p) => p.status !== 'completed');
@@ -50,30 +55,41 @@ export const DashboardPage = observer(function DashboardPage() {
   ];
   const doneCount = setup.filter((x) => x.done).length;
 
-  const stats = [
-    { label: 'Reels', value: s.total },
-    { label: 'In progress', value: s.inProgress + s.drafts },
-    { label: 'Finished', value: s.completed },
+  const spark = k.activity.map((d) => d.value);
+  const kpis = [
+    { label: 'Reels', value: k.total, note: `${k.minutes} min of explainers`, trend: k.weekDelta },
+    { label: 'In the works', value: k.working, note: `${Math.round(k.avgProgress * 100)}% done on average` },
+    { label: 'Finished', value: k.finished, note: k.total ? `${Math.round((k.finished / k.total) * 100)}% of all reels` : 'Export one to see it here' },
+    { label: 'Started this week', value: k.thisWeek, note: k.weekDelta === 0 ? 'Same as last week' : `${k.weekDelta > 0 ? '+' : ''}${k.weekDelta} on last week`, trend: k.weekDelta },
   ];
 
   return (
-    <div className="w-full space-y-6 p-4 md:p-8">
-      <Reveal className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm text-ink-400">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-          <h1 className="mt-0.5 font-display text-3xl font-bold tracking-tight">
-            {greeting()}, {name}
-          </h1>
-        </div>
-        <dl className="flex gap-2">
-          {stats.map((st) => (
-            <div key={st.label} className="min-w-[88px] rounded-xl border border-line/[0.09] bg-ink-900 px-4 py-2 shadow-soft">
-              <dd className="font-display text-xl font-bold leading-none">{projects.loaded ? <CountUp to={st.value} /> : <span className="skeleton inline-block h-5 w-6 align-middle" />}</dd>
-              <dt className="mt-1 text-xs text-ink-400">{st.label}</dt>
-            </div>
-          ))}
-        </dl>
-      </Reveal>
+    <div className="page">
+      <PageHeader
+        eyebrow={new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+        title={
+          <>
+            {greeting()}, <span className="text-gradient">{name}</span>
+          </>
+        }
+        subtitle="Your studio at a glance: what you're making, how far each reel has got, and what to do next."
+      />
+
+      <dl className="stagger grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {kpis.map((st) => (
+          <div key={st.label} className="card p-4">
+            <dt className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-ink-400">
+              {st.label}
+              {st.trend !== undefined && st.trend !== 0 && (st.trend > 0 ? <TrendingUp className="h-4 w-4 text-emerald-400" /> : <TrendingDown className="h-4 w-4 text-rose-400" />)}
+            </dt>
+            <dd className="mt-2 font-display text-3xl font-bold leading-none">{projects.loaded ? <CountUp to={st.value} /> : <span className="skeleton inline-block h-7 w-10 align-middle" />}</dd>
+            <dd className="mt-1.5 text-xs text-ink-400">{st.note}</dd>
+            <dd className="mt-3">
+              <Sparkline values={spark} />
+            </dd>
+          </div>
+        ))}
+      </dl>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
@@ -83,6 +99,23 @@ export const DashboardPage = observer(function DashboardPage() {
               <p className="mb-4 mt-1 text-sm text-ink-400">Type a question. Research, the script and the style follow, and you approve each step.</p>
               <NewReelForm autoFocus={Boolean(params.get('new'))} initialTopic={params.get('topic') ?? ''} />
             </section>
+          </Reveal>
+
+          <Reveal delay={40}>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <section className="card p-5" aria-label="Activity">
+                <h2 className="font-display font-bold">Activity</h2>
+                <p className="mt-0.5 text-xs text-ink-400">Reels started or worked on, last 14 days</p>
+                <BarChart className="mt-4" data={k.activity} label="Reels worked on per day, last 14 days" />
+              </section>
+              <section className="card p-5" aria-label="Pipeline">
+                <h2 className="font-display font-bold">Pipeline</h2>
+                <p className="mt-0.5 text-xs text-ink-400">How many reels have got through each step</p>
+                <div className="mt-4">
+                  <BarList data={k.pipeline} />
+                </div>
+              </section>
+            </div>
           </Reveal>
 
           <Reveal delay={80}>
@@ -120,10 +153,15 @@ export const DashboardPage = observer(function DashboardPage() {
                         to={`/app/projects/${p.id}`}
                         className="group grid animate-fade-up grid-cols-[minmax(0,1fr)_96px] items-center gap-3 border-b border-line/[0.06] px-5 py-3 text-sm transition last:border-b-0 hover:bg-ink-800/70 md:grid-cols-[minmax(0,1fr)_130px_140px_84px]"
                       >
-                        <span role="cell" className="min-w-0">
+                        <span role="cell" className="flex min-w-0 items-center gap-3">
+                          <span className="h-11 w-9 shrink-0 overflow-hidden rounded-md bg-ink-800 ring-1 ring-line/10">
+                            <ProjectThumb project={p} className="!p-1 [&>span]:hidden" />
+                          </span>
+                          <span className="min-w-0">
                           <span className="block truncate font-medium group-hover:text-accent">{p.title}</span>
                           <span className="mt-1 flex items-center gap-2 text-xs text-ink-400">
                             <StatusBadge status={p.status} /> {p.durationSec}s <PlatformIcons list={p.platforms} />
+                          </span>
                           </span>
                         </span>
                         <span role="cell" className="hidden items-center gap-1 text-ink-300 md:flex">
@@ -168,6 +206,30 @@ export const DashboardPage = observer(function DashboardPage() {
               </Link>
             </Reveal>
           )}
+
+          <Reveal delay={90}>
+            <section className="card p-5" aria-label="Styles used">
+              <div className="flex items-center justify-between">
+                <h2 className="font-display font-bold">Styles used</h2>
+                <span className="text-xs font-semibold text-ink-400">
+                  {k.stylesTried}/{k.stylesTotal} tried
+                </span>
+              </div>
+              <div className="mt-4">
+                <BarList data={k.styles} empty="Pick a style for a reel and it shows up here." />
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs">
+                <div className="rounded-xl bg-line/[0.04] p-2.5">
+                  <div className="font-display text-lg font-bold">{k.platforms.instagram}</div>
+                  <div className="text-ink-400">for Instagram</div>
+                </div>
+                <div className="rounded-xl bg-line/[0.04] p-2.5">
+                  <div className="font-display text-lg font-bold">{k.platforms.youtube}</div>
+                  <div className="text-ink-400">for YouTube</div>
+                </div>
+              </div>
+            </section>
+          </Reveal>
 
           <Reveal delay={120}>
             <section className="card p-5">

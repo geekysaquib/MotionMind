@@ -35,7 +35,7 @@ export const ProjectLayout = observer(function ProjectLayout() {
   const href = (path: string) => (path ? `/app/projects/${p.id}/${path}` : `/app/projects/${p.id}`);
 
   return (
-    <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-5 p-4 md:p-6 lg:grid-cols-[216px_minmax(0,1fr)]">
+    <div className="grid w-full grid-cols-1 gap-5 px-4 py-6 md:px-8 lg:grid-cols-[232px_minmax(0,1fr)]">
       <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
         <div className="card p-4">
           <div className="flex items-start gap-3">

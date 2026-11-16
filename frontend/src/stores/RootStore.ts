@@ -20,6 +20,7 @@ export class RootStore {
   async onSessionChanged() {
     if (this.auth.session) {
       await Promise.all([this.profile.load(), this.projects.load()]);
+      void this.profile.loadLogo();
     } else {
       this.profile.clear();
       this.projects.clear();

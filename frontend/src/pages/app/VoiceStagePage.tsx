@@ -53,7 +53,6 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
 
   useEffect(() => {
     if (!dirty) setDraft(project.editor?.upload ?? null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.editor?.updatedAt, project.editor?.upload]);
 
   useEffect(() => {
@@ -61,7 +60,6 @@ export const VoiceStagePage = observer(function VoiceStagePage() {
       .then(() => api.editorFor(project.id))
       .then((r) => setUrls(r.urls))
       .catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
   if (!script) {

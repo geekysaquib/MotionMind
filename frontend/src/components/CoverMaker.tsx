@@ -30,7 +30,8 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
   const platforms = normalizePlatforms(project.platforms);
   const [platform, setPlatform] = useState<Platform>(platforms[0]!);
   const active = platforms.includes(platform) ? platform : platforms[0]!;
-  const [urls, setUrls] = useState<Partial<Record<Platform, string>>>({});
+  // The last covers made are kept with the project, so they show again on the next visit.
+  const [urls, setUrls] = useState<Partial<Record<Platform, string>>>(() => Object.fromEntries(Object.entries(script.cover?.thumbs ?? {}).map(([k, f]) => [k, `${config.apiUrl}/api/renders/${f}`])));
   const url = urls[active] ?? null;
   const ideas = script.post?.[active]?.covers ?? [];
 
@@ -42,6 +43,7 @@ export const CoverMaker = observer(function CoverMaker({ project }: { project: P
       const cover = { scene, ...(words && words !== script.title ? { headline: words } : {}), ...(text ? {} : { text: false }) };
       projects.upsert(await api.saveCover(project.id, cover));
       const r = await api.renderCover(project.id, cover, active);
+      if (r.project) projects.upsert(r.project);
       setUrls((u) => ({ ...u, [active]: `${config.apiUrl}${r.url}` }));
       log.info('cover', 'Cover made', { projectId: project.id, scene, platform: active });
     } catch (e) {

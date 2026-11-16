@@ -26,7 +26,9 @@ export interface Renderer {
   /** One frame of the animation at `at` seconds, as a PNG (the cover). Returns its file name. */
   still(html: string, at: number, projectId?: string): Promise<string>;
   /** Deletes the finished videos and cover images of a project, and forgets its jobs. */
-  removeProject?(userId: string, projectId: string): Promise<void>;
+  removeProject?(userId: string, projectId: string, files?: string[]): Promise<void>;
+  /** Deletes finished files by name (covers that were replaced). */
+  removeFiles?(files: string[]): Promise<void>;
   /** Absolute path of a finished render, by file name; null if unknown. */
   filePath(file: string): string | null;
 }
@@ -54,11 +56,18 @@ export class HyperFramesRenderer implements Renderer {
 
   filePath(file: string) {
     if (!/^[0-9a-f-]{36}\.(mp4|png|jpg)$/.test(file)) return null;
-    return this.stills.has(file) || [...this.jobs.values()].some((j) => j.file === file) ? path.join(RENDERS_DIR, file) : null;
+    // Names are random UUIDs, so any one on disk may be served: covers kept as thumbnails outlive a restart of the API.
+    return path.join(RENDERS_DIR, file);
   }
 
-  async removeProject(userId: string, projectId: string) {
-    const files: string[] = [];
+  async removeFiles(files: string[]) {
+    const safe = files.filter((f) => /^[0-9a-f-]{36}\.(mp4|png|jpg)$/.test(f));
+    for (const f of safe) this.stills.delete(f);
+    await Promise.all(safe.map((f) => rm(path.join(RENDERS_DIR, f), { force: true })));
+  }
+
+  async removeProject(userId: string, projectId: string, extra: string[] = []) {
+    const files: string[] = extra.filter((f) => /^[0-9a-f-]{36}\.(mp4|png|jpg)$/.test(f));
     for (const [key, job] of this.jobs) {
       if (!key.startsWith(`${userId}:${projectId}:`)) continue;
       this.jobs.delete(key);
