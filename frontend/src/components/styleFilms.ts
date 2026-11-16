@@ -18,6 +18,7 @@ export const STYLE_FILMS: Partial<Record<StyleId, string>> = {
   'security-xray': 'security-xray',
   'white-model': 'white-model',
   'isometric-picture-book': 'isometric-picture-book',
+  'iso-infographic': 'iso-infographic',
   'lowpoly-island': 'lowpoly-island',
   'tilt-shift': 'tilt-shift',
   'paper-lantern': 'paper-lantern',

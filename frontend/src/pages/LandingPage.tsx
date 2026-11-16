@@ -29,7 +29,7 @@ import { FloatingIcons } from '../components/FloatingIcons';
 const STEPS = [
   { icon: Sparkles, title: 'Pick a topic', text: 'Type a question, or start from an idea. Choose the length and the quality.', sample: '“How does a Soundbox know the money arrived?”' },
   { icon: FileSearch, title: 'Research it', text: 'Sources are searched and every claim is marked verified, single-source or conflicting.', sample: '12 facts · 9 verified · 7 sources' },
-  { icon: Boxes, title: 'Pick a style', text: 'A live city map, a 3D terrain fly-over, a dark keynote stage, a radar sweep, a TV news package and more. Each with a moving sample.', sample: '22 styles, never the same look' },
+  { icon: Boxes, title: 'Pick a style', text: 'A live city map, a 3D terrain fly-over, a dark keynote stage, a radar sweep, a TV news package and more. Each with a moving sample.', sample: '23 styles, never the same look' },
   { icon: PenLine, title: 'Write the script', text: 'A hook, the explanation in steps, and a payoff, in Hindi, Hinglish or English.', sample: '9 scenes · 52 seconds spoken' },
   { icon: Mic, title: 'Add the voice', text: 'Read the narration in your own voice and upload it. Motion Mind fits every scene and word to your recording.', sample: 'Captions follow every word' },
   { icon: Layers3, title: 'Storyboard', text: 'Polish every scene: the card, the picture, short forms and brands, steps, numbers, items or a note.', sample: 'Phone → NPCI → Bank → Soundbox' },

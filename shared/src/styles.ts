@@ -3,7 +3,7 @@ import type { ReelScript } from './projects';
 // Styles: the look a whole reel is drawn in. The user picks one on the Style step, after the storyboard.
 // Same id list as the reel engine's STYLE_IDS (the engine doesn't import this package; a test keeps them equal).
 
-export const STYLE_IDS = ['live-map', 'dark-keynote', 'transit-map', 'newsroom', 'spotlight-noir', 'system-terminal', 'deep-blue', 'map-explainer', 'dark-documentary', 'briefing-board', 'dataviz', 'data-physical', 'teardown', 'security-xray', 'white-model', 'isometric-picture-book', 'lowpoly-island', 'tilt-shift', 'paper-lantern', 'silkscreen-poster', 'city-symphony', 'telestrator'] as const;
+export const STYLE_IDS = ['live-map', 'dark-keynote', 'transit-map', 'newsroom', 'spotlight-noir', 'system-terminal', 'deep-blue', 'map-explainer', 'dark-documentary', 'briefing-board', 'dataviz', 'data-physical', 'teardown', 'security-xray', 'white-model', 'isometric-picture-book', 'iso-infographic', 'lowpoly-island', 'tilt-shift', 'paper-lantern', 'silkscreen-poster', 'city-symphony', 'telestrator'] as const;
 export type StyleId = (typeof STYLE_IDS)[number];
 export const DEFAULT_STYLE: StyleId = 'live-map';
 
@@ -193,6 +193,17 @@ export const STYLES: Record<StyleId, ReelStyle> = {
     swatch: ["#0C0D10","#F2F2EE"],
     direction: "Projection Model: one white massing model of the place on a plinth in a dark room. Each scene projects one layer of light onto it: a heat colour for pollution, blue for water, a moving line for traffic, a highlighted block with a number. The model stays still; the camera circles it slowly; one layer per scene.",
     credit: LEMO,
+  },
+  'iso-infographic': {
+    id: "iso-infographic",
+    name: "Isometric Infographic",
+    tagline: "A living isometric diagram",
+    description: "A system diagram come alive: a floating isometric diorama of flat three-tone blocks with a cross-section at its edges, thin ink labels and leader lines, things that open up to show their insides, and numbers built from rows of repeated icons.",
+    bestFor: "Processes and supply chains, how a system works end to end, \"from A to B\" journeys, annual numbers.",
+    cues: ["supply chain","factory","process","journey","farm to","how is","made","production","pipeline","warehouse","logistics","export","import","coffee","tea"],
+    swatch: ["#F3F0EA","#2F6FED"],
+    credit: LEMO,
+    direction: "Isometric Infographic: the whole reel is one isometric diorama on a floating board. Each scene moves along the system to one part of it: a block opens up to show its inside, a route line draws on, and a number is shown as a row of identical icons that add up. Thin ink leader lines and pins label every part with real numbers. Flat three-tone faces, no perspective, a pale background.",
   },
   'isometric-picture-book': {
     id: "isometric-picture-book",
