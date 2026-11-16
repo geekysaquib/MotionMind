@@ -100,7 +100,12 @@ Work at the highest quality you are capable of, as a senior motion designer woul
 - REAL LOGOS. Every company, app or government body named on screen shows its real logo, as the <img> from the logo URL above (on a white rounded tile, sized 72 to 140 px, never stretched: width and height equal, object-fit: contain). Never draw a company logo yourself from shapes or letters, and never use a different company's logo.
 - FLAGS. A country's flag is drawn as accurate inline SVG: the right colours, stripe order and proportions (India 3:2 saffron #FF9933, white, green #138808, with the navy 24-spoke Ashoka Chakra; USA 13 stripes with the blue canton of stars; China red with five yellow stars). Never use emoji for flags or icons: the renderer has no emoji font and shows letters instead.
 - ICONS AND IMAGES. Icons are clean inline SVG paths in one consistent stroke width and corner style, centred in their box and never cut off. Every object is drawn with care and recognisable at a glance: a chip has its pins and die, a phone has a real-looking app screen, a server has its lights. No placeholder boxes, no question-mark or broken images, no generic blobs.
-- DETAIL IN EVERY FRAME. Pause on any frame and it should look finished: a clear hero, supporting detail, labels with real numbers from the narration, depth (background, midground, foreground) and light. No near-empty frames and no frame where only text is on screen.
+- PEAK DETAIL IN EVERY FRAME. Pause on any frame and it should look like a finished poster from a top studio:
+  - A hero illustration of at least 25 shapes, with layered gradients, a highlight edge, an inner shadow and a soft cast shadow on the ground.
+  - Two or three supporting objects that add context (the place, the people, the device, the document) and micro-details on every object: small UI text, screws, seams, LEDs, reflections, tick marks, legends.
+  - Three depth layers (a background with texture or a soft scene, a midground with the hero, a foreground with particles, light rays or a blurred element), one key light and ambient glow.
+  - Labels and callouts with the real numbers and names from the narration, joined to what they describe by thin leader lines.
+  - No near-empty frames, no frame where only text is on screen, no plain flat background, and no element that looks unfinished, cut off or low resolution. If a frame feels thin, add detail to the hero and its surroundings, not more text.
 - NO OVERLAP. No text overlaps other text, a logo, an icon or a panel edge, in any frame, including during transitions (see the layout rules).
 - FILL THE WHOLE REEL. The scenes run to ${t.storyEnd.toFixed(2)} s; every second has something designed on screen, with no stretch where nothing happens.
 
