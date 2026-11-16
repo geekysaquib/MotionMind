@@ -5,14 +5,15 @@ import { Badge, Card } from '../../components/ui';
 import { timeAgo } from '../../lib/format';
 import { AnimationPreview } from '../../components/AnimationPreview';
 import { PasteScriptPanel } from './PasteScriptPanel';
-import { STYLES } from '@motionmind/shared';
+import { lengthPlan, lengthWarning, narrationWords, STYLES, WORDS_PER_SECOND } from '@motionmind/shared';
 import { pickedStyle } from '../../lib/pickedStyle';
 
-
-/** Script stage: Claude writes the reel script from the topic, and the embedded engine plays it. */
+/** Script stage: the prompt to copy into claude.ai, the pasted script, and the reel's preview. */
 export const ScriptStagePage = observer(function ScriptStagePage() {
   const project = useOutletContext<Project>();
-    const script = project.script;
+  const script = project.script;
+  const plan = lengthPlan(project.durationSec);
+  const warning = script ? lengthWarning(script.beats, project.durationSec) : null;
   const style = pickedStyle(project);
 
   return (
@@ -34,6 +35,11 @@ export const ScriptStagePage = observer(function ScriptStagePage() {
             </Link>
           </div>
           {script && style && script.style && script.style !== style && <p className="mt-2 text-xs text-amber-700">This script was designed for another style. Write it again for the best fit.</p>}
+          <p className="mt-2 text-xs text-ink-400">
+            Length: {plan.seconds} seconds, so the prompt asks for about {plan.words.target} words in {plan.beats.min} to {plan.beats.max} scenes.
+            {script && ` This script has ${narrationWords(script.beats)} words in ${script.beats.length} scenes (about ${Math.round(narrationWords(script.beats) / WORDS_PER_SECOND)} seconds).`}
+          </p>
+          {warning && <p className="mt-2 text-xs font-semibold text-amber-700">{warning}</p>}
         </Card>
         {script ? (
           <details className="group card overflow-hidden">

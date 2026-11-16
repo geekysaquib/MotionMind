@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { styleOf, type ResearchReport, type StyleId } from '@motionmind/shared';
+import { lengthPlan, styleOf, WORDS_PER_SECOND, type ResearchReport, type StyleId } from '@motionmind/shared';
 import { researchSchema, reelScriptSchema, type ReelScript, type Research } from './reelSchema';
 
 // The script prompt. Every reel is made by copy and paste through claude.ai (Saquib, 2026-11-09).
@@ -30,7 +30,7 @@ What makes the script great (follow all of it):
 - One idea per beat. Each beat answers the question the last one raised, so the viewer always wants the next line. Build to a payoff that makes the viewer feel smart, then end with a one-line takeaway (the app adds the follow line itself).
 - Accurate: only facts from the approved research or that you are sure of. If a number is an estimate say "lagbhag" / "about"; never invent a statistic, a quote or a date.
 - Explain jargon the first time in plain words. No emoji, hashtags or markdown in the narration (it is spoken aloud). Card headlines are punchy, under 9 words, with 1 or 2 key words in *stars*.
-- Pacing: about 2.7 spoken words per second; 7 to 11 beats; each beat 1 or 2 sentences.
+- Pacing: about ${WORDS_PER_SECOND} spoken words per second; each beat 1 or 2 sentences (about 6 to 7 seconds). The LENGTH below is exact: hit its word count and number of beats, whatever the length is.
 
 Each beat has narration plus an on-screen card (eyebrow, headline, tone and 1 or 2 short rows: "flow" steps, "kv" label + value, "chips" items with "strike": true for wrong or old ones, or a "note"). A motion designer animates every scene later from this script, so make each beat's card say concretely what should be on screen.
 
@@ -44,7 +44,7 @@ Before you answer, check your own script once: is the hook strong, is every fact
 export function reelRequest(brief: ReelBrief): string {
   return [
     `Write a reel about: ${brief.topic}`,
-    `Length: about ${brief.durationSec} seconds spoken (roughly ${Math.round(brief.durationSec * 2.7)} words of narration in total).`,
+    lengthNotes(brief.durationSec),
     `Language for narration, card text and step names: ${LANGUAGE[brief.language]}.`,
     brief.niche ? `Channel niche: ${brief.niche}.` : '',
     brief.channelName ? `Channel name: ${brief.channelName}.` : '',
@@ -53,6 +53,16 @@ export function reelRequest(brief: ReelBrief): string {
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+/** The exact length the creator chose, as a word count and a number of beats Claude must hit. */
+function lengthNotes(durationSec: number): string {
+  const p = lengthPlan(durationSec);
+  return [
+    `LENGTH (exact, the creator chose it): ${p.seconds} seconds of narration when spoken at a natural pace.`,
+    `- Write ${p.words.target} words of narration in total (never fewer than ${p.words.min}, never more than ${p.words.max}), spread over ${p.beats.min} to ${p.beats.max} beats.`,
+    `- Count the words of all narration before you answer. If you are short, add another step of the explanation, an example or a number from the research, not filler. A ${p.seconds}-second reel written as a 60-second one is wrong.`,
+  ].join('\n');
 }
 
 /** The chosen style's design rules, so the scenes are designed for the look they will be drawn in. */
@@ -76,12 +86,13 @@ For every claim, record which sources support it and how sure it is:
 verified = two or more independent reliable sources agree; single_source = only one source; estimate = an approximate number; conflicting = sources disagree.
 Do not invent sources or URLs. Only list pages you actually read.`;
 
-export function researchRequest(brief: Pick<ReelBrief, 'topic'>): string {
-  return `Research this topic for a reel: ${brief.topic}`;
+export function researchRequest(brief: Pick<ReelBrief, 'topic'> & { durationSec?: number }): string {
+  const p = lengthPlan(brief.durationSec ?? 60);
+  return `Research this topic for a reel: ${brief.topic}\nThe reel is ${p.seconds} seconds long (about ${p.beats.max} scenes), so find at least ${p.facts} distinct, specific facts (numbers, dates, names, how each step works), enough to fill every scene without repeating.`;
 }
 
 /** The research prompt for claude.ai (turn on web search there). */
-export function manualResearchPrompt(brief: Pick<ReelBrief, 'topic'>): string {
+export function manualResearchPrompt(brief: Pick<ReelBrief, 'topic'> & { durationSec?: number }): string {
   return `${RESEARCH_SYSTEM}
 
 ${researchRequest(brief)}

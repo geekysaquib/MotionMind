@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import type { Project, ReelScript, StyleId } from '@motionmind/shared';
+import { lengthWarning, type Project, type ReelScript, type StyleId } from '@motionmind/shared';
 import type { RootStore } from './RootStore';
 import type { NewProject } from '../services/types';
 import { log } from '../lib/logger';
@@ -113,6 +113,12 @@ export class ProjectStore {
   async importScript(id: string, text: string, style?: StyleId | null) {
     const p = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).importScript(id, text, style);
     log.info('claude', 'Pasted script imported', { projectId: id, beats: p.script?.beats.length });
+    // A script clearly off the chosen length is kept, with a warning so the creator can ask Claude to fix it.
+    const warning = p.script ? lengthWarning(p.script.beats, p.durationSec) : null;
+    if (warning) {
+      log.warn('claude', 'Pasted script is off the chosen length', { projectId: id, durationSec: p.durationSec });
+      this.root.toasts.push('info', warning, 12000);
+    }
     runInAction(() => {
       this.items = [p, ...this.items.filter((x) => x.id !== id)];
     });

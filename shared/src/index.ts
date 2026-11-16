@@ -10,3 +10,4 @@ export * from './animation';
 export * from './alignScript';
 export * from './alignWords';
 export * from './social';
+export * from './length';

@@ -6,7 +6,7 @@ import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 import { manualReelPrompt, manualResearchPrompt, parsePastedScript, parseResearch, PastedScriptError, type ReelBrief } from './reelPrompt';
 import { reelScriptSchema as scriptSchemaV4, type Research } from './reelSchema';
-import { STYLE_IDS, type StyleId, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
+import { lengthWarning, STYLE_IDS, type StyleId, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
 
 const editSchema = z.object({ script: z.unknown() });
 // The storyboard carries the chosen style and the cover; the schema Claude writes to does not.
@@ -82,7 +82,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   api.get('/projects/:id/research/prompt', async (req, reply) => {
     const project = await projectFor(req, reply);
     if (!project) return reply;
-    return { prompt: withNote(manualResearchPrompt({ topic: project.topic! }), noteOf(req.query)) };
+    return { prompt: withNote(manualResearchPrompt({ topic: project.topic!, durationSec: project.durationSec }), noteOf(req.query)) };
   });
 
   api.post('/projects/:id/research/import', async (req, reply) => {
@@ -121,7 +121,9 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
     if (!project) return reply;
     try {
       const script = parsePastedScript(body.data.text);
-      return { project: await saveScript(req.userId, project, script, PASTED_MODEL, body.data.style) };
+      // Saved either way; a script clearly off the chosen length comes back with a warning to show.
+      const warning = lengthWarning(script.beats, project.durationSec);
+      return { project: await saveScript(req.userId, project, script, PASTED_MODEL, body.data.style), ...(warning ? { warning } : {}) };
     } catch (err) {
       if (err instanceof PastedScriptError) return reply.code(400).send({ error: 'invalid_script', message: err.message });
       throw err;

@@ -39,7 +39,7 @@ export const reelScriptSchema = z.object({
         }),
       }),
     )
-    .describe('7 to 11 beats: a hook, the explanation in steps, and a short payoff'),
+    .describe('As many beats as the LENGTH asks for: a hook, the explanation in steps, and a short payoff'),
 });
 
 export type ReelScript = z.infer<typeof reelScriptSchema>;

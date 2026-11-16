@@ -50,7 +50,10 @@ describe('script from claude.ai', () => {
     expect(res.statusCode).toBe(200);
     const prompt = res.json().prompt as string;
     expect(prompt).toContain('Write a reel about: How UPI works');
-    expect(prompt).toContain('about 45 seconds');
+    expect(prompt).toContain('LENGTH (exact, the creator chose it): 45 seconds');
+    expect(prompt).toContain('Write 117 words of narration in total');
+    // Research is sized to the reel too.
+    expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/research/prompt`, headers: H })).json().prompt).toContain('The reel is 45 seconds long');
     expect(prompt).toContain('Answer with only one JSON object');
     expect(prompt).toContain('"beats"');
   });
