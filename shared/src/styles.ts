@@ -3,7 +3,7 @@ import type { ReelScript } from './projects';
 // Styles: the look a whole reel is drawn in. The user picks one on the Style step, after the storyboard.
 // Same id list as the reel engine's STYLE_IDS (the engine doesn't import this package; a test keeps them equal).
 
-export const STYLE_IDS = ['live-map', 'whiteboard', 'dark-keynote', 'transit-map', 'newsroom', 'spotlight-noir', 'night-3d', 'system-terminal', 'host-dark', 'host-light', 'pixel-duo', 'deep-blue'] as const;
+export const STYLE_IDS = ['live-map', 'whiteboard', 'dark-keynote', 'transit-map', 'newsroom', 'spotlight-noir', 'system-terminal', 'deep-blue'] as const;
 export type StyleId = (typeof STYLE_IDS)[number];
 export const DEFAULT_STYLE: StyleId = 'live-map';
 
@@ -95,17 +95,6 @@ export const STYLES: Record<StyleId, ReelStyle> = {
     credit: REF,
     direction: 'Spotlight Noir: one hero object per scene under a cone of light on a near-black navy stage, glossy product-shot rendering, tiny monospace series tags at the top, violet and red pill labels, giant numbers, and one centred caption line with the spoken word in violet. Calm and secretive, like a tech documentary episode.',
   },
-  'night-3d': {
-    id: 'night-3d',
-    name: 'Night World 3D',
-    tagline: 'A low-poly 3D world at night',
-    description: 'A cinematic low-poly 3D place at dusk (rail line, city, tower) with glowing windows and a moving camera, close-ups of the mechanism lit in cyan, glass data cards floating in the scene, and huge two-line captions at the top with one word in yellow or pink.',
-    bestFor: 'Trains, vehicles, machines, towers, infrastructure, "how does this physical thing work".',
-    cues: ['train', 'railway', 'irctc', 'brake', 'engine', 'tower', 'signal', 'network', 'car', 'bike', 'plane', 'metro', 'machine', 'factory', 'track'],
-    swatch: ['#1B1E3A', '#FFD23F'],
-    credit: REF,
-    direction: 'Night World 3D: one low-poly 3D world at dusk or night built from flat-shaded shapes, a camera that keeps gliding (aerial, medium, close-up on the mechanism lit in cyan), glass data cards floating in the scene, and big two-line captions at the top with the keyword in yellow (facts) or pink (drama).',
-  },
   'system-terminal': {
     id: 'system-terminal',
     name: 'Terminal Dashboard',
@@ -116,39 +105,6 @@ export const STYLES: Record<StyleId, ReelStyle> = {
     swatch: ['#07090C', '#3DDC84'],
     credit: REF,
     direction: 'Terminal Dashboard: every concept is a neon-outlined monospace card that lights up when named and joins a row of concept chips at the top; numbers in monospace or seven-segment displays, tables of word to number, tokens as coloured blocks, data centres as outlined nodes joined by cables; green = solution, amber = data, red = problem, blue = system.',
-  },
-  'host-dark': {
-    id: 'host-dark',
-    name: 'Host Desk, Dark',
-    tagline: 'A cartoon anchor tells the story',
-    description: 'A warm dark studio with a friendly flat-illustrated host (headphones and mic) in the lower third who reacts to every line, and above them news headline cards, giant red numbers, documents and toggles; key words in red italic serif.',
-    bestFor: 'News stories, controversies, "what really happened", outages, investigations.',
-    cues: ['news', 'outage', 'down', 'crash', 'investigation', 'government', 'report', 'airport', 'flight', 'happened', 'coincidence', 'scandal', 'leak', 'official'],
-    swatch: ['#2A211D', '#E5483B'],
-    credit: REF,
-    direction: 'Host Desk, Dark: a flat cartoon host with a headset sits in the lower third and changes pose with every line (explaining hand, finger up, surprised, thinking), while news headline cards with highlighted phrases, giant red numbers and props appear above; warm dark brown studio, cream text, key words in red italic serif.',
-  },
-  'host-light': {
-    id: 'host-light',
-    name: 'Host Desk, Light',
-    tagline: 'A friendly teacher on a white page',
-    description: 'A bright white page with a bearded cartoon host at the bottom gesturing through the lesson, and sticker-style illustrations (phones, tables, database cylinders, interview desks, stamps) popping in above; black text with red italic serif accents.',
-    bestFor: 'Interview questions, tech concepts for beginners, "which one should you choose", lessons and tips.',
-    cues: ['which', 'choose', 'interview', 'beginner', 'learn', 'mistake', 'tips', 'question', 'sql', 'nosql', 'postgres', 'database', 'career', 'job'],
-    swatch: ['#F7F6F3', '#E63B2E'],
-    credit: REF,
-    direction: 'Host Desk, Light: a flat cartoon teacher with a beard and mint shirt at the bottom gestures through the lesson on an off-white page, while thick-outlined sticker illustrations (phones with app screens, mini tables, database cylinders, red MISTAKE stamps, a cheat-sheet card) pop in above; black sans headline at top left with key words in red italic serif.',
-  },
-  'pixel-duo': {
-    id: 'pixel-duo',
-    name: 'Pixel Duo',
-    tagline: 'A pixel-art sitcom of two',
-    description: 'A cosy pixel-art room at night where a creator and a friendly robot talk through the topic; their lines appear as named subtitles, and chunky panels (comments, bills, tool cards, step cards, checklists) pop up above them.',
-    bestFor: 'Tools and tutorials, free vs paid, AI tools, step-by-step how-tos, funny explainers.',
-    cues: ['free', 'tool', 'tutorial', 'step', 'install', 'github', 'clone', 'voice', 'app', 'setup', 'guide', 'paid', 'subscription', 'hack'],
-    swatch: ['#1B2240', '#D7FF3A'],
-    credit: REF,
-    direction: 'Pixel Duo: crisp pixel art (no blur) of two characters in a night room, a human creator and a screen-faced robot, talking in turns; each narration line belongs to one speaker and shows as a subtitle with their name and mood; chunky dark panels with lime step tags, invoices with red stamps and tool cards pop up above them.',
   },
   'deep-blue': {
     id: 'deep-blue',
