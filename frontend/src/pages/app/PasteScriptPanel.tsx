@@ -4,6 +4,8 @@ import { ClipboardCopy, ExternalLink } from 'lucide-react';
 import type { Project } from '@motionmind/shared';
 import { useStores } from '../../stores/RootStore';
 import { pickedStyle } from '../../lib/pickedStyle';
+import { pickedApproach, rememberApproach } from '../../lib/pickedApproach';
+import { ApproachPicker } from '../../components/ApproachPicker';
 import { Alert, Button, Card } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
@@ -116,14 +118,25 @@ export function ClaudeAiPanel({ title, chatHint, placeholder, disabled, getPromp
 export const PasteScriptPanel = observer(function PasteScriptPanel({ project }: { project: Project }) {
   const { projects, services, auth } = useStores();
   const style = pickedStyle(project);
+  const [approach, setApproach] = useState(() => pickedApproach(project.id));
   return (
+    <div className="space-y-4">
+    <ApproachPicker
+      value={approach}
+      onChange={(a) => {
+        setApproach(a);
+        rememberApproach(project.id, a);
+      }}
+    />
     <ClaudeAiPanel
+      key={approach}
       title="Write it in claude.ai"
       placeholder='{ "title": "...", "steps": [...], "beats": [...] }'
       disabled={!project.topic}
       logScope="Script"
-      getPrompt={(note) => services.claude(() => auth.session?.accessToken ?? null).scriptPrompt(project.id, style, note)}
+      getPrompt={(note) => services.claude(() => auth.session?.accessToken ?? null).scriptPrompt(project.id, style, note, approach)}
       onImport={(text) => projects.importScript(project.id, text, style)}
     />
+    </div>
   );
 });

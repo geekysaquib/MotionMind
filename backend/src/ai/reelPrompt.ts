@@ -1,5 +1,5 @@
 import { z } from 'zod/v4';
-import { lengthPlan, styleOf, WORDS_PER_SECOND, type ResearchReport, type StyleId } from '@motionmind/shared';
+import { approachOf, lengthPlan, styleOf, WORDS_PER_SECOND, type ApproachId, type ResearchReport, type StyleId } from '@motionmind/shared';
 import { researchSchema, reelScriptSchema, type ReelScript, type Research } from './reelSchema';
 
 // The script prompt. Every reel is made by copy and paste through claude.ai (Saquib, 2026-11-09).
@@ -14,6 +14,8 @@ export interface ReelBrief {
   research?: ResearchReport | null;
   /** The style the user picked: the scenes are designed for it. */
   style?: StyleId | null;
+  /** How the reel explains its topic (facts with examples, concept, theory ...). */
+  approach?: ApproachId | null;
 }
 
 const LANGUAGE: Record<ReelBrief['language'], string> = {
@@ -38,13 +40,22 @@ Short forms and brands (always do this):
 - Never leave an abbreviation unexplained. The first time the narration uses a short form, say the full form once, like "IRCTC, yaani Indian Railway Catering and Tourism Corporation". List EVERY short form in "glossary" as { short, full }, written exactly as it appears in the reel.
 - Every real company, brand, app or government body named (IRCTC, NPCI, Paytm, HDFC Bank, Google, Aadhaar ...) goes in "brands" as { name, domain } with its official website (for example irctc.co.in).
 
-Before you answer, check your own script once: is the hook strong, is every fact right, is it natural for an Indian viewer, does every beat lead to the next? Fix it, then answer.`;
+Written for text-to-speech (the creator voices it with a TTS tool such as AI Awaaz, so the punctuation IS the delivery):
+- Short spoken sentences of 6 to 14 words. One thought per sentence. A long sentence read by TTS sounds flat and rushed.
+- Punctuation makes the pauses: a comma where a speaker takes a short breath, a full stop between thoughts, a question mark on every real question (TTS lifts the voice), and "..." at most once or twice in the whole reel for a dramatic pause before a reveal. Every beat ends with a full stop, a question mark or an exclamation mark, because the scene changes on that pause.
+- Write everything the way it is SPOKEN, never as symbols: numbers, amounts, dates and units in words in the narration language ("dhai hazaar rupaye", not "₹2,500"; "pachaas pratishat" or "50 percent", not "50%"; "saal do hazaar chaubees", not "2024"; "teen sau kilometre", not "300 km"). No %, ₹, $, &, /, +, =, #, brackets, quotes or emoji in the narration (cards and captions may show the numbers in figures).
+- Short forms: write them the way they are said. Letter-by-letter ones with spaces or dots so TTS spells them (U P I, I R C T C); ones said as a word as a word (NASA, ISRO).
+- In Hindi (Devanagari) narration, write the English words people use in Devanagari as they sound (सर्वर, पेमेंट, ऐप), so the Hindi voice pronounces them correctly. In Hinglish, write Hindi words in simple, common Latin spellings (hai, nahi, kyunki).
+- Natural rhythm: vary sentence length a little, put the key word at the end of the sentence where the voice lands, and avoid tongue-twisters and runs of similar sounds. Read every line aloud in your head: if you would stumble, rewrite it.
+
+Before you answer, check your own script once: is the hook strong, is every fact right, is it natural for an Indian viewer, does every beat lead to the next, would every line sound natural read by a text-to-speech voice? Fix it, then answer.`;
 
 /** The user turn: what this particular reel is about. */
 export function reelRequest(brief: ReelBrief): string {
   return [
     `Write a reel about: ${brief.topic}`,
     lengthNotes(brief.durationSec),
+    `APPROACH: ${approachOf(brief.approach).script}`,
     `Language for narration, card text and step names: ${LANGUAGE[brief.language]}.`,
     brief.niche ? `Channel niche: ${brief.niche}.` : '',
     brief.channelName ? `Channel name: ${brief.channelName}.` : '',
@@ -86,13 +97,13 @@ For every claim, record which sources support it and how sure it is:
 verified = two or more independent reliable sources agree; single_source = only one source; estimate = an approximate number; conflicting = sources disagree.
 Do not invent sources or URLs. Only list pages you actually read.`;
 
-export function researchRequest(brief: Pick<ReelBrief, 'topic'> & { durationSec?: number }): string {
+export function researchRequest(brief: Pick<ReelBrief, 'topic'> & { durationSec?: number; approach?: ApproachId | null }): string {
   const p = lengthPlan(brief.durationSec ?? 60);
-  return `Research this topic for a reel: ${brief.topic}\nThe reel is ${p.seconds} seconds long (about ${p.beats.max} scenes), so find at least ${p.facts} distinct, specific facts (numbers, dates, names, how each step works), enough to fill every scene without repeating.`;
+  return `Research this topic for a reel: ${brief.topic}\nThe reel is ${p.seconds} seconds long (about ${p.beats.max} scenes), so find at least ${p.facts} distinct, specific facts (numbers, dates, names, how each step works), enough to fill every scene without repeating.\nThe reel's approach is "${approachOf(brief.approach).label}": ${approachOf(brief.approach).research} Put these in the facts too.`;
 }
 
 /** The research prompt for claude.ai (turn on web search there). */
-export function manualResearchPrompt(brief: Pick<ReelBrief, 'topic'> & { durationSec?: number }): string {
+export function manualResearchPrompt(brief: Pick<ReelBrief, 'topic'> & { durationSec?: number; approach?: ApproachId | null }): string {
   return `${RESEARCH_SYSTEM}
 
 ${researchRequest(brief)}

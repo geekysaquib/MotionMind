@@ -54,6 +54,12 @@ describe('script from claude.ai', () => {
     expect(prompt).toContain('Write 117 words of narration in total');
     // Research is sized to the reel too.
     expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/research/prompt`, headers: H })).json().prompt).toContain('The reel is 45 seconds long');
+    // Written for text-to-speech, with the default approach unless another is asked for.
+    expect(prompt).toContain('Written for text-to-speech');
+    expect(prompt).toContain('APPROACH: Facts with examples');
+    const theory = (await app.inject({ method: 'GET', url: `/api/projects/${id}/script/prompt?approach=theory`, headers: H })).json().prompt as string;
+    expect(theory).toContain('APPROACH: Theory in depth');
+    expect((await app.inject({ method: 'GET', url: `/api/projects/${id}/research/prompt?approach=concept`, headers: H })).json().prompt).toContain('"Concept explained"');
     expect(prompt).toContain('Answer with only one JSON object');
     expect(prompt).toContain('"beats"');
   });

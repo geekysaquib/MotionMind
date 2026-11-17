@@ -11,3 +11,4 @@ export * from './alignScript';
 export * from './alignWords';
 export * from './social';
 export * from './length';
+export * from './approach';

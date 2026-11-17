@@ -6,7 +6,7 @@ import type { AppDeps } from '../app';
 import { firstIssue } from '../http';
 import { manualReelPrompt, manualResearchPrompt, parsePastedScript, parseResearch, PastedScriptError, type ReelBrief } from './reelPrompt';
 import { reelScriptSchema as scriptSchemaV4, type Research } from './reelSchema';
-import { lengthWarning, STYLE_IDS, type StyleId, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
+import { approachOf, lengthWarning, STYLE_IDS, type StyleId, type Project, type ReelScript, type ResearchReport } from '@motionmind/shared';
 
 const editSchema = z.object({ script: z.unknown() });
 // The storyboard carries the chosen style and the cover; the schema Claude writes to does not.
@@ -82,7 +82,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   api.get('/projects/:id/research/prompt', async (req, reply) => {
     const project = await projectFor(req, reply);
     if (!project) return reply;
-    return { prompt: withNote(manualResearchPrompt({ topic: project.topic!, durationSec: project.durationSec }), noteOf(req.query)) };
+    return { prompt: withNote(manualResearchPrompt({ topic: project.topic!, durationSec: project.durationSec, approach: approachOf((req.query as { approach?: string }).approach).id }), noteOf(req.query)) };
   });
 
   api.post('/projects/:id/research/import', async (req, reply) => {
@@ -111,7 +111,7 @@ export function registerClaudeRoutes(api: FastifyInstance, deps: AppDeps) {
   api.get('/projects/:id/script/prompt', async (req, reply) => {
     const project = await projectFor(req, reply);
     if (!project) return reply;
-    return { prompt: withNote(manualReelPrompt(await briefFor(req.userId, project, styleOf((req.query as { style?: unknown }).style))), noteOf(req.query)) };
+    return { prompt: withNote(manualReelPrompt({ ...(await briefFor(req.userId, project, styleOf((req.query as { style?: unknown }).style))), approach: approachOf((req.query as { approach?: string }).approach).id }), noteOf(req.query)) };
   });
 
   api.post('/projects/:id/script/import', async (req, reply) => {

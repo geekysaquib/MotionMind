@@ -1,5 +1,5 @@
 import type { AnalyticsRange, AnalyticsSummary, SocialAccount, SocialPlatform } from '@motionmind/shared';
-import type { AudioTrack, CoverSettings, Platform, Project, ReelAnimation, ReelEditor, ReelScript, ReelTimeline, StyleId } from '@motionmind/shared';
+import type { ApproachId, AudioTrack, CoverSettings, Platform, Project, ReelAnimation, ReelEditor, ReelScript, ReelTimeline, StyleId } from '@motionmind/shared';
 import { apiRequest } from './http';
 import { ServiceError } from './types';
 
@@ -51,10 +51,10 @@ export interface ClaudeService {
   trendingPrompt(lang: 'en' | 'hi', note?: string): Promise<string>;
   importTrendingIdeas(text: string): Promise<TrendIdea[]>;
   /** Script: the prompt to copy, then the answer to paste back. */
-  scriptPrompt(projectId: string, style?: StyleId | null, note?: string): Promise<string>;
+  scriptPrompt(projectId: string, style?: StyleId | null, note?: string, approach?: ApproachId): Promise<string>;
   importScript(projectId: string, text: string, style?: StyleId | null): Promise<Project>;
   /** Research: the prompt to copy, the answer to paste back, then the user approves it. */
-  researchPrompt(projectId: string, note?: string): Promise<string>;
+  researchPrompt(projectId: string, note?: string, approach?: ApproachId): Promise<string>;
   importResearch(projectId: string, text: string): Promise<Project>;
   approveResearch(projectId: string): Promise<Project>;
   /** Animate: Claude writes the reel as a HyperFrames composition in claude.ai; the user pastes it back. */
@@ -107,9 +107,9 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     return apiRequest<T>(baseUrl, path, { method, body, token, fetchImpl });
   }
   return {
-    scriptPrompt: async (projectId, style, note) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt${query({ style, note })}`)).prompt,
+    scriptPrompt: async (projectId, style, note, approach) => (await call<{ prompt: string }>(`/projects/${projectId}/script/prompt${query({ style, note, approach })}`)).prompt,
     importScript: async (projectId, text, style) => (await call<{ project: Project }>(`/projects/${projectId}/script/import`, 'POST', style ? { text, style } : { text })).project,
-    researchPrompt: async (projectId, note) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt${query({ note })}`)).prompt,
+    researchPrompt: async (projectId, note, approach) => (await call<{ prompt: string }>(`/projects/${projectId}/research/prompt${query({ note, approach })}`)).prompt,
     importResearch: async (projectId, text) => (await call<{ project: Project }>(`/projects/${projectId}/research/import`, 'POST', { text })).project,
     approveResearch: async (projectId) => (await call<{ project: Project }>(`/projects/${projectId}/research/approve`, 'POST')).project,
     animationFor: (projectId) => call(`/projects/${projectId}/animation`),

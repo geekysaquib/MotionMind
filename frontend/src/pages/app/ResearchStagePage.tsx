@@ -7,6 +7,8 @@ import { useStores } from '../../stores/RootStore';
 import { Alert, Badge, Button, Card } from '../../components/ui';
 import { errorText, timeAgo } from '../../lib/format';
 import { ClaudeAiPanel } from './PasteScriptPanel';
+import { ApproachPicker } from '../../components/ApproachPicker';
+import { pickedApproach, rememberApproach } from '../../lib/pickedApproach';
 
 const STATUS_TONE: Record<FactStatus, 'mint' | 'violet' | 'amber' | 'coral'> = {
   verified: 'mint',
@@ -22,6 +24,7 @@ export const ResearchStagePage = observer(function ResearchStagePage() {
   const [busy, setBusy] = useState<'approve' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const research = project.research;
+  const [approach, setApproach] = useState(() => pickedApproach(project.id));
 
   async function run(kind: 'approve') {
     setBusy(kind);
@@ -36,15 +39,23 @@ export const ResearchStagePage = observer(function ResearchStagePage() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-4xl">
       <div className="space-y-6">
+        <ApproachPicker
+          value={approach}
+          onChange={(a) => {
+            setApproach(a);
+            rememberApproach(project.id, a);
+          }}
+        />
         <ClaudeAiPanel
+            key={approach}
             title="Research it in claude.ai"
             chatHint="Turn on web search in claude.ai first, so Claude can read real sources."
             placeholder='{ "summary": "...", "facts": [...], "sources": [...] }'
             disabled={!project.topic}
             logScope="Research"
-            getPrompt={(note) => services.claude(() => auth.session?.accessToken ?? null).researchPrompt(project.id, note)}
+            getPrompt={(note) => services.claude(() => auth.session?.accessToken ?? null).researchPrompt(project.id, note, approach)}
             onImport={(text) => projects.importResearch(project.id, text)}
           />
 
