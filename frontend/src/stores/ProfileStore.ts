@@ -11,6 +11,9 @@ export class ProfileStore {
   loading = false;
   error: string | null = null;
 
+  /** The channel picture (Settings → Profile), shown beside the account in the sidebar. Null = none uploaded. */
+  logoUrl: string | null = null;
+
   handleInput = '';
   handleStatus: HandleStatus = 'idle';
   handleMessage = '';
@@ -38,7 +41,6 @@ export class ProfileStore {
         this.profile = p;
         this.error = null;
         if (!this.handleInput && p.handle) this.handleInput = p.handle;
-        this.root.aiMode.adopt(p.aiMode);
       });
     } catch (e) {
       log.error('profile', `Couldn't load the profile: ${(e as Error).message}`);
@@ -52,8 +54,25 @@ export class ProfileStore {
     }
   }
 
+  /** Loads the channel picture once after sign-in. A missing picture or an offline API just leaves the initials. */
+  async loadLogo() {
+    try {
+      const r = await this.root.services.claude(() => this.root.auth.session?.accessToken ?? null).logo();
+      runInAction(() => {
+        this.logoUrl = r.url;
+      });
+    } catch {
+      // No picture: the initials show instead.
+    }
+  }
+
+  setLogo(url: string | null) {
+    this.logoUrl = url;
+  }
+
   clear() {
     this.profile = null;
+    this.logoUrl = null;
     this.handleInput = '';
     this.handleStatus = 'idle';
   }

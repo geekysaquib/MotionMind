@@ -1,30 +1,17 @@
 import { describe, expect, it } from '@jest/globals';
-import { DEFAULT_CAPTIONS, clampClosingAt, clampPace, clampTrimEnd, clampTrimStart, closingRange, defaultClosingAt, detectTrim, editorSpecParts, trimWindow, moveCut, normalizeEditor, sceneBounds, usesUploadedVoice, type ReelEditor } from './editor';
+import { clampClosingAt, clampTrimEnd, clampTrimStart, closingRange, defaultClosingAt, detectTrim, trimWindow, moveCut, normalizeEditor, sceneBounds, usesUploadedVoice, type ReelEditor } from './editor';
 
 const track = { path: 'u/p/voice-1.mp3', fileName: 'voice.mp3', mime: 'audio/mpeg', durationSec: 30 };
-const upload: ReelEditor = { ...normalizeEditor(null), upload: { track, cuts: [10, 20] } };
-
-describe('clampPace', () => {
-  it('keeps the voice speed between 0.7x and 1.5x', () => {
-    expect(clampPace(0.2)).toBe(0.7);
-    expect(clampPace(9)).toBe(1.5);
-    expect(clampPace(1.234)).toBe(1.23);
-    expect(clampPace('fast')).toBe(1);
-    expect(clampPace(NaN)).toBe(1);
-  });
-});
+const upload: ReelEditor = { upload: { track, cuts: [10, 20] }, music: null };
 
 describe('normalizeEditor', () => {
-  it('fills in a blank editor, picking ElevenLabs when only that voice exists', () => {
-    expect(normalizeEditor(null)).toMatchObject({ voiceSource: 'upload', upload: null, pace: 1, music: null, captions: DEFAULT_CAPTIONS });
-    expect(normalizeEditor(null, true).voiceSource).toBe('elevenlabs');
+  it('fills in a blank editor', () => {
+    expect(normalizeEditor(null)).toEqual({ upload: null, music: null });
   });
 
-  it('repairs out-of-range values from older saves', () => {
-    const e = normalizeEditor({ pace: 5, scenePace: [0.1, 1.2], captions: { size: 'large' } as never });
-    expect(e.pace).toBe(1.5);
-    expect(e.scenePace).toEqual([0.7, 1.2]);
-    expect(e.captions).toEqual({ ...DEFAULT_CAPTIONS, size: 'large' });
+  it('drops the fields of the old editor (pace, captions, sound effects, voice source)', () => {
+    const old = { voiceSource: 'elevenlabs', pace: 1.2, scenePace: [1], captions: { size: 'large' }, sfx: [], upload: { track, cuts: [10] }, music: null, updatedAt: 'now' };
+    expect(normalizeEditor(old as never)).toEqual({ upload: { track, cuts: [10] }, music: null, updatedAt: 'now' });
   });
 });
 
@@ -48,30 +35,8 @@ describe('sceneBounds', () => {
   });
 });
 
-describe('editorSpecParts', () => {
-  it('turns the editor into what the reel needs, with the voice only when its cuts fit the scenes', () => {
-    const parts = editorSpecParts(upload, 3, { voice: 'https://x/voice.mp3' });
-    expect(parts.voiceTrack).toEqual({ url: 'https://x/voice.mp3', durationSec: 30, cuts: [10, 20] });
-    expect(parts.scenePace).toEqual([1, 1, 1]);
-    expect(parts.music).toBeUndefined();
-    expect(editorSpecParts(upload, 4, { voice: 'https://x/voice.mp3' }).voiceTrack).toBeUndefined();
-    expect(editorSpecParts({ ...upload, voiceSource: 'elevenlabs' }, 3, { voice: 'https://x/voice.mp3' }).voiceTrack).toBeUndefined();
-    expect(editorSpecParts(upload, 3, {}).voiceTrack).toBeUndefined();
-  });
-
-  it('adds music with a safe volume, pace per scene and caption style', () => {
-    const e: ReelEditor = { ...upload, pace: 1.2, scenePace: [1, 0.8], music: { track: { ...track, path: 'u/p/music-1.mp3', durationSec: 90 }, volume: 3 }, captions: { size: 'large', position: 'middle', look: 'plain' } };
-    const parts = editorSpecParts(e, 3, { music: 'https://x/music.mp3' });
-    expect(parts.music).toEqual({ url: 'https://x/music.mp3', durationSec: 90, volume: 1 });
-    expect(parts.pace).toBe(1.2);
-    expect(parts.scenePace).toEqual([1, 0.8, 1]);
-    expect(parts.captions).toEqual({ size: 'large', position: 'middle', look: 'plain' });
-    expect(editorSpecParts(null, 3, {})).toEqual({});
-  });
-});
-
 describe('usesUploadedVoice', () => {
-  it('needs the upload chosen and one cut fewer than scenes', () => {
+  it('needs a recording and one cut fewer than scenes', () => {
     expect(usesUploadedVoice(upload, 3)).toBe(true);
     expect(usesUploadedVoice(upload, 2)).toBe(false);
     expect(usesUploadedVoice({ ...upload, upload: null }, 3)).toBe(false);
@@ -101,23 +66,11 @@ describe('the follow line at the end of a recording', () => {
     expect(clampClosingAt(5, [10, 20], 30)).toBeCloseTo(20.3);
     expect(clampClosingAt(99, [10, 20], 30)).toBeCloseTo(29.6);
   });
-
-  it('reaches the reel engine only when it is a usable point', () => {
-    const e = (closingAt: number | null): ReelEditor => ({ ...upload, upload: { track, cuts: [10, 20], closingAt } });
-    expect(editorSpecParts(e(26), 3, { voice: 'u' }).voiceTrack?.closingAt).toBe(26);
-    expect(editorSpecParts(e(null), 3, { voice: 'u' }).voiceTrack?.closingAt).toBeUndefined();
-    expect(editorSpecParts(e(20.1), 3, { voice: 'u' }).voiceTrack?.closingAt).toBeUndefined();
-    expect(editorSpecParts(e(29.9), 3, { voice: 'u' }).voiceTrack?.closingAt).toBeUndefined();
-  });
 });
 
 describe('trimming the recording', () => {
   // 20 s at 20 peaks/s: 1.5 s of quiet, speech from 1.5 to 17, then quiet to the end.
   const peaks = Array.from({ length: 400 }, (_, i) => (i >= 30 && i < 340 ? 55 : 1));
-  const withTrim = (trimStart: number | null, trimEnd: number | null, closingAt: number | null = null): ReelEditor => ({
-    ...upload,
-    upload: { track: { ...track, durationSec: 20 }, cuts: [6, 12], closingAt, trimStart, trimEnd },
-  });
 
   it('finds the quiet at each end and keeps a small margin', () => {
     const t = detectTrim(peaks, 20, [6, 12]);
@@ -140,36 +93,5 @@ describe('trimming the recording', () => {
     expect(trimWindow({ track: { durationSec: 20 } })).toEqual({ start: 0, end: 20 });
     expect(trimWindow({ track: { durationSec: 20 }, trimStart: 2, trimEnd: 18 })).toEqual({ start: 2, end: 18 });
     expect(trimWindow({ track: { durationSec: 20 }, trimStart: 10, trimEnd: 10.5 })).toEqual({ start: 0, end: 20 });
-  });
-
-  it('reaches the engine, and the follow line is judged against the trimmed end', () => {
-    const p = editorSpecParts(withTrim(1.5, 18), 3, { voice: 'u' }).voiceTrack!;
-    expect(p.trimStart).toBe(1.5);
-    expect(p.trimEnd).toBe(18);
-    expect(editorSpecParts(withTrim(null, null), 3, { voice: 'u' }).voiceTrack).toMatchObject({ cuts: [6, 12] });
-    expect(editorSpecParts(withTrim(null, null), 3, { voice: 'u' }).voiceTrack!.trimStart).toBeUndefined();
-    expect(editorSpecParts(withTrim(null, 15, 14.8), 3, { voice: 'u' }).voiceTrack!.closingAt).toBeUndefined();
-    expect(editorSpecParts(withTrim(null, 15, 13), 3, { voice: 'u' }).voiceTrack!.closingAt).toBe(13);
-  });
-});
-
-describe('sound effects', () => {
-  const clip = (name: string, at: number, volume = 0.8) => ({ track: { ...track, path: `u/p/${name}.mp3`, durationSec: 2 }, at, volume });
-  const withSfx = (sfx: NonNullable<ReelEditor['sfx']>): ReelEditor => ({ ...upload, sfx });
-
-  it('is empty by default, and a reel can have at most twelve', () => {
-    expect(normalizeEditor(null).sfx).toEqual([]);
-    const many = Array.from({ length: 15 }, (_, i) => clip(`s${i}`, i));
-    expect(normalizeEditor({ sfx: many }).sfx).toHaveLength(12);
-  });
-
-  it('reaches the engine with its url, start time and volume, and skips clips without a url', () => {
-    const e = withSfx([clip('a', 1.5, 0.5), clip('b', 4), clip('c', -2, 3)]);
-    const parts = editorSpecParts(e, 3, { voice: 'u', sfx: { 'u/p/a.mp3': 'ua', 'u/p/c.mp3': 'uc' } });
-    expect(parts.sfx).toEqual([
-      { url: 'ua', durationSec: 2, at: 1.5, volume: 0.5 },
-      { url: 'uc', durationSec: 2, at: 0, volume: 1 },
-    ]);
-    expect(editorSpecParts(upload, 3, { voice: 'u' }).sfx).toBeUndefined();
   });
 });

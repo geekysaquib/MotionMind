@@ -59,6 +59,10 @@ do $$ begin
   exception when insufficient_privilege then null; end;
   begin perform 1 from public.projects; raise exception 'anon can read projects';
   exception when insufficient_privilege then null; end;
+  begin perform 1 from public.social_accounts; raise exception 'anon can read social_accounts';
+  exception when insufficient_privilege then null; end;
+  begin perform 1 from public.social_snapshots; raise exception 'anon can read social_snapshots';
+  exception when insufficient_privilege then null; end;
 end $$;
 reset role;
 
@@ -67,6 +71,8 @@ do $$ begin
   begin perform 1 from public.profiles; raise exception 'authenticated can read profiles';
   exception when insufficient_privilege then null; end;
   begin insert into public.projects (owner_id, title) values ('00000000-0000-0000-0000-00000000000a', 'x'); raise exception 'authenticated can write projects';
+  exception when insufficient_privilege then null; end;
+  begin perform 1 from public.social_accounts; raise exception 'authenticated can read social_accounts';
   exception when insufficient_privilege then null; end;
 end $$;
 reset role;

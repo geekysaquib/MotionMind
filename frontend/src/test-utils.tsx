@@ -10,9 +10,8 @@ export function memStorage(): Storage {
   return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v) };
 }
 
-export async function makeStore(opts: { signedIn?: boolean; storage?: Storage; aiMode?: 'paste' | 'keys' } = {}) {
+export async function makeStore(opts: { signedIn?: boolean; storage?: Storage } = {}) {
   const store = new RootStore(memoryServices(opts.storage ?? memStorage(), 'http://api.test'));
-  store.aiMode.adopt(opts.aiMode ?? 'keys');
   await store.auth.init();
   if (opts.signedIn) {
     await store.auth.verifyCode('saquib@example.com', DEMO_CODE);

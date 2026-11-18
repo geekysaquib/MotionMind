@@ -1,43 +1,35 @@
-import { normalizePlatforms, type Platform } from '@motionmind/shared';
+/** The narration in another language: a prompt for claude.ai and a reader for its answer. */
+export const LANGUAGES = ['English', 'Hindi', 'Hinglish', 'Marathi', 'Tamil', 'Telugu', 'Bengali', 'Gujarati', 'Kannada', 'Punjabi'] as const;
 
-/** Languages the narration script can be copied in. `original` is the script as written. */
-export type ScriptLanguage = 'original' | 'en' | 'hi';
-
-export const LANGUAGE_LABELS: Record<ScriptLanguage, string> = {
-  original: 'As written',
-  en: 'English',
-  hi: 'Hindi (हिन्दी)',
+const HINTS: Record<string, string> = {
+  English: 'natural, spoken English',
+  Hindi: 'natural, spoken Hindi written in Devanagari script (keep common English tech words like UPI, app or server as they are)',
+  Hinglish: 'natural, spoken Hinglish: Hindi written in the Roman alphabet, the way people text, with English words where people use them',
 };
 
-const TARGET: Record<'en' | 'hi', string> = {
-  en: 'natural, spoken English',
-  hi: 'natural, spoken Hindi written in Devanagari script (keep common English tech words like UPI, app or server as they are)',
-};
+const TTS_RULES = [
+  'These lines will be read aloud by a text-to-speech voice that mispronounces words written in a script it does not expect.',
+  "So write EVERY word that is not in the target language's own script (English words, brand and company names, acronyms, units) in the target script, spelled exactly as it is pronounced.",
+  'Examples for Hindi: CDN -> सीडीएन, OTP -> ओ टी पी, server -> सर्वर, Aadhaar -> आधार, IRCTC -> आई आर सी टी सी, PRS -> पी आर एस, 87 percent -> सत्तासी परसेंट.',
+  'Spell acronyms letter by letter with spaces, and write numbers as words. Keep sentence punctuation, so the voice pauses at the end of each sentence.',
+];
 
-/** A prompt that turns the scene lines into another language, one line per scene, as a JSON array. */
-export function translatePrompt(lines: string[], lang: 'en' | 'hi'): string {
+/**
+ * A prompt that turns the scene lines into another language (or, with `tts`, rewrites them so a text-to-speech voice says
+ * every word right), one line per scene, as a JSON array.
+ */
+export function translatePrompt(lines: string[], language: string, note = '', tts = false): string {
+  const same = language === '';
+  const target = same ? "the language the lines are written in, in that language's own script" : (HINTS[language] ?? `natural, spoken ${language}, in that language's own script (keep common English tech words as they are)`);
   return [
-    `Translate these ${lines.length} voiceover lines for a short Instagram reel into ${TARGET[lang]}.`,
+    same ? `Rewrite these ${lines.length} voiceover lines for a short Instagram reel, keeping their language and meaning.` : `Translate these ${lines.length} voiceover lines for a short Instagram reel into ${target}.`,
     'They are read aloud, so keep each line short and easy to say. Keep the meaning, names and numbers.',
+    ...(tts ? TTS_RULES : []),
     `Reply with ONLY a JSON array of exactly ${lines.length} strings, in the same order, one per line. No notes, no markdown.`,
     '',
     JSON.stringify(lines, null, 2),
+    ...(note ? ['', `Extra instructions from the creator: ${note}`] : []),
   ].join('\n');
-}
-
-/** Who the viewer is told to follow: the channel name, else the handle, else the studio name. */
-export function followName(profile: { channelName: string | null; handle: string | null } | null | undefined, fallback: string): string {
-  return profile?.channelName?.trim() || (profile?.handle ? `@${profile.handle}` : '') || fallback;
-}
-
-/** The last thing the voice says: a follow message with the brand or handle, in the language of the script. */
-export function closingLine(language: 'en' | 'hi' | 'hinglish', name: string, platforms: Platform[] = ['instagram']): string {
-  const list = normalizePlatforms(platforms);
-  const both = list.length > 1;
-  const youtube = list[0] === 'youtube';
-  if (language === 'en') return both ? `Follow ${name} on Instagram and subscribe on YouTube for more explainers like this.` : youtube ? `Subscribe to ${name} for more explainers like this.` : `Follow ${name} for more explainers like this.`;
-  if (language === 'hi') return both ? `ऐसे और वीडियो के लिए ${name} को इंस्टाग्राम पर फ़ॉलो करें और यूट्यूब पर सब्सक्राइब करें।` : youtube ? `ऐसे और वीडियो के लिए ${name} को सब्सक्राइब करें।` : `ऐसे और वीडियो के लिए ${name} को फ़ॉलो करें।`;
-  return both ? `Aise aur videos ke liye ${name} ko Instagram par follow karo aur YouTube par subscribe karo.` : youtube ? `Aise aur videos ke liye ${name} ko subscribe karo.` : `Aise aur videos ke liye ${name} ko follow karo.`;
 }
 
 export class TranslationError extends Error {}

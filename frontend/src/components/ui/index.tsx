@@ -5,9 +5,9 @@ import { cn } from '../../lib/cn';
 type Variant = 'primary' | 'dark' | 'secondary' | 'ghost' | 'danger';
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-mint-600 text-white hover:bg-mint-700 shadow-glow',
+  primary: 'bg-brand text-white hover:brightness-110 shadow-glow',
   dark: 'bg-ink-100 text-ink-950 hover:opacity-90',
-  secondary: 'bg-ink-900 text-ink-100 hover:bg-ink-800 border border-line/[0.14] shadow-sm',
+  secondary: 'bg-line/[0.05] text-ink-100 hover:bg-line/[0.09] border border-line/[0.12]',
   ghost: 'text-ink-300 hover:text-ink-100 hover:bg-line/5',
   danger: 'bg-coral-500/10 text-danger border border-coral-500/30 hover:bg-coral-500/20',
 };
@@ -29,7 +29,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition active:scale-[.98] disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition active:scale-[.98] disabled:pointer-events-none disabled:opacity-50',
         VARIANTS[variant],
         sizes[size],
         className,
@@ -109,7 +109,7 @@ export function Alert({ tone = 'error', children }: { tone?: 'error' | 'info' | 
     success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700',
   };
   return (
-    <div role={tone === 'error' ? 'alert' : 'status'} className={cn('rounded-lg border px-4 py-3 text-sm', tones[tone])}>
+    <div role={tone === 'error' ? 'alert' : 'status'} className={cn('rounded-xl border px-4 py-3 text-sm', tones[tone])}>
       {children}
     </div>
   );

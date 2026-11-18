@@ -1,6 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom';
-import { ArrowRight, Box, Check, Clapperboard, FileText, LayoutGrid, Lightbulb, Mic, PenLine, Scissors, Search, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Check, Palette, Wand2, Clapperboard, FileText, LayoutGrid, Lightbulb, Mic, PenLine, Search, type LucideIcon } from 'lucide-react';
 import { useStores } from '../../stores/RootStore';
 import { Spinner } from '../../components/ui';
 import { ProgressRing } from '../../components/motion';
@@ -9,7 +9,7 @@ import { nextStage, progressOf, stageDone, STAGE_INFO } from '../../lib/progress
 import { cn } from '../../lib/cn';
 
 /** A small icon for each step. */
-export const STAGE_ICONS: Record<string, LucideIcon> = { '': PenLine, research: Search, script: FileText, storyboard: LayoutGrid, graphics: Box, voice: Mic, editor: Scissors, export: Clapperboard };
+export const STAGE_ICONS: Record<string, LucideIcon> = { '': PenLine, research: Search, script: FileText, storyboard: LayoutGrid, graphics: Palette, animate: Wand2, voice: Mic, export: Clapperboard };
 
 export const PROJECT_TABS = STAGE_INFO.map(({ path, label }) => ({ path, label }));
 
@@ -35,7 +35,7 @@ export const ProjectLayout = observer(function ProjectLayout() {
   const href = (path: string) => (path ? `/app/projects/${p.id}/${path}` : `/app/projects/${p.id}`);
 
   return (
-    <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-5 p-4 md:p-6 lg:grid-cols-[216px_minmax(0,1fr)]">
+    <div className="grid w-full grid-cols-1 gap-5 px-4 py-6 md:px-8 lg:grid-cols-[232px_minmax(0,1fr)]">
       <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
         <div className="card p-4">
           <div className="flex items-start gap-3">
@@ -71,11 +71,11 @@ export const ProjectLayout = observer(function ProjectLayout() {
                     <span
                       className={cn(
                         'relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-bold transition',
-                        isCurrent ? 'border-mint-600 bg-ink-900 text-accent' : done[i] ? 'border-mint-600 bg-mint-600 text-white' : 'border-line/20 bg-ink-900 text-ink-400',
+                        isCurrent ? 'border-mint-600 bg-ink-900 text-accent' : done[i] ? 'border-mint-600 bg-brand text-white' : 'border-line/20 bg-ink-900 text-ink-400',
                       )}
                     >
                       {isCurrent && <span className="absolute inset-[-5px] animate-ping-soft rounded-full border border-mint-500/50" aria-hidden />}
-                      {done[i] && !isCurrent ? <Check className="h-3.5 w-3.5 animate-pop" strokeWidth={3} /> : isCurrent ? <span className="h-2 w-2 rounded-full bg-mint-600" /> : i + 1}
+                      {done[i] && !isCurrent ? <Check className="h-3.5 w-3.5 animate-pop" strokeWidth={3} /> : isCurrent ? <span className="h-2 w-2 rounded-full bg-brand" /> : i + 1}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={cn('flex items-center gap-1.5 truncate text-sm', isCurrent ? 'font-semibold' : done[i] ? 'text-ink-100' : 'text-ink-300')}>
@@ -104,7 +104,7 @@ export const ProjectLayout = observer(function ProjectLayout() {
       <div className="min-w-0">
         <div key={info.path} className="mb-5 flex animate-fade-up flex-wrap items-start justify-between gap-4 rounded-xl border border-line/[0.09] bg-ink-900 p-5 shadow-soft">
           <div className="flex min-w-[240px] flex-1 items-start gap-4">
-            <span className="flex h-11 w-11 shrink-0 animate-pop items-center justify-center rounded-xl bg-mint-600 text-white shadow-glow">
+            <span className="flex h-11 w-11 shrink-0 animate-pop items-center justify-center rounded-xl bg-brand text-white shadow-glow">
               {(() => {
                 const HeroIcon = STAGE_ICONS[info.path] ?? PenLine;
                 return <HeroIcon className="h-5 w-5" aria-hidden />;

@@ -2,6 +2,7 @@ import type { Profile, Project } from '@motionmind/shared';
 import { config } from '../config';
 import { apiRequest } from './http';
 import { httpClaudeService } from './claudeHttp';
+import { httpFootageService } from './footageHttp';
 import { ServiceError, type AuthService, type ProfileService, type ProjectService, type Services, type Session } from './types';
 import type { Storage } from './memory';
 
@@ -54,6 +55,10 @@ export function apiServices(storage: Storage = window.localStorage, baseUrl = co
       const res = await apiRequest<{ token: string; user: { id: string; email: string } }>(baseUrl, '/auth/verify-code', { method: 'POST', body: { email, code }, fetchImpl });
       setSession({ userId: res.user.id, email: res.user.email, accessToken: res.token }, 'SIGNED_IN');
     },
+    async pair(code) {
+      const res = await apiRequest<{ token: string; user: { id: string; email: string } }>(baseUrl, '/auth/pair', { method: 'POST', body: { code }, fetchImpl });
+      setSession({ userId: res.user.id, email: res.user.email, accessToken: res.token }, 'SIGNED_IN');
+    },
     signOut: async () => setSession(null, 'SIGNED_OUT'),
   };
 
@@ -80,5 +85,5 @@ export function apiServices(storage: Storage = window.localStorage, baseUrl = co
     },
   };
 
-  return { mode: 'api', auth, profiles, projects, claude: (getToken) => httpClaudeService(baseUrl, getToken, fetchImpl) };
+  return { mode: 'api', auth, profiles, projects, claude: (getToken) => httpClaudeService(baseUrl, getToken, fetchImpl), footage: (getToken) => httpFootageService(baseUrl, getToken, fetchImpl) };
 }

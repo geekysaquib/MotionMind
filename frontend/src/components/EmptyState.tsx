@@ -11,7 +11,7 @@ export function EmptyState({ icon, title, text, to, action }: { icon: ReactNode;
         <h2 className="mt-4 font-display text-lg font-bold">{title}</h2>
         <p className="mx-auto mt-1.5 max-w-sm text-sm text-ink-400">{text}</p>
         {to && action && (
-          <Link to={to} className="group mt-5 inline-flex items-center gap-2 rounded-lg bg-mint-600 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:bg-mint-700">
+          <Link to={to} className="group mt-5 inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:brightness-110">
             {action} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
           </Link>
         )}

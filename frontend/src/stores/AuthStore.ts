@@ -48,6 +48,12 @@ export class AuthStore {
     }
   }
 
+  /** Motion Mind Terminal: sign this phone in with the one-time code from the PC's QR code. */
+  async pair(code: string) {
+    await this.root.services.auth.pair(code.trim());
+    log.info('auth', 'Signed in by pairing', { userId: this.session?.userId });
+  }
+
   async signOut() {
     log.info('auth', 'Signed out');
     await this.root.services.auth.signOut();

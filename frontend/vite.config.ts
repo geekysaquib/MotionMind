@@ -11,11 +11,11 @@ export default defineConfig({
     alias: {
       '@motionmind/shared': fileURLToPath(new URL('../shared/src/index.ts', import.meta.url)),
       // The reel engine is embedded in the web app for live previews (same code the renderer uses).
-      '@motionmind/reel-engine': fileURLToPath(new URL('../backend/reel-engine/src/public.ts', import.meta.url)),
     },
   },
   // The single .env lives in the repo root. Only VITE_* values are exposed to the browser.
   envDir: fileURLToPath(new URL('..', import.meta.url)),
   // The web app calls /api on its own origin; Vite forwards it to the local API.
-  server: { port: 5173, proxy: { '/api': api, '/health': api } },
+  // host: the phone and tablet reach Motion Mind Terminal on this PC's Wi-Fi address (see /t and Settings, Open on your phone).
+  server: { port: 5173, host: true, proxy: { '/api': api, '/health': api } },
 });

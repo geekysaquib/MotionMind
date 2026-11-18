@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Platform, Profile, Project, QualityTier, ReelEditor, ReelScript, ReelVoice, ResearchReport } from '@motionmind/shared';
+import type { Platform, Profile, Project, QualityTier, ReelEditor, ReelScript, ResearchReport } from '@motionmind/shared';
 import { ALL_PLATFORMS, RESERVED_HANDLES, normalizeHandle, normalizePlatforms } from '@motionmind/shared';
 
 export interface User {
@@ -25,7 +25,7 @@ export interface NewProject {
   platforms?: Platform[];
 }
 
-export type ProjectPatch = Partial<NewProject & Pick<Project, 'status' | 'stage'>> & { script?: ReelScript | null; research?: ResearchReport | null; voice?: ReelVoice | null; editor?: ReelEditor | null };
+export type ProjectPatch = Partial<NewProject & Pick<Project, 'status' | 'stage'>> & { script?: ReelScript | null; research?: ResearchReport | null; editor?: ReelEditor | null };
 
 export class HandleTakenError extends Error {}
 
@@ -49,7 +49,7 @@ export interface DataRepository {
   removeProject(ownerId: string, id: string): Promise<boolean>;
 }
 
-const emptyProfile = (id: string): Profile => ({ id, handle: null, displayName: null, channelName: null, niche: null, language: 'hinglish', aiMode: null, onboardedAt: null });
+const emptyProfile = (id: string): Profile => ({ id, handle: null, displayName: null, channelName: null, niche: null, language: 'hinglish', onboardedAt: null });
 
 export class MemoryDataRepository implements DataRepository {
   private codes = new Map<string, LoginCode>();
@@ -111,7 +111,7 @@ export class MemoryDataRepository implements DataRepository {
   }
   async createProject(ownerId: string, input: NewProject) {
     const now = new Date().toISOString();
-    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, platforms: normalizePlatforms(input.platforms), stage: 'topic', status: 'draft', script: null, research: null, voice: null, editor: null, createdAt: now, updatedAt: now };
+    const p: Project = { id: crypto.randomUUID(), ownerId, ...input, platforms: normalizePlatforms(input.platforms), stage: 'topic', status: 'draft', script: null, research: null, editor: null, createdAt: now, updatedAt: now };
     this.projects.push(p);
     return { ...p };
   }
@@ -137,7 +137,6 @@ const profileFromRow = (r: Row): Profile => ({
   channelName: (r.channel_name as string | null) ?? null,
   niche: (r.niche as string | null) ?? null,
   language: (r.language as Profile['language']) ?? 'hinglish',
-  aiMode: (r.ai_mode as Profile['aiMode']) ?? null,
   onboardedAt: (r.onboarded_at as string | null) ?? null,
 });
 
@@ -153,7 +152,6 @@ const projectFromRow = (r: Row): Project => ({
   durationSec: r.duration_sec as number,
   script: (r.script as ReelScript | null) ?? null,
   research: (r.research as ResearchReport | null) ?? null,
-  voice: (r.voice as ReelVoice | null) ?? null,
   editor: (r.editor as ReelEditor | null) ?? null,
   createdAt: r.created_at as string,
   updatedAt: r.updated_at as string,
@@ -166,7 +164,6 @@ function profileRow(patch: ProfilePatch): Row {
   if (patch.channelName !== undefined) row.channel_name = patch.channelName;
   if (patch.niche !== undefined) row.niche = patch.niche;
   if (patch.language !== undefined) row.language = patch.language;
-  if (patch.aiMode !== undefined) row.ai_mode = patch.aiMode;
   if (patch.onboardedAt !== undefined) row.onboarded_at = patch.onboardedAt;
   return row;
 }
@@ -182,7 +179,6 @@ function projectRow(patch: ProjectPatch): Row {
   if (patch.stage !== undefined) row.stage = patch.stage;
   if (patch.script !== undefined) row.script = patch.script;
   if (patch.research !== undefined) row.research = patch.research;
-  if (patch.voice !== undefined) row.voice = patch.voice;
   if (patch.editor !== undefined) row.editor = patch.editor;
   return row;
 }

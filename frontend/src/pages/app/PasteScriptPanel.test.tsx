@@ -35,9 +35,37 @@ describe('PasteScriptPanel', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }));
     });
-    expect(scriptPrompt).toHaveBeenCalledWith(project.id);
+    expect(scriptPrompt).toHaveBeenCalledWith(project.id, null, '', 'facts-examples');
     expect(writeText).toHaveBeenCalledWith('PROMPT FOR CLAUDE.AI');
     expect(screen.getByRole('button', { name: 'Copied' })).toBeTruthy();
+  });
+
+  it("sends the creator's own instructions with the prompt, and asks for a fresh copy after they change", async () => {
+    const { project, scriptPrompt } = await setup(async () => {
+      throw new Error('not used');
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }));
+    });
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Your instructions for Claude'), { target: { value: '  Keep it under 40 seconds  ' } });
+    expect(screen.getByRole('button', { name: 'Copy prompt' })).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }));
+    });
+    expect(scriptPrompt).toHaveBeenLastCalledWith(project.id, null, 'Keep it under 40 seconds', 'facts-examples');
+  });
+
+  it('asks for the approach the creator picked, and remembers it for this project', async () => {
+    const { project, scriptPrompt } = await setup(async () => {
+      throw new Error('not used');
+    });
+    fireEvent.click(screen.getByRole('radio', { name: /Theory in depth/ }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }));
+    });
+    expect(scriptPrompt).toHaveBeenLastCalledWith(project.id, null, '', 'theory');
+    expect(localStorage.getItem(`motionmind-approach:${project.id}`)).toBe('theory');
   });
 
   it("imports Claude's pasted answer into the project", async () => {
