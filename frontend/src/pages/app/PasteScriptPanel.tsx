@@ -9,6 +9,7 @@ import { ApproachPicker } from '../../components/ApproachPicker';
 import { Alert, Button, Card } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { log } from '../../lib/logger';
+import { copyText } from '../../lib/clipboard';
 
 interface ClaudeAiPanelProps {
   title: string;
@@ -37,7 +38,7 @@ export function ClaudeAiPanel({ title, chatHint, placeholder, disabled, getPromp
     setBusy('copy');
     setError(null);
     try {
-      await navigator.clipboard.writeText(await getPrompt(note.trim()));
+      if (!(await copyText(await getPrompt(note.trim())))) throw new Error('This browser blocked copying. Use Chrome or Edge, or open Motion Mind at localhost.');
       setCopied(true);
       log.info('claude', `${logScope} prompt copied for claude.ai`);
     } catch (e) {

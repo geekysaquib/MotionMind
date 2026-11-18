@@ -72,6 +72,9 @@ export function memoryServices(storage: Storage = window.localStorage, apiUrl = 
       }
       startSession(user);
     },
+    async pair() {
+      throw new ServiceError('Pairing a phone needs the real Motion Mind API on your PC.', 'unavailable');
+    },
     async signOut() {
       db.session = null;
       save();

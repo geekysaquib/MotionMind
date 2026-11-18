@@ -6,6 +6,7 @@ import { useStores } from '../../stores/RootStore';
 import { Button, Card, Field, Select } from '../../components/ui';
 import { errorText } from '../../lib/format';
 import { ChannelLogo } from '../../components/ChannelLogo';
+import { PhonePairCard } from '../../components/PhonePairCard';
 
 export const ProfileSettings = observer(function ProfileSettings() {
   const { profile, toasts } = useStores();
@@ -68,6 +69,7 @@ export const ProfileSettings = observer(function ProfileSettings() {
       </form>
     </Card>
     <ChannelLogo />
+    <PhonePairCard />
     </div>
   );
 });

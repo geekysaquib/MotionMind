@@ -33,6 +33,13 @@ const FootageEditPage = lazy(() => import('./pages/app/FootageEditPage').then((m
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 const LandingPage = lazy(() => import('./pages/LandingPage').then((m) => ({ default: m.LandingPage })));
 
+// Motion Mind Terminal: the reel flow on a phone or tablet (/t).
+const TerminalLayout = lazy(() => import('./terminal/TerminalLayout').then((m) => ({ default: m.TerminalLayout })));
+const TerminalPair = lazy(() => import('./terminal/TerminalLayout').then((m) => ({ default: m.TerminalPair })));
+const TerminalHome = lazy(() => import('./terminal/TerminalHome').then((m) => ({ default: m.TerminalHome })));
+const TerminalNew = lazy(() => import('./terminal/TerminalHome').then((m) => ({ default: m.TerminalNew })));
+const TerminalProject = lazy(() => import('./terminal/TerminalProject').then((m) => ({ default: m.TerminalProject })));
+
 const page = (node: ReactNode) => <Suspense fallback={<PageFallback />}>{node}</Suspense>;
 
 export const routes = [
@@ -83,6 +90,17 @@ export const routes = [
           { path: 'diagnostics', element: page(<DiagnosticsSettings />) },
         ],
       },
+    ],
+  },
+  { path: '/t/pair', element: page(<TerminalPair />) },
+  {
+    path: '/t',
+    element: page(<TerminalLayout />),
+    children: [
+      { index: true, element: page(<TerminalHome />) },
+      { path: 'new', element: page(<TerminalNew />) },
+      { path: 'p/:id', element: page(<TerminalProject />) },
+      { path: 'p/:id/:step', element: page(<TerminalProject />) },
     ],
   },
   { path: '*', element: page(<NotFoundPage />) },

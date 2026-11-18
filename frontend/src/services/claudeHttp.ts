@@ -91,6 +91,8 @@ export interface ClaudeService {
   startExport(projectId: string, platform?: Platform): Promise<{ job: RenderJob; withVoice: boolean }>;
   /** `jobs` has the latest export of each platform; `job` is the first platform's. */
   exportStatus(projectId: string): Promise<{ available: boolean; job: RenderJob | null; jobs?: Partial<Record<Platform, RenderJob | null>> }>;
+  /** Motion Mind Terminal: a one-time code and QR code for pairing a phone on this Wi-Fi. */
+  pairCode(webPort?: number): Promise<{ code: string; expiresAt: string; urls: string[]; qr: string | null }>;
   /** Storyboard: save the user's edits to the script. */
   saveScript(projectId: string, script: ReelScript): Promise<Project>;
 }
@@ -150,6 +152,7 @@ export function httpClaudeService(baseUrl: string, getToken: () => string | null
     startExport: (projectId, platform) => call(`/projects/${projectId}/export`, 'POST', platform ? { platform } : undefined),
     exportStatus: (projectId) => call(`/projects/${projectId}/export`),
     saveScript: async (projectId, script) => (await call<{ project: Project }>(`/projects/${projectId}/script`, 'PUT', { script })).project,
+    pairCode: (webPort) => call('/auth/pair-code', 'POST', webPort ? { webPort } : {}),
     trending: (lang) => call(`/discover/trending?lang=${lang}`),
     trendingPrompt: async (lang, note) => (await call<{ prompt: string }>(`/discover/prompt${query({ lang, note })}`)).prompt,
     importTrendingIdeas: async (text) => (await call<{ ideas: TrendIdea[] }>(`/discover/import`, 'POST', { text })).ideas,

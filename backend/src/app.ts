@@ -1,3 +1,4 @@
+import { PairCodes, registerPairCodeRoute, registerPairRoute } from './auth/pair';
 import { registerPersonRoute, type PersonPhotoFetcher } from './person/routes';
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
@@ -31,6 +32,9 @@ export interface AppDeps {
   fetchLogo?: LogoFetcher;
   /** Looks up a person's photo by Wikipedia title. Defaults to Wikipedia / Wikimedia Commons. */
   fetchPersonPhoto?: PersonPhotoFetcher;
+  /** One-time phone pairing codes (Motion Mind Terminal). Tests pass their own; the network addresses can be faked with `lanAddresses`. */
+  pairCodes?: PairCodes;
+  lanAddresses?: () => string[];
   data: DataRepository;
   sessions: SessionTokens;
   mailer: Mailer;
@@ -75,6 +79,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
     logger: deps.logger ? { redact: ['req.headers.authorization', 'body.apiKey', 'body.code'] } : false,
   });
   const verifier = deps.verifier ?? deps.sessions;
+  const pairCodes = deps.pairCodes ?? new PairCodes();
 
   await app.register(cors, { origin: deps.webOrigin, methods: ['GET', 'PUT', 'PATCH', 'POST', 'DELETE'] });
   app.decorateRequest('userId', '');
@@ -88,7 +93,10 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
   registerSocialCallback(app, deps);
 
   // Public
-  app.register(async (auth) => registerLoginRoutes(auth, deps), { prefix: '/api/auth' });
+  app.register(async (auth) => {
+    registerLoginRoutes(auth, deps);
+    registerPairRoute(auth, deps, pairCodes);
+  }, { prefix: '/api/auth' });
   app.register(async (logs) => registerClientLogRoutes(logs, deps), { prefix: '/api' });
 
   // Signed in: every route below sees req.userId
@@ -102,6 +110,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
         req.userId = userId;
       });
       registerAccountRoutes(api, deps);
+      registerPairCodeRoute(api, pairCodes, deps.lanAddresses);
       registerClaudeRoutes(api, deps);
       registerDiscoverRoutes(api, deps);
       registerEditorRoutes(api, deps);

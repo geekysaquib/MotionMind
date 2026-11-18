@@ -20,6 +20,8 @@ export interface AuthService {
   onChange(cb: (session: Session | null, event: string) => void): () => void;
   requestCode(email: string): Promise<void>;
   verifyCode(email: string, code: string): Promise<void>;
+  /** Motion Mind Terminal: a phone trades the one-time code from the PC's QR code for its own session. */
+  pair(code: string): Promise<void>;
   signOut(): Promise<void>;
 }
 

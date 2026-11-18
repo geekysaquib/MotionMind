@@ -55,6 +55,10 @@ export function apiServices(storage: Storage = window.localStorage, baseUrl = co
       const res = await apiRequest<{ token: string; user: { id: string; email: string } }>(baseUrl, '/auth/verify-code', { method: 'POST', body: { email, code }, fetchImpl });
       setSession({ userId: res.user.id, email: res.user.email, accessToken: res.token }, 'SIGNED_IN');
     },
+    async pair(code) {
+      const res = await apiRequest<{ token: string; user: { id: string; email: string } }>(baseUrl, '/auth/pair', { method: 'POST', body: { code }, fetchImpl });
+      setSession({ userId: res.user.id, email: res.user.email, accessToken: res.token }, 'SIGNED_IN');
+    },
     signOut: async () => setSession(null, 'SIGNED_OUT'),
   };
 

@@ -16,5 +16,6 @@ export default defineConfig({
   // The single .env lives in the repo root. Only VITE_* values are exposed to the browser.
   envDir: fileURLToPath(new URL('..', import.meta.url)),
   // The web app calls /api on its own origin; Vite forwards it to the local API.
-  server: { port: 5173, proxy: { '/api': api, '/health': api } },
+  // host: the phone and tablet reach Motion Mind Terminal on this PC's Wi-Fi address (see /t and Settings, Open on your phone).
+  server: { port: 5173, host: true, proxy: { '/api': api, '/health': api } },
 });
