@@ -1,3 +1,4 @@
+import { registerPersonRoute, type PersonPhotoFetcher } from './person/routes';
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import { registerAccountRoutes } from './account/routes';
@@ -28,6 +29,8 @@ import { registerClientLogRoutes, type ClientLogReport } from './logs/routes';
 export interface AppDeps {
   /** Looks up a company's logo by website. Defaults to the public favicon services. */
   fetchLogo?: LogoFetcher;
+  /** Looks up a person's photo by Wikipedia title. Defaults to Wikipedia / Wikimedia Commons. */
+  fetchPersonPhoto?: PersonPhotoFetcher;
   data: DataRepository;
   sessions: SessionTokens;
   mailer: Mailer;
@@ -79,6 +82,7 @@ export async function buildApp(input: Omit<AppDeps, 'audio'> & { audio?: AudioSt
   app.get('/health', async () => ({ ok: true, mode: deps.mode }));
   registerRenderDownload(app, deps);
   registerLogoRoute(app, deps);
+  registerPersonRoute(app, deps);
   registerAnimationAssets(app);
   registerFootageFiles(app, deps);
   registerSocialCallback(app, deps);

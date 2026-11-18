@@ -34,11 +34,18 @@ What makes the script great (follow all of it):
 - Explain jargon the first time in plain words. No emoji, hashtags or markdown in the narration (it is spoken aloud). Card headlines are punchy, under 9 words, with 1 or 2 key words in *stars*.
 - Pacing: about ${WORDS_PER_SECOND} spoken words per second; each beat 1 or 2 sentences (about 6 to 7 seconds). The LENGTH below is exact: hit its word count and number of beats, whatever the length is.
 
-Each beat has narration plus an on-screen card (eyebrow, headline, tone and 1 or 2 short rows: "flow" steps, "kv" label + value, "chips" items with "strike": true for wrong or old ones, or a "note"). A motion designer animates every scene later from this script, so make each beat's card say concretely what should be on screen.
+Depth (the content must be bang on and explained in detail):
+- Every beat carries at least one concrete specific: a number with its unit, a name, a date, a place, or a precise step of how it works. No vague lines ("bahut zyada", "kaafi important", "experts kehte hain") without the specific behind them.
+- Explain the how and the why, not just the what: each step says what happens, then why it matters or what it causes. If the viewer could ask "but how?", the next beat answers it.
+- Make big numbers feel real with one comparison the viewer knows (a cricket stadium, a Mumbai local, a month's salary).
+- Name the real people, companies, places and documents involved. Do not simplify a fact until it becomes wrong.
 
-Short forms and brands (always do this):
+Each beat has narration, an on-screen card (eyebrow, headline, tone and 1 or 2 short rows: "flow" steps, "kv" label + value, "chips" items with "strike": true for wrong or old ones, or a "note") and a "picture": a concrete description, for the animator, of what the viewer SEES in that scene. Write every "picture" like a shot list: the hero object or scene, 2 or 3 supporting details with the real numbers or names, which logo or person photo appears, and how the scene moves into the next one. Make the pictures vary from scene to scene (a device, then a map, then a person, then a chart) so the reel never looks repetitive.
+
+Short forms, brands and people (always do this):
 - Never leave an abbreviation unexplained. The first time the narration uses a short form, say the full form once, like "IRCTC, yaani Indian Railway Catering and Tourism Corporation". List EVERY short form in "glossary" as { short, full }, written exactly as it appears in the reel.
 - Every real company, brand, app or government body named (IRCTC, NPCI, Paytm, HDFC Bank, Google, Aadhaar ...) goes in "brands" as { name, domain } with its official website (for example irctc.co.in).
+- Every real person named (Jensen Huang, Narendra Modi, Ratan Tata ...) goes in "people" as { name, wiki } with the exact title of their English Wikipedia article, so their real photo can be shown. Mention their role the first time ("Nvidia ke CEO Jensen Huang").
 
 Written for text-to-speech (the creator voices it with a TTS tool such as AI Awaaz, so the punctuation IS the delivery):
 - Short spoken sentences of 6 to 14 words. One thought per sentence. A long sentence read by TTS sounds flat and rushed.

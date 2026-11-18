@@ -1,4 +1,5 @@
 import { reelTimeline, styleOf, type Platform, type Profile, type Project } from '@motionmind/shared';
+import { withCaptions } from './captions';
 
 // The end card is the same on every reel, so Motion Mind draws it itself instead of asking Claude to improvise one:
 // a quiet "Follow" (or "Subscribe") over the handle, with the creator's logo when there is one. It is added to
@@ -90,11 +91,12 @@ export function withEndCard(html: string, o: EndCardOptions): string {
   return out;
 }
 
-/** The animation of a project as it is played, exported and checked: Claude's file plus Motion Mind's end card. */
+/** The animation of a project as it is played, exported and checked: Claude's file plus Motion Mind's captions and end card. */
 export function finishedAnimation(project: Project, profile: Pick<Profile, 'handle' | 'language'> | null, logo?: string): string {
   const script = project.script!;
-  const html = script.animation!.html;
   const t = reelTimeline(script, project.editor);
+  const accent = styleOf(script.style).swatch[1];
+  const html = withCaptions(script.animation!.html, t, script.beats.map((b) => b.keywords ?? []), accent);
   return withEndCard(html, {
     storyEnd: t.storyEnd,
     duration: t.duration,

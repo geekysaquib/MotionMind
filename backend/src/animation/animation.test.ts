@@ -47,7 +47,11 @@ describe('Animate step', () => {
     expect(prompt).toContain('Layout rules (nothing may overlap');
     expect(prompt).toContain('one inline-block cell per character');
     expect(prompt).toContain('Text must be rock steady');
-    expect(prompt).toContain('lay out ALL of its words at once in a fixed box');
+    // Captions are Motion Mind's own: Claude leaves the band free and marks the file.
+    expect(prompt).toContain('Make NO captions');
+    expect(prompt).toContain('<!-- motionmind:no-captions -->');
+    expect(prompt).toContain('data-start = (scene start − 0.6)');
+    expect(prompt).toContain('/api/person/');
     const noted = (await app.inject({ method: 'GET', url: `/api/projects/${id}/animation/prompt?note=${encodeURIComponent('Use more red')}`, headers: H })).json().prompt as string;
     expect(noted).toContain('Use more red');
     expect(prompt).not.toContain('Use more red');

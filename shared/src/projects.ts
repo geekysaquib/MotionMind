@@ -78,6 +78,8 @@ export interface ReelBeat {
   /** 0 = hook, then 1..steps.length */
   chapter: number;
   card: { eyebrow: string; headline: string; tone: ReelTone; rows: ReelRow[] };
+  /** What the viewer sees in this scene, written for the animator (hero, details, logos or photos, transition). */
+  picture?: string;
 }
 
 /** A reel script: what the voice says and what each on-screen card shows. The reel engine renders it. */
@@ -97,6 +99,8 @@ export interface ReelScript {
   glossary?: { short: string; full: string }[];
   /** Companies and products named in the reel, with their website so their logo can be shown. */
   brands?: { name: string; domain: string }[];
+  /** Real people named in the reel, with their Wikipedia article title so their photo can be shown. */
+  people?: { name: string; wiki: string }[];
   /** Which Claude model wrote it, and when. */
   model?: string;
   writtenAt?: string;
