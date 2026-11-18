@@ -33,24 +33,85 @@ export interface HtmlRenderInput {
 /** Any GSAP build from a CDN becomes the local copy, so renders work offline and the same every time. */
 export const localizeGsap = (html: string, local: string) => html.replace(/https:\/\/(?:cdn\.jsdelivr\.net\/npm|unpkg\.com|cdnjs\.cloudflare\.com\/ajax\/libs)\/gsap@?[^"'\s]*?\/(?:dist\/)?gsap(?:\.min)?\.js/g, local);
 
-function run(bin: string, args: string[], cwd: string, onLine?: (line: string) => void): Promise<{ code: number; tail: string }> {
+export interface RunLimits {
+  /** Stop when nothing is printed for this long (ms): the tool has hung. */
+  idleMs?: number;
+  /** Stop after this long in total (ms). */
+  totalMs?: number;
+}
+
+/** Kills a process and everything it started (HyperFrames runs Chrome workers). */
+function killTree(pid: number | undefined) {
+  if (!pid) return;
+  if (process.platform === 'win32') spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { windowsHide: true }).on('error', () => undefined);
+  else {
+    try {
+      process.kill(-pid, 'SIGKILL');
+    } catch {
+      try {
+        process.kill(pid, 'SIGKILL');
+      } catch {
+        /* already gone */
+      }
+    }
+  }
+}
+
+/**
+ * Runs a tool, passing every output line on. Our renders are queued one at a time, so HyperFrames' own account-wide
+ * lock is turned off: a crashed or hung earlier run can no longer hold it and keep every later export waiting.
+ */
+export function run(bin: string, args: string[], cwd: string, onLine?: (line: string) => void, limits: RunLimits = {}): Promise<{ code: number; tail: string; timedOut?: 'idle' | 'total' }> {
   return new Promise((resolve) => {
-    const p = spawn(bin, args, { cwd, windowsHide: true });
+    const p = spawn(bin, args, { cwd, windowsHide: true, detached: process.platform !== 'win32', env: { ...process.env, HYPERFRAMES_RENDER_LOCK: 'off' } });
     let tail = '';
+    let timedOut: 'idle' | 'total' | undefined;
+    let idle: ReturnType<typeof setTimeout> | undefined;
+    const stop = (why: 'idle' | 'total') => {
+      timedOut = why;
+      killTree(p.pid);
+    };
+    const poke = () => {
+      if (!limits.idleMs) return;
+      if (idle) clearTimeout(idle);
+      idle = setTimeout(() => stop('idle'), limits.idleMs);
+    };
+    const total = limits.totalMs ? setTimeout(() => stop('total'), limits.totalMs) : undefined;
+    poke();
     const take = (b: Buffer) => {
+      poke();
       const s = b.toString();
       tail = (tail + s).slice(-4000);
-      s.split(/\r?\n/).forEach((l) => l && onLine?.(l));
+      s.split(/\r?\n|\r/).forEach((l) => l && onLine?.(l));
     };
     p.stdout.on('data', take);
     p.stderr.on('data', take);
-    p.on('error', (e) => resolve({ code: -1, tail: String(e) }));
-    p.on('close', (code) => resolve({ code: code ?? -1, tail }));
+    const done = (code: number, extra = '') => {
+      if (idle) clearTimeout(idle);
+      if (total) clearTimeout(total);
+      resolve({ code, tail: tail + extra, ...(timedOut ? { timedOut } : {}) });
+    };
+    p.on('error', (e) => done(-1, String(e)));
+    p.on('close', (code) => done(timedOut ? -1 : (code ?? -1)));
   });
 }
 
+/** HyperFrames prints machine-readable progress: @hf-progress {"code":"capture","done":20,"total":90,"pct":35}. */
+export function parseProgress(line: string): { code: string; done: number; total: number; pct: number } | null {
+  const i = line.indexOf('@hf-progress ');
+  if (i < 0) return null;
+  try {
+    const j = JSON.parse(line.slice(i + 13)) as { code?: string; done?: number; total?: number; pct?: number };
+    return typeof j.pct === 'number' ? { code: String(j.code ?? ''), done: Number(j.done ?? 0), total: Number(j.total ?? 0), pct: j.pct } : null;
+  } catch {
+    return null;
+  }
+}
+
+const mins = (s: number) => (s < 90 ? 'under 2 minutes' : `about ${Math.round(s / 60)} minutes`);
+
 async function fetchTo(url: string, file: string) {
-  const res = await fetch(url);
+  const res = await fetch(url, { signal: AbortSignal.timeout(90_000) });
   if (!res.ok) throw new Error(`Could not load an audio file (${res.status}).`);
   await writeFile(file, Buffer.from(await res.arrayBuffer()));
 }
@@ -89,17 +150,32 @@ export async function renderHtmlJob(job: RenderJob, input: HtmlRenderInput, rend
   try {
     await prepareProject(dir, input.html);
     job.status = 'rendering';
-    // HyperFrames does not report a percentage we can rely on: count captured frames when it says so, else creep up.
-    const total = Math.max(1, Math.round(input.duration * 30));
-    const creep = setInterval(() => (job.progress = Math.min(0.85, job.progress + (0.85 - job.progress) * 0.03)), 1000);
-    const r = await run(process.execPath, [hyperframesBin(), 'render', dir, '-o', path.join(dir, 'video.mp4'), '--quality', 'delivery', '--fps', '30'], dir, (line) => {
-      const m = /(\d+)\s*\/\s*(\d+)\s*frames?/i.exec(line);
-      if (m && Number(m[2]) >= total * 0.5) job.progress = Math.min(0.85, (Number(m[1]) / Number(m[2])) * 0.85);
-    });
-    clearInterval(creep);
+    job.detail = 'Starting the renderer…';
+    // HyperFrames reports its own progress (0 to 100 %, frames drawn); it maps onto 2 % to 88 % of the whole job.
+    const began = Date.now();
+    const r = await run(
+      process.execPath,
+      [hyperframesBin(), 'render', dir, '-o', path.join(dir, 'video.mp4'), '--quality', 'delivery', '--fps', '30'],
+      dir,
+      (line) => {
+        const p = parseProgress(line);
+        if (!p) return;
+        job.progress = Math.max(job.progress, 0.02 + (Math.min(100, p.pct) / 100) * 0.86);
+        if (p.code === 'capture' && p.total > 0) {
+          const rate = p.done / Math.max(1, (Date.now() - began) / 1000);
+          const left = rate > 0 ? (p.total - p.done) / rate : 0;
+          job.detail = `Drawing frame ${p.done} of ${p.total}${p.done > 30 ? `, ${mins(left)} left` : ''}`;
+        } else if (p.code === 'encode') job.detail = 'Encoding the video…';
+        else if (p.code === 'assemble') job.detail = 'Putting the video together…';
+      },
+      // A heavy frame can take a while, but five silent minutes means the renderer has hung.
+      { idleMs: 5 * 60_000, totalMs: 90 * 60_000 },
+    );
+    if (r.timedOut) throw new Error(r.timedOut === 'idle' ? 'The renderer stopped responding for 5 minutes and was stopped. Try the export again; if it happens again, check the animation for something heavy (huge blurs, hundreds of moving pieces).' : 'The render took longer than 90 minutes and was stopped.');
     if (r.code !== 0) throw new Error(`HyperFrames could not render the animation: ${lastError(r.tail)}`);
     job.status = 'finishing';
-    job.progress = 0.88;
+    job.progress = Math.max(job.progress, 0.9);
+    job.detail = 'Adding your voice and levelling the sound…';
     const clips: { file: string; clip: AudioClip }[] = [];
     for (const [i, clip] of input.audio.entries()) {
       const file = path.join(dir, `audio-${i}`);
@@ -107,7 +183,7 @@ export async function renderHtmlJob(job: RenderJob, input: HtmlRenderInput, rend
       clips.push({ file, clip });
     }
     const out = path.join(rendersDir, `${job.id}.mp4`);
-    const m = await run(ffmpegBin(), muxArgs(path.join(dir, 'video.mp4'), clips, input.duration, out), dir);
+    const m = await run(ffmpegBin(), muxArgs(path.join(dir, 'video.mp4'), clips, input.duration, out), dir, undefined, { totalMs: 10 * 60_000 });
     if (m.code !== 0) {
       // Without FFmpeg the silent video is still worth having.
       if (clips.length) throw new Error(`FFmpeg could not add the voice: ${lastError(m.tail)}`);
@@ -116,6 +192,7 @@ export async function renderHtmlJob(job: RenderJob, input: HtmlRenderInput, rend
     job.file = `${job.id}.mp4`;
     job.progress = 1;
     job.status = 'done';
+    job.detail = undefined;
   } catch (err) {
     job.status = 'failed';
     job.error = err instanceof Error ? err.message.split('\n')[0] : String(err);
@@ -132,7 +209,8 @@ export async function snapshotHtml(html: string, at: number, rendersDir: string)
   try {
     await prepareProject(dir, html);
     const outDir = path.join(dir, 'shots');
-    const r = await run(process.execPath, [hyperframesBin(), 'snapshot', dir, '--at', at.toFixed(2), '--no-end', '-o', outDir], dir);
+    const r = await run(process.execPath, [hyperframesBin(), 'snapshot', dir, '--at', at.toFixed(2), '--no-end', '-o', outDir], dir, undefined, { totalMs: 3 * 60_000 });
+    if (r.timedOut) throw new Error('Taking the picture took over 3 minutes and was stopped. Try again.');
     if (r.code !== 0) throw new Error(`HyperFrames could not take the picture: ${lastError(r.tail)}`);
     const png = (await readdir(outDir)).find((f) => f.endsWith('.png'));
     if (!png) throw new Error('HyperFrames made no picture.');

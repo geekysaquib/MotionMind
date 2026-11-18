@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Platform } from '@motionmind/shared';
@@ -12,8 +12,10 @@ import { renderHtmlJob, snapshotHtml, type HtmlRenderInput } from './hyperframes
 export interface RenderJob {
   id: string;
   projectId: string;
-  status: 'bundling' | 'rendering' | 'finishing' | 'done' | 'failed';
+  status: 'queued' | 'bundling' | 'rendering' | 'finishing' | 'done' | 'failed';
   progress: number;
+  /** What is happening right now, in plain words ("Drawing frame 1200 of 2700, about 4 minutes left"). */
+  detail?: string;
   file?: string;
   error?: string;
   startedAt: string;
@@ -40,13 +42,24 @@ export class HyperFramesRenderer implements Renderer {
   private jobs = new Map<string, RenderJob>();
   /** Cover images made so far, by file name, with the project each belongs to (when known). */
   private stills = new Map<string, string | null>();
+  private queue: Promise<void> = Promise.resolve();
+
+  constructor() {
+    void cleanStaleWorkFolders();
+  }
 
   start(userId: string, projectId: string, input: HtmlRenderInput, platform: Platform = 'instagram'): RenderJob {
     const running = this.latest(userId, projectId, platform);
-    if (running && ['bundling', 'rendering', 'finishing'].includes(running.status)) return running;
-    const job: RenderJob = { id: randomUUID(), projectId, status: 'bundling', progress: 0, startedAt: new Date().toISOString() };
+    if (running && ['queued', 'bundling', 'rendering', 'finishing'].includes(running.status)) return running;
+    const job: RenderJob = { id: randomUUID(), projectId, status: 'queued', progress: 0, startedAt: new Date().toISOString(), detail: 'Waiting for the export before it to finish…' };
     this.jobs.set(`${userId}:${projectId}:${platform}`, job);
-    void mkdir(RENDERS_DIR, { recursive: true }).then(() => renderHtmlJob(job, input, RENDERS_DIR));
+    // One render at a time: two at once would each take twice as long on one PC.
+    this.queue = this.queue.then(async () => {
+      job.status = 'bundling';
+      job.detail = 'Preparing the animation…';
+      await mkdir(RENDERS_DIR, { recursive: true });
+      await renderHtmlJob(job, input, RENDERS_DIR);
+    });
     return job;
   }
 
@@ -87,5 +100,19 @@ export class HyperFramesRenderer implements Renderer {
     const file = await snapshotHtml(html, at, RENDERS_DIR);
     this.stills.set(file, projectId);
     return file;
+  }
+}
+
+/** Work folders left behind when the API stopped in the middle of a render (they hold whole videos). */
+async function cleanStaleWorkFolders() {
+  try {
+    const names = (await readdir(RENDERS_DIR)).filter((n) => n.startsWith('hf-'));
+    for (const n of names) {
+      const full = path.join(RENDERS_DIR, n);
+      const info = await stat(full).catch(() => null);
+      if (info && Date.now() - info.mtimeMs > 2 * 3_600_000) await rm(full, { recursive: true, force: true });
+    }
+  } catch {
+    // No renders folder yet.
   }
 }

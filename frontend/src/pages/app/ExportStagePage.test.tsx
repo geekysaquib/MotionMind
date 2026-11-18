@@ -20,7 +20,7 @@ async function setup(available: boolean, jobs: (RenderJob | null)[], platforms: 
       exportStatus: async () => ({ available, job: jobs[Math.min(n++, jobs.length - 1)] ?? null }),
       startExport: async (_id: string, platform?: Platform) => {
         started.push(platform);
-        return { job: { id: 'j', status: 'bundling', progress: 0, startedAt: 'now' }, withVoice: false };
+        return { job: { id: 'j', status: 'rendering', progress: 0.42, detail: 'Drawing frame 1200 of 2700, about 4 minutes left', startedAt: 'now' }, withVoice: false };
       },
     }) as unknown as ClaudeService;
   const Layout = observer(() => <Outlet context={store.projects.byId(created.id)} />);
@@ -56,7 +56,7 @@ describe('ExportStagePage', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Export MP4' }));
     });
-    expect(screen.getByText(/Preparing the engine/)).toBeTruthy();
+    expect(screen.getByText(/42% · Drawing frame 1200 of 2700, about 4 minutes left/)).toBeTruthy();
     expect(screen.getByText(/this export is silent/)).toBeTruthy();
   });
 

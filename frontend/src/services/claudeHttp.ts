@@ -17,7 +17,8 @@ export interface LayoutCheck {
 
 export interface RenderJob {
   id: string;
-  status: 'bundling' | 'rendering' | 'finishing' | 'done' | 'failed';
+  status: 'queued' | 'bundling' | 'rendering' | 'finishing' | 'done' | 'failed';
+  detail?: string;
   progress: number;
   file?: string;
   error?: string;

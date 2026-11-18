@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pause, Play, RotateCcw } from 'lucide-react';
+import { Maximize2, Minimize2, Pause, Play, RotateCcw } from 'lucide-react';
 
 /**
  * Plays Claude's HyperFrames composition in the browser: the HTML runs in a sandboxed frame (scripts only, no
@@ -38,6 +38,8 @@ export interface PlayerClip {
 export function HtmlReelPlayer({ html, duration, clips = [], gsapUrl }: { html: string; duration: number; clips?: PlayerClip[]; gsapUrl: string }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const box = useRef<HTMLDivElement>(null);
+  const shell = useRef<HTMLDivElement>(null);
+  const [full, setFull] = useState(false);
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [scale, setScale] = useState(0.3);
@@ -62,6 +64,17 @@ export function HtmlReelPlayer({ html, duration, clips = [], gsapUrl }: { html: 
     });
     return () => audios.current.forEach((a) => a.pause());
   }, [clips]);
+
+  // Full screen: the player fills the screen, the reel as tall as it fits, controls under it.
+  useEffect(() => {
+    const on = () => setFull(document.fullscreenElement === shell.current);
+    document.addEventListener('fullscreenchange', on);
+    return () => document.removeEventListener('fullscreenchange', on);
+  }, []);
+  const toggleFull = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    else void shell.current?.requestFullscreen?.().catch(() => undefined);
+  };
 
   const seek = (time: number) => frame.current?.contentWindow?.postMessage({ mm: 'seek', t: time }, '*');
 
@@ -111,8 +124,8 @@ export function HtmlReelPlayer({ html, duration, clips = [], gsapUrl }: { html: 
   }, [playing]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line/10 bg-ink-900 shadow-soft">
-      <div ref={box} className="relative w-full overflow-hidden bg-black" style={{ aspectRatio: '9 / 16' }}>
+    <div ref={shell} className={full ? 'flex h-full w-full flex-col items-center justify-center bg-black' : 'overflow-hidden rounded-2xl border border-line/10 bg-ink-900 shadow-soft'}>
+      <div ref={box} className="relative overflow-hidden bg-black" style={full ? { height: 'calc(100vh - 56px)', aspectRatio: '9 / 16' } : { width: '100%', aspectRatio: '9 / 16' }}>
         <iframe
           ref={frame}
           title="Reel animation"
@@ -123,7 +136,7 @@ export function HtmlReelPlayer({ html, duration, clips = [], gsapUrl }: { html: 
           style={{ width: 1080, height: 1920, border: 0, transform: `scale(${scale})`, transformOrigin: '0 0', position: 'absolute', left: 0, top: 0 }}
         />
       </div>
-      <div className="flex items-center gap-3 px-3 py-2">
+      <div className={full ? 'flex w-full max-w-3xl items-center gap-3 px-3 py-2 text-white' : 'flex items-center gap-3 px-3 py-2'}>
         <button type="button" aria-label={playing ? 'Pause' : 'Play'} className="rounded-full p-1.5 text-ink-100 hover:bg-line/[0.08]" onClick={() => (t >= duration ? (setT(0), seek(0), setPlaying(true)) : setPlaying((p) => !p))}>
           {playing ? <Pause className="h-4 w-4" /> : t >= duration ? <RotateCcw className="h-4 w-4" /> : <Play className="h-4 w-4" />}
         </button>
@@ -145,6 +158,9 @@ export function HtmlReelPlayer({ html, duration, clips = [], gsapUrl }: { html: 
         <span className="w-20 text-right font-mono text-xs text-ink-400">
           {t.toFixed(1)} / {duration.toFixed(1)}s
         </span>
+        <button type="button" aria-label={full ? 'Exit full screen' : 'Full screen'} title={full ? 'Exit full screen (Esc)' : 'Full screen'} className="rounded-full p-1.5 text-ink-100 hover:bg-line/[0.08]" onClick={toggleFull}>
+          {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </button>
       </div>
     </div>
   );
